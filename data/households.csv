@@ -1,0 +1,4 @@
+household_id,persona,n_people,weekly_budget_usd,weekly_protein_target_g,demand_scale,weekend_boost,demand_noise,allergen_exclusions,description
+hh_student,Budget student,1,30,300,1.0,1.30,0.25,,Single student on a tight grocery budget
+hh_couple,Working couple,2,55,600,1.9,1.20,0.20,,Two adults with regular weekday routines
+hh_family,Family of four,4,100,1100,3.6,1.35,0.30,,Two adults and two children; more weekend cooking
