@@ -107,6 +107,35 @@ def check_synthetic(s: pd.DataFrame, products: pd.DataFrame, demand_weeks: list[
           f"{s.drop_duplicates('product_id')['baseline_source'].eq('open_prices_median').sum()}/{len(products)}")
 
 
+def check_regional(r: pd.DataFrame, base: pd.DataFrame, products: pd.DataFrame) -> None:
+    from src.generate_regional_prices import COLUMNS as REGIONAL_COLUMNS, REGIONS
+    print("data/price_weekly_regional_synthetic.csv (synthetic, regional)")
+    check(list(r.columns) == REGIONAL_COLUMNS, "columns match the documented schema")
+    n = len(REGIONS) * len(products) * N_WEEKS
+    check(len(r) == n, f"{len(r)} rows = {len(REGIONS)} regions x {len(products)} products x {N_WEEKS} weeks")
+    check(set(r["region_id"]) == set(REGIONS), "all regions present")
+    check(not r.duplicated(subset=["region_id", "week", "product_id"]).any(), "no duplicate region/week/product rows")
+    unit = r["product_id"].map(products.set_index("product_id")["unit"])
+    check(unit.notna().all() and (r["unit"] == unit).all(), "products and units match products.csv")
+    na = r.drop(columns="promo_price_usd").isna().sum().sum()
+    check(na == 0, "no missing values outside promo_price_usd")
+    check((r["source"] == "synthetic_regional").all(), "every row labelled source = synthetic_regional")
+    check((r["regular_price_usd"] > 0).all() and (r["price_usd"] > 0).all(), "prices positive")
+    promo = r["is_promo"].astype(bool)
+    check((r["promo_price_usd"].notna() == promo).all(), "promo price present exactly in promo weeks")
+    check((r.loc[promo, "promo_price_usd"] < r.loc[promo, "regular_price_usd"]).all(), "promo price below regular")
+    eff = np.where(promo, r["promo_price_usd"], r["regular_price_usd"])
+    check(np.allclose(r["price_usd"], eff), "price_usd = promo price in promo weeks, else regular price")
+    check(r["regional_multiplier"].between(0.8, 1.35).all(),
+          f"regional multipliers within 0.8..1.35 ({r['regional_multiplier'].min()}..{r['regional_multiplier'].max()})")
+    j = r.merge(base[["product_id", "week", "regular_price_usd", "is_promo"]], on=["product_id", "week"],
+                suffixes=("", "_base"))
+    check((j["is_promo"].astype(bool) == j["is_promo_base"].astype(bool)).all(),
+          "promotion weeks match the base synthetic file")
+    expected = (j["regular_price_usd_base"] * j["regional_multiplier"]).round(2)
+    check(np.allclose(j["regular_price_usd"], expected), "regular price = base price x regional multiplier")
+
+
 def main() -> None:
     products = pd.read_csv("data/products.csv")
     history = pd.read_csv("data/price_history.csv")
@@ -119,6 +148,13 @@ def main() -> None:
           "real dataset contains only Open Prices records (no synthetic rows or columns)")
     check((synthetic["data_source"] == "synthetic").all() and "source_price_id" not in synthetic.columns,
           "synthetic dataset contains only synthetic rows (no real Open Prices records)")
+    regional_path = "data/price_weekly_regional_synthetic.csv"
+    try:
+        regional = pd.read_csv(regional_path)
+    except FileNotFoundError:
+        print(f"{regional_path} not found, skipped")
+    else:
+        check_regional(regional, synthetic, products)
     if failures:
         print(f"\n{len(failures)} check(s) FAILED")
         sys.exit(1)

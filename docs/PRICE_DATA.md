@@ -190,3 +190,60 @@ Products appear in `products.csv` row order. **Every row is synthetic** (`is_syn
 - **Synthetic is not real:** inflation rates, seasonality, promotion frequency and depth are plausible assumptions, not estimates from data.
   Results that use the synthetic file must be reported as simulated.
 - **Upstream:** Open Prices is crowdsourced and updated daily. Labels and categories can be wrong, and a new download may change the matched set.
+
+## 3. Regional synthetic prices: `data/price_weekly_regional_synthetic.csv`
+
+**All regional differences are synthetic assumptions, not verified local prices.** For the demo only.
+
+`python -m src.generate_regional_prices` reads `data/price_weekly_synthetic.csv` (unchanged) and writes
+5 regions x 36 products x 104 weeks = 18,720 rows. The run is reproducible (seed 42).
+
+Each regional price is the base price times a fixed multiplier per region and product:
+`multiplier = region index x exp(category adjustment + product noise)`, with the noise drawn from Normal(0, 0.025) once per (region, product).
+Weekly fluctuations and promotion weeks and depths are inherited from the base file, so they are the same in every region; only the price level changes.
+The base file counts as index 1.00. Its baselines lean toward Bay Area prices (see Limitations), so the indices are relative, not national.
+
+| region_id | Region | Index | Category adjustments (log points) | Multiplier range |
+|---|---|---:|---|---|
+| `durham_nc` | Durham, NC | 0.95 | protein −0.02, dairy +0.01, fats_oils +0.02 | 0.91–1.00 |
+| `san_francisco_ca` | San Francisco, CA | 1.20 | fruit/vegetables −0.04, protein +0.03, beverages +0.02 | 1.13–1.26 |
+| `atlanta_ga` | Atlanta, GA | 0.97 | protein −0.02, fruit +0.01, beverages −0.02 | 0.92–1.00 |
+| `new_york_ny` | New York, NY | 1.16 | fruit/vegetables +0.03, protein +0.03, processed +0.02 | 1.10–1.29 |
+| `chicago_il` | Chicago, IL | 1.03 | dairy −0.03, grains −0.01, protein −0.01 | 0.98–1.08 |
+
+The indices follow the usual ordering of cost-of-living grocery indices: SF and NYC are highest and the Southeast lowest. The category adjustments are illustrative.
+
+Columns:
+
+| Column | Meaning |
+|---|---|
+| `region_id`, `region_name` | region |
+| `week`, `product_id`, `unit` | as in the base file |
+| `regular_price_usd`, `promo_price_usd`, `is_promo`, `price_usd` | as in the base file, scaled by the multiplier (promo price empty outside promotions) |
+| `regional_multiplier` | the multiplier applied |
+| `source` | always `synthetic_regional` |
+
+`python -m src.check_prices` also validates this file:
+- row count; no duplicate (region, week, product) rows;
+- units match `products.csv`; no missing values;
+- positive prices; promo price below regular;
+- `price_usd` is consistent with the promo and regular prices;
+- promotion weeks equal the base file's; regular price = base x multiplier.
+
+### Selecting prices by location (RL and Optimization)
+
+No module uses this file yet. Suggested use, without changing the interfaces:
+
+```python
+regional = pd.read_csv("data/price_weekly_regional_synthetic.csv")
+products = pd.read_csv("data/products.csv")
+r = regional[regional["region_id"] == region_id]                       # e.g. "durham_nc"
+# week x product matrix of the price actually paid, columns in products.csv order (INTERFACES convention)
+prices = r.pivot(index="week", columns="product_id", values="price_usd")[products["product_id"]].to_numpy()
+week_prices = prices[week]                                             # shape (n_products,)
+```
+
+- **RL (`GroceryEnv`):** take `region_id` as a setting, use `week_prices` for `spend` and `waste_cost`, and optionally add `prices` and `is_promo` to `obs`.
+- **Optimization (`apply_constraints`):** compute order cost as `order @ week_prices` instead of using `products.csv` `price_usd`.
+- **Weeks:** use `price_usd` for what is paid and `regular_price_usd` for "regular" comparisons. Use the same `week` index as the demand data, `week % 104` if an episode runs longer.
+- **Households:** budgets in `households.csv` are not regional. Comparing regions changes only prices, not budgets or demand.
