@@ -1,0 +1,630 @@
+<meta charset="utf-8">
+<title>Smart Grocery Coach</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a single-column consumer app. Coach hero up top, then the receipt; kitchen as item tiles;
+   the policy comparison lives in a short "Impact" story, with the full table folded away. */
+:root{
+  --bg:#F1F4F2; --surface:#FFFFFF; --sunk:#E7ECE9; --ink:#14221C; --muted:#5B6A63; --line:#D6DED9;
+  --accent:#0E7C86; --accent-ink:#FFFFFF; --accent-soft:#D9EFEF;
+  --hero:#0F3B3F; --hero-ink:#F2F7F5; --hero-muted:#A9C6C4;
+  --fresh:#2E8B57; --fresh-soft:#DDF0E4; --warn:#B9770E; --warn-soft:#F9EBD2; --bad:#C8402F; --bad-soft:#F8DFDB;
+  --s-avg:#8A979F; --s-fc:#3E5466; --s-fixed:#B3BDC4;
+  --paper:#FFFFFF; --paper-ink:#1C2630;
+  --c-produce:#3E9B5A; --c-dairy:#3F86D0; --c-protein:#D0574F; --c-grains:#C08A22; --c-legumes:#8E6A47; --c-bev:#8467CC; --c-fat:#A99525; --c-proc:#7D8D99;
+  --f-display:"Familjen Grotesk","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:18px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1512; --surface:#16211D; --sunk:#111A17; --ink:#E5EDE9; --muted:#97A8A0; --line:#26332E;
+  --accent:#3CC3CC; --accent-ink:#06282B; --accent-soft:#143A3C;
+  --hero:#123E42; --hero-ink:#EAF4F1; --hero-muted:#9FC1BF;
+  --fresh:#4CC38A; --fresh-soft:#163528; --warn:#F0B44C; --warn-soft:#3A2D14; --bad:#F07468; --bad-soft:#3D1D19;
+  --s-avg:#7E909D; --s-fc:#B4C3CE; --s-fixed:#566874;
+  --paper:#F3F1EA; --paper-ink:#1C2630; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1512; --surface:#16211D; --sunk:#111A17; --ink:#E5EDE9; --muted:#97A8A0; --line:#26332E;
+  --accent:#3CC3CC; --accent-ink:#06282B; --accent-soft:#143A3C;
+  --hero:#123E42; --hero-ink:#EAF4F1; --hero-muted:#9FC1BF;
+  --fresh:#4CC38A; --fresh-soft:#163528; --warn:#F0B44C; --warn-soft:#3A2D14; --bad:#F07468; --bad-soft:#3D1D19;
+  --s-avg:#7E909D; --s-fc:#B4C3CE; --s-fixed:#566874;
+  --paper:#F3F1EA; --paper-ink:#1C2630; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;margin:0}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:780px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:14px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* header + nav */
+header.top{background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);position:sticky;top:env(safe-area-inset-top,0px);z-index:5;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar{display:flex;align-items:center;gap:12px;padding-block:12px 10px;flex-wrap:wrap}
+.mark{width:34px;height:34px;border-radius:11px;background:var(--accent);display:grid;place-items:center;flex:none}
+.mark svg{width:20px;height:20px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:18px}
+.who{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0;font-size:14px;color:var(--muted)}
+.hhsel{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23788' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center;border-radius:999px;padding:7px 34px 7px 14px;font-weight:700;font-size:14px;max-width:min(340px,70vw);color:var(--ink)}
+nav.seg{display:flex;gap:4px;background:var(--sunk);border-radius:999px;padding:4px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none}
+nav.seg button{flex:1 0 auto;border:0;background:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
+nav.seg button[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+main{padding-block:20px 64px}
+@media (max-width:560px){.wl{display:none}.who{margin-left:0;width:100%}.hhsel{max-width:100%;width:100%}nav.seg button{padding:8px 10px;font-size:13px}}
+.stack{display:grid;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.card h3{font-size:19px;font-weight:700}
+.sub{margin:4px 0 0;color:var(--muted);font-size:15px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 16px;border-radius:999px;font-weight:700;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.link{border:0;background:none;color:var(--accent);font-weight:700;padding:0;font-size:15px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;background:var(--surface);font-weight:700}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.badge.demo{background:var(--warn-soft);color:var(--warn)} .badge.live{background:var(--fresh-soft);color:var(--fresh)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+/* hero */
+.hero{background:var(--hero);color:var(--hero-ink);border-radius:24px;padding:22px 22px 20px;display:grid;gap:14px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 45%,transparent),transparent 70%);pointer-events:none}
+.hero .eyebrow{color:var(--hero-muted)}
+.hero h1{font-size:clamp(26px,5.4vw,38px);font-weight:700;line-height:1.08;position:relative;z-index:1}
+.hero h1 em{font-style:normal;color:color-mix(in srgb,var(--accent) 70%,#fff)}
+.hstats{display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
+.hstat{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;display:grid;line-height:1.25}
+.hstat b{font-family:var(--f-display);font-size:19px}
+.hstat span{font-size:12px;color:var(--hero-muted)}
+.wk{display:flex;align-items:center;gap:8px;position:relative;z-index:1}
+.wk button{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:var(--hero-ink);font-size:16px;line-height:1}
+.wk button:disabled{opacity:.35;cursor:default}
+.wk span{font-family:var(--f-mono);font-size:13px;color:var(--hero-muted)}
+.flag{position:relative;z-index:1;background:rgba(240,180,76,.16);border:1px solid rgba(240,180,76,.35);color:#F7D9A2;border-radius:12px;padding:8px 12px;font-size:14px}
+
+/* use-first strip */
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.tile{border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:8px;background:var(--surface);min-width:0}
+.tile .top{display:flex;align-items:center;gap:10px;min-width:0}
+.ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:14px;flex:none;background:color-mix(in srgb,var(--c) 18%,var(--surface));color:var(--c)}
+.tile .nm{font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .amt{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.left{font-size:13px;font-weight:700}
+.left.x{color:var(--bad)} .left.w{color:var(--warn)} .left.f{color:var(--fresh)} .left.n{color:var(--muted)}
+.meter{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:3px}
+.meter i.x{background:var(--bad)} .meter i.w{background:var(--warn)} .meter i.f{background:var(--fresh)} .meter i.n{background:var(--s-avg)}
+
+/* receipt */
+.receipt{background:var(--paper);color:var(--paper-ink);font-family:var(--f-mono);font-size:14px;padding:24px 22px 30px;border-radius:6px;box-shadow:0 1px 0 var(--line),0 14px 34px -22px rgba(10,30,40,.5);
+  -webkit-mask:radial-gradient(circle 7px at 50% 100%,transparent 98%,#000) bottom/18px 100% repeat-x;mask:radial-gradient(circle 7px at 50% 100%,transparent 98%,#000) bottom/18px 100% repeat-x}
+.receipt h4{font-family:var(--f-mono);font-size:15px;text-align:center;letter-spacing:.16em;text-transform:uppercase}
+.receipt .c{text-align:center;color:#5F6B75;font-size:12px}
+.receipt hr{border:0;border-top:1px dashed #9AA6AF;margin:12px 0}
+.receipt details{border-bottom:1px dotted #D3D9DD}
+.receipt details:last-of-type{border-bottom:0}
+.receipt summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:7px 0;cursor:pointer}
+.receipt summary::-webkit-details-marker{display:none}
+.receipt summary .q{grid-column:1;color:#5F6B75;font-size:12px}
+.receipt summary .p{grid-column:2;grid-row:1;text-align:right}
+.receipt summary .nm::after{content:" +";color:#9AA6AF}
+.receipt details[open] summary .nm::after{content:" −"}
+.receipt .why{font-family:var(--f-body);font-size:13px;color:#4A5660;padding:0 0 10px;line-height:1.45}
+.rl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:3px 0}
+.rl.tot{font-weight:600;font-size:16px}
+.rnote{font-size:12px;color:#5F6B75;margin:4px 0}
+.budgetline{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;justify-content:center;font-size:13px}
+.budgetline b{font-size:16px}
+.bl{color:#1E7A48;font-weight:600} .bl.over{color:#B23A2B}
+.ptrk{height:8px;background:#DDE3E7;border-radius:4px;overflow:hidden;margin-top:4px}
+.ptrk i{display:block;height:100%;background:#1E7A48}
+.sale{font-size:10px;font-weight:600;color:#9A5B00;background:#FBE9C7;border-radius:3px;padding:1px 5px;margin-left:6px;white-space:nowrap;vertical-align:1px}
+.vs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.vs>div{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:2px}
+.vs>div.me{border-color:var(--accent);background:var(--accent-soft)}
+.vs b{font-family:var(--f-display);font-size:20px}
+
+/* kitchen grid */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px}
+.group{display:grid;gap:10px}
+.group h4{font-size:16px;display:flex;align-items:center;gap:8px}
+.group h4 .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:500}
+.dotc{width:10px;height:10px;border-radius:50%}
+.tile.out{opacity:.62;border-style:dashed}
+
+/* meals */
+.meal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:10px}
+.meal.top{border:2px solid var(--accent)}
+.meal h4{font-size:20px;font-weight:700}
+.meal .reason{margin:0;font-size:15px}
+.macro{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.macro b{font-family:var(--f-display);font-size:18px;color:var(--ink)}
+.ings{display:flex;flex-wrap:wrap;gap:6px}
+.ing{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.ing.w{background:var(--warn-soft);color:var(--warn);font-weight:700}
+.ing.x{background:var(--bad-soft);color:var(--bad);font-weight:700}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+
+/* impact */
+.big{font-family:var(--f-display);font-size:clamp(24px,4.6vw,32px);font-weight:700;line-height:1.15;margin:0}
+.big em{font-style:normal;color:var(--fresh)}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.trio>div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:2px}
+.trio b{font-family:var(--f-display);font-size:26px;color:var(--fresh)}
+@media (max-width:620px){.trio{grid-template-columns:minmax(0,1fr)}}
+.weeks{display:grid;grid-template-columns:repeat(26,minmax(0,1fr));gap:3px;margin-top:10px}
+.weeks i{display:block;aspect-ratio:1;max-width:100%;border-radius:3px;background:var(--sunk)}
+.weeks i.ok{background:var(--fresh)} .weeks i.mid{background:var(--warn)} .weeks i.hi{background:var(--bad)}
+svg.chart text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:4px;border-radius:2px;display:inline-block}
+details.judges{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px}
+details.judges summary{font-family:var(--f-display);font-weight:700;font-size:17px;cursor:pointer}
+.pscroll{overflow-x:auto;margin-top:12px}
+.pgrid{display:grid;grid-template-columns:minmax(130px,1.1fr) repeat(4,minmax(0,1fr));min-width:600px;font-size:14px}
+.pgrid>div{padding:9px 8px;border-bottom:1px solid var(--line)}
+.pgrid .h{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pgrid .me{background:var(--accent-soft)}
+.pgrid .v{font-family:var(--f-mono)}
+.best{color:var(--fresh);font-weight:700}
+.facts{display:flex;flex-wrap:wrap;gap:6px}
+.fact{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.fact b{font-family:var(--f-mono);font-weight:600}
+.fact.diet{background:var(--fresh-soft);border-color:transparent;color:var(--fresh);font-weight:700}
+.fact.alg{background:var(--bad-soft);border-color:transparent;color:var(--bad);font-weight:700}
+
+/* scan */
+.search{display:flex;gap:8px}
+.search .btn{flex:none}
+input[type=text]{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:10px 16px;width:100%;min-width:0}
+.nf{background:var(--paper);color:#000;border:1px solid #000;padding:6px 8px;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;width:100%;max-width:330px}
+.nf h5{font-size:28px;font-weight:900;margin:0;line-height:1}
+.nf .sv{border-bottom:10px solid #000;padding:3px 0 4px;font-size:13px;display:flex;justify-content:space-between;font-weight:700;gap:8px}
+.nf .cal{display:flex;justify-content:space-between;align-items:end;border-bottom:5px solid #000;padding:2px 0}
+.nf .cal b{font-size:28px;font-weight:900;line-height:1}
+.nf .dvh{text-align:right;font-size:11px;font-weight:700;border-bottom:1px solid #000;padding:2px 0}
+.nf .ln{display:flex;justify-content:space-between;border-bottom:1px solid #000;font-size:13px;padding:2px 0;gap:8px}
+.nf .ln.ind{padding-left:14px}
+.nf .ln.thick{border-bottom:8px solid #000}
+.nf .foot{font-size:10px;padding-top:4px;line-height:1.3}
+.verdict{display:flex;gap:14px;align-items:center}
+.ring{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:20px;border:4px solid currentColor;flex:none}
+.c-good{color:var(--fresh)} .c-ok{color:var(--warn)} .c-bad{color:var(--bad)}
+.ins{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ins li{display:grid;grid-template-columns:10px minmax(0,1fr);gap:10px;font-size:15px}
+.ins li::before{content:"";width:10px;height:10px;border-radius:50%;margin-top:7px;background:var(--muted)}
+.ins li.g::before{background:var(--fresh)} .ins li.w::before{background:var(--warn)} .ins li.b::before{background:var(--bad)}
+.scanres{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:start}
+@media (max-width:640px){.scanres{grid-template-columns:minmax(0,1fr)}}
+.vlist{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.vlist li{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center}
+.vtrk{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:4px}
+.vtrk i{display:block;height:100%;background:var(--accent)}
+.rp{display:grid;gap:4px;padding:12px 14px;border-radius:14px;background:var(--sunk)}
+.empty{padding:26px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+footer.note{font-size:13px;color:var(--muted);display:grid;gap:4px;padding-top:6px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;z-index:20}
+@media (prefers-reduced-motion:no-preference){.meter i,.ptrk i,.vtrk i{transition:width .45s ease}main>.stack{animation:rise .28s ease}@keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2"/><path d="M10 11.5l1.8 1.8L15.5 9.6"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></div>
+      <span class="brand">Grocery Coach</span>
+      <label class="who" for="hhsel"><span class="wl">Shopping for</span> <select id="hhsel" class="hhsel"></select></label>
+    </div>
+    <nav class="seg" id="nav" aria-label="Sections">
+      <button data-go="week">This week</button>
+      <button data-go="kitchen">Kitchen</button>
+      <button data-go="cook">Cook</button>
+      <button data-go="scan">Scan</button>
+      <button data-go="impact">Impact</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast" hidden></div>
+
+<script id="coach-data" type="application/json">__COACH_DATA__</script>
+<script>
+/* ===================== Data ===================== */
+const DATA=(()=>{try{return JSON.parse(document.getElementById("coach-data").textContent)}catch(e){return null}})();
+const app=document.getElementById("app");
+if(!DATA){app.innerHTML='<div class="empty">No data was loaded. Start the app with <code>streamlit run app.py</code> from the repo root.</div>';throw new Error("no data")}
+const P=DATA.products, H=DATA.households, R=DATA.recipes, DEM=DATA.demand;
+const PID=P.map(p=>p.id), PIX=Object.fromEntries(PID.map((id,i)=>[id,i]));
+const NW=Math.min(...H.map(h=>(DEM[h.id]?.[PID[0]]||[]).length));
+const TRAIN_END=Math.floor(NW/2);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=(v,d=2)=>(v<0?"−$":"$")+Math.abs(v).toFixed(d);
+const pct=v=>Math.round(v*100)+"%";
+const fx=(v,d=1)=>(+v).toFixed(d);
+let ST={hh:H[0].id, scrub:null, metric:"cost", lookup:null};
+try{const s=JSON.parse(localStorage.getItem("grocery-coach")||"null");if(s&&H.some(h=>h.id===s.hh))ST={...ST,...s,lookup:null}}catch(e){}
+const save=()=>{try{localStorage.setItem("grocery-coach",JSON.stringify({hh:ST.hh,metric:ST.metric}))}catch(e){}};
+const HH=()=>H.find(h=>h.id===ST.hh);
+H.forEach(h=>{h.ok=new Set(h.allowed||PID)});
+const relevant=(hh,i)=>hh.ok.has(PID[i])&&model(hh).avg[i]>0.005;
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,2400)}
+
+/* Friendly quantities from purchase units ("500 g", "12 count", "1 loaf") */
+function parseUnit(u){const m=String(u).trim().match(/^([\d.]+)\s*(.*)$/);return m?{n:+m[1],l:m[2]}:{n:1,l:String(u)}}
+function friendly(q,p){
+  const {n,l}=parseUnit(p.unit),t=q*n;
+  if(l==="g")return t>=1000?fx(t/1000,1)+" kg":Math.round(t)+" g";
+  if(l==="kg")return t<1?Math.round(t*1000)+" g":fx(t,1)+" kg";
+  if(l==="L"||l==="l")return t<1?Math.round(t*1000)+" ml":fx(t,1)+" L";
+  if(l==="ml")return t>=1000?fx(t/1000,1)+" L":Math.round(t)+" ml";
+  if(l==="count"){const c=t<1?Math.round(t*10)/10:Math.round(t),nm=p.name.toLowerCase();return (c<0.1?"<0.1":c)+" "+(c===1?nm.replace(/s$/,""):nm)}
+  const pk=l.match(/^([a-z]+)\s+(.+)$/i);
+  if(pk){const r=Math.round(t*10)/10;return `${r<0.1?"<0.1":r} ${pk[1]}${r===1?"":"s"} (${pk[2]})`}
+  const r=Math.round(t*10)/10;return r+" "+(r===1?l:l.endsWith("f")?l.slice(0,-1)+"ves":l+"s");
+}
+
+/* ===================== Simulator (mirrors INTERFACES.md §5–6) ===================== */
+function dayF(b){const raw=[1,1,1,1,1,b,b];const m=raw.reduce((a,x)=>a+x)/7;return raw.map(x=>x/m)}
+const stockOf=(st,i)=>st.inv[i].reduce((a,b)=>a+b.q,0);
+const clone=st=>({inv:st.inv.map(bs=>bs.map(b=>({...b})))});
+function avgDemand(hh){return P.map((p,i)=>{const a=DEM[hh.id][p.id];let s=0;for(let w=0;w<TRAIN_END;w++)s+=a[w];return s/TRAIN_END})}
+function maxStock(hh,i,avg){const p=P[i];return avg[i]*(p.shelf>=60?6:p.shelf>=14?3:1.6)}
+function ma(hh,w,i,k=4){const a=DEM[hh.id][PID[i]];let s=0,n=0;for(let j=Math.max(0,w-k);j<w;j++){s+=a[j];n++}return n?s/n:a[0]}
+function constrain(order,st,hh,avg){
+  const notes=[];let o=order.slice();
+  P.forEach((p,i)=>{if(o[i]>0.01&&!hh.ok.has(p.id)){const hit=p.allergens.filter(a=>hh.exclusions.includes(a));notes.push(`Skipped ${p.name}: ${hit.length?"contains "+hit.join(", "):"not part of a "+hh.diet+" diet"}.`)}if(!hh.ok.has(p.id))o[i]=0});
+  P.forEach((p,i)=>{const room=Math.max(0,maxStock(hh,i,avg)-stockOf(st,i));if(o[i]>room+1e-6){if(o[i]-room>0.05)notes.push(`Capped ${p.name} so stock at home stays under ${friendly(maxStock(hh,i,avg),p)}.`);o[i]=room}});
+  const cost=o.reduce((a,q,i)=>a+q*P[i].price,0);
+  if(cost>hh.budget){const f=hh.budget/cost;o=o.map(q=>q*f);notes.push(`Scaled the basket down ${Math.round((1-f)*100)}% to stay within the ${money(hh.budget,0)} weekly budget.`)}
+  return [o,notes];
+}
+function stepWeek(st,order,demand,hh,f,ids){
+  const r={spend:0,waste_units:0,waste_cost:0,waste_kg:0,stockout_units:0,stockout_days:0,kcal:0,protein_g:0};
+  for(const i of ids){const q=order[i];if(q>1e-9){st.inv[i].push({q,age:0});r.spend+=q*P[i].price}}
+  for(let d=0;d<7;d++){
+    for(const i of ids){const p=P[i];let need=demand[i]*f[d]/7;const want=need;const bs=st.inv[i].sort((a,b)=>b.age-a.age);
+      for(const b of bs){if(need<=0)break;const t=Math.min(b.q,need);b.q-=t;need-=t;r.kcal+=t*p.kcal;r.protein_g+=t*p.protein}
+      if(need>0.02*want&&need>1e-6){r.stockout_units+=need;r.stockout_days+=1}
+      st.inv[i]=bs.filter(b=>b.q>1e-9)}
+    for(const i of ids){const p=P[i];st.inv[i].forEach(b=>b.age++);for(const b of st.inv[i])if(b.age>=p.shelf){r.waste_units+=b.q;r.waste_cost+=b.q*p.price;r.waste_kg+=b.q*(p.grams||0)/1000}st.inv[i]=st.inv[i].filter(b=>b.age<p.shelf)}
+  }
+  r.protein_target_met=hh.protein_target?r.protein_g/hh.protein_target:0;
+  return r;
+}
+const POL={
+  fixed:(c,i)=>c.avg[i]*1.05,
+  average_rule:(c,i)=>ma(c.hh,c.w,i),
+  forecast_rule:(c,i)=>Math.max(0,ma(c.hh,c.w,i)*1.1-stockOf(c.st,i)),
+  coach:(c,i)=>{const q=Math.max(0,ma(c.hh,c.w,i)*c.k[i]-stockOf(c.st,i));return q<0.25?0:q},
+};
+const ALL=P.map((_,i)=>i);
+function order(pol,hh,w,st,M){return P.map((_,i)=>POL[pol]({hh,w,st,avg:M.avg,k:M.k},i))}
+function run(pol,hh,M,from,to,recFrom,ids=ALL,constrained=true){
+  const st={inv:P.map(()=>[])},f=dayF(hh.weekend_boost),out=[];
+  for(let w=from;w<to;w++){
+    let o=order(pol,hh,w,st,M);if(constrained)o=constrain(o,st,hh,M.avg)[0];
+    const r=stepWeek(st,o,P.map(p=>DEM[hh.id][p.id][w]),hh,f,ids);if(w>=recFrom)out.push(r);
+  }
+  return {weekly:out,st};
+}
+/* The stand-in: per-product order-up-to factor tuned on the training weeks (replace with the RL agent). */
+function tune(hh,avg){
+  const k=P.map(()=>1.1),grid=[0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.35,1.5];
+  P.forEach((p,i)=>{let best=Infinity,bk=1.1;
+    for(const g of grid){const kk=k.slice();kk[i]=g;const {weekly}=run("coach",hh,{avg,k:kk},0,TRAIN_END,4,[i],false);
+      const cost=weekly.reduce((a,r)=>a+r.spend+r.waste_cost+3*r.stockout_units*p.price,0);if(cost<best-1e-9){best=cost;bk=g}}
+    k[i]=bk});
+  return k;
+}
+const mean=(a,f)=>a.length?a.reduce((s,x)=>s+f(x),0)/a.length:0;
+const MODEL={};
+function model(hh){
+  if(MODEL[hh.id])return MODEL[hh.id];
+  const avg=avgDemand(hh),k=tune(hh,avg),M={avg,k},pols={};
+  for(const pol of ["fixed","average_rule","forecast_rule","coach"]){const {weekly}=run(pol,hh,M,TRAIN_END-8,NW,TRAIN_END);
+    pols[pol]={weekly,weekly_cost:mean(weekly,r=>r.spend),waste_units:mean(weekly,r=>r.waste_units),waste_cost:mean(weekly,r=>r.waste_cost),waste_kg:mean(weekly,r=>r.waste_kg),stockout_days:mean(weekly,r=>r.stockout_days),protein_target_met:mean(weekly,r=>r.protein_target_met)}}
+  return MODEL[hh.id]={...M,pols};
+}
+
+/* ===================== Results source: results.json when present, else the demo simulation ===================== */
+function realResults(hh){
+  const r=DATA.results;if(!r)return null;
+  const list=Array.isArray(r)?r:(r.policies?[r]:Object.values(r));
+  const hit=list.find(x=>x&&x.household===hh.id);if(!hit||!hit.policies)return null;
+  const map={fixed:"fixed",average_rule:"average_rule",forecast_rule:"forecast_rule",coach:"rl"},out={};
+  for(const [k,src] of Object.entries(map)){const v=hit.policies[src];if(!v||v.weekly_cost==null)return null;
+    const wk=(v.weekly||[]).map(x=>typeof x==="object"?{spend:x.spend??x.weekly_cost,waste_units:x.waste_units,waste_cost:x.waste_cost,stockout_days:x.stockout_days,protein_target_met:x.protein_target_met}:null).filter(Boolean);
+    out[k]={weekly:wk,weekly_cost:v.weekly_cost,waste_units:v.waste_units,waste_cost:v.waste_cost,stockout_days:v.stockout_days,protein_target_met:v.protein_target_met,std:{cost:v.weekly_cost_std,waste:v.waste_units_std,so:v.stockout_days_std,pr:v.protein_target_met_std}}}
+  return {pols:out,n_seeds:hit.n_seeds};
+}
+const isLive=hh=>!!realResults(hh);
+const NAME=hh=>({fixed:"Fixed list",average_rule:"Average rule",forecast_rule:"Forecast rule",coach:isLive(hh)?"RL agent":"Coach (preview)"});
+const COLOR={fixed:"var(--s-fixed)",average_rule:"var(--s-avg)",forecast_rule:"var(--s-fc)",coach:"var(--accent)"};
+const ORDER=["coach","forecast_rule","average_rule","fixed"];
+
+/* ===================== Charts ===================== */
+function roll(a,k=4){return a.map((_,i)=>{const s=a.slice(Math.max(0,i-k+1),i+1);return s.reduce((x,y)=>x+y,0)/s.length})}
+function niceStep(v){if(v<=0)return 1;const e=Math.pow(10,Math.floor(Math.log10(v)));const m=v/e;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*e}
+function lineChart(series,{yfmt=v=>v,label}){
+  const W=760,H=250,L=52,Rr=28,T=14,B=30,n=Math.max(...series.map(s=>s.values.length));
+  if(n<2)return '<div class="empty">No weekly series in results.json yet.</div>';
+  const lo=0,top=Math.max(...series.flatMap(s=>s.values))*1.05||1,step=niceStep(top/4),hi=Math.ceil(top/step)*step;
+  const X=i=>L+i/(n-1)*(W-L-Rr),Y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+  const ticks=[];for(let t=0;t<=hi+1e-9;t+=step)ticks.push(t);
+  const xt=[0,Math.round((n-1)/4),Math.round((n-1)/2),Math.round(3*(n-1)/4),n-1];
+  const sorted=[...series].sort((a,b)=>(a.focus?1:0)-(b.focus?1:0));
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">
+    ${ticks.map(t=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${L-8}" y="${Y(t)+4}" text-anchor="end">${yfmt(t)}</text>`).join("")}
+    ${xt.map(i=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle">wk ${i+1}</text>`).join("")}
+    ${sorted.map(s=>`<polyline points="${s.values.map((v,i)=>X(i).toFixed(1)+","+Y(v).toFixed(1)).join(" ")}" fill="none" stroke="${s.color}" stroke-width="${s.focus?3:1.6}" ${s.dash?'stroke-dasharray="5 4"':""} stroke-linejoin="round" stroke-linecap="round"/>`).join("")}
+    ${sorted.filter(s=>s.focus).map(s=>`<circle cx="${X(s.values.length-1)}" cy="${Y(s.values.at(-1))}" r="4.5" fill="${s.color}"/>`).join("")}
+  </svg>`;
+}
+
+const pollsN=hh=>{const r=DATA.results;const l=Array.isArray(r)?r:(r?.policies?[r]:Object.values(r||{}));const x=l.find(y=>y&&y.household===hh.id);return x?.n_seeds?x.n_seeds+" seeds":"seeds"};
+const std=(s,k)=>({cost:s.cost,waste:s.waste,so:s.so,pr:s.pr}[k]??null);
+function pantryAt(hh,w){
+  const M=model(hh),pre=run("coach",hh,M,TRAIN_END-8,w,NW).st;
+  const fc=P.map((_,i)=>ma(hh,w,i));
+  const [co,notes]=constrain(order("coach",hh,w,pre,M),pre,hh,M.avg);
+  const [ao]=constrain(order("average_rule",hh,w,pre,M),pre,hh,M.avg);
+  const f=dayF(hh.weekend_boost);
+  const exp=o=>{const s=clone(pre);return stepWeek(s,o,fc,hh,f,ALL)};
+  const after=clone(pre);co.forEach((q,i)=>{if(q>1e-9)after.inv[i].push({q,age:0})});
+  return {pre,after,fc,co,ao,notes,ec:exp(co),ea:exp(ao)};
+}
+const daysLeft=(b,p)=>p.shelf-b.age;
+const fclass=(d,p)=>p.shelf>=60?"f":d<=1?"x":d<=3?"w":"f";
+function mealIdeas(hh,inv){
+  return R.map(r=>{
+    const ing=Object.entries(r.ingredients).map(([pid,q])=>{const i=PIX[pid],p=P[i];if(p==null)return null;
+      const bs=inv.inv[i].slice().sort((a,b)=>daysLeft(a,p)-daysLeft(b,p));const have=bs.reduce((a,b)=>a+b.q,0);
+      return {pid,p,q,have,ok:have>=q-1e-6,d:bs.length?daysLeft(bs[0],p):null}}).filter(Boolean);
+    if(ing.some(x=>!x.ok))return null;
+    if(ing.some(x=>!hh.ok.has(x.pid)))return null;
+    const urgent=ing.filter(x=>x.p.shelf<60&&x.d!=null&&x.d<=3).sort((a,b)=>a.d-b.d);
+    const score=urgent.reduce((a,x)=>a+3/Math.max(1,x.d),0)+(r.tags.includes("use_it_first")?1.5:0)+(r.tags.includes("high_protein")?0.6:0)+(r.tags.includes("budget")?0.3:0);
+    const per=k=>ing.reduce((a,x)=>a+x.q*x.p[k],0)/r.servings;
+    const cps=ing.reduce((a,x)=>a+x.q*x.p.price,0)/r.servings,pps=per("protein");
+    const reason=urgent.length?`Uses ${list(urgent.map(x=>x.p.name.toLowerCase()))} before ${urgent.length>1?"they spoil":"it spoils"} (${urgent[0].d<=1?"last day":urgent[0].d+" days left"}).`
+      :r.tags.includes("high_protein")?`${Math.round(pps)} g protein a serving, about ${pct(pps/(hh.protein_target/7/hh.n_people))} of one person's daily share.`
+      :r.tags.includes("budget")?`One of the cheapest options at ${money(cps)} a serving.`
+      :r.tags.includes("quick")?`Ready in ${r.prep_time_min} minutes with what's at home.`
+      :"Everything is already at home, nothing extra to buy.";
+    return {r,ing,urgent,score,reason,kcal:per("kcal"),protein:per("protein"),cost:ing.reduce((a,x)=>a+x.q*x.p.price,0)/r.servings};
+  }).filter(Boolean).sort((a,b)=>b.score-a.score);
+}
+const list=a=>a.length<=1?a.join(""):a.slice(0,-1).join(", ")+" and "+a.at(-1);
+function fitScore(n,hh,allergens){
+  const ins=[];let s=65;
+  const kcal=n.kcal||0,prot=n.protein||0,sugar=n.sugar,sod=n.sodium,fib=n.fiber;
+  const dens=kcal>0?prot/kcal*100:0;
+  if(dens>=8){s+=14;ins.push(["g",`Protein-dense: ${fx(dens,1)} g protein per 100 kcal.`])}else if(dens>=4){s+=5;ins.push(["g",`Moderate protein: ${fx(dens,1)} g per 100 kcal.`])}else if(kcal>0)ins.push(["w",`Low protein for its calories (${fx(dens,1)} g per 100 kcal).`]);
+  if(sugar!=null){if(sugar>=15){s-=16;ins.push(["b",`High sugar: ${fx(sugar,1)} g per 100 g.`])}else if(sugar>=7){s-=6;ins.push(["w",`Some sugar: ${fx(sugar,1)} g per 100 g.`])}}
+  if(sod!=null){if(sod>=600){s-=14;ins.push(["b",`High sodium: ${Math.round(sod)} mg per 100 g.`])}else if(sod>=300){s-=5;ins.push(["w",`Moderate sodium: ${Math.round(sod)} mg per 100 g.`])}}
+  if(fib!=null&&fib>=5){s+=7;ins.push(["g",`Good fiber: ${fx(fib,1)} g per 100 g.`])}
+  if(n.nova===4){s-=8;ins.push(["w","Ultra-processed (NOVA group 4)."])}
+  const hit=(allergens||[]).filter(a=>hh.exclusions.includes(a));
+  if(hit.length){s=Math.min(s,20);ins.unshift(["b",`Contains ${hit.join(", ")}, which this household avoids.`])}
+  if(n.missing)ins.push(["w","Some nutrition values are missing for this product."]);
+  s=Math.max(5,Math.min(98,Math.round(s)));
+  return {s,cls:s>=70?"c-good":s>=45?"c-ok":"c-bad",label:s>=70?"Good fit":s>=45?"Occasional":"Poor fit",ins};
+}
+function nfLabel(n,hh,basis){
+  const L=(name,v,u,share,cls="")=>`<div class="ln ${cls}"><span>${name} ${v==null?"—":fx(v,v<10?1:0)+u}</span><b>${share!=null&&v!=null?share:""}</b></div>`;
+  const pw=n.protein!=null?Math.round(n.protein/hh.protein_target*1000)/10+"%":null;
+  return `<div class="nf"><h5>Nutrition Facts</h5><div class="sv"><span>Amount</span><span>${esc(basis)}</span></div>
+    <div class="cal"><span style="font-weight:900">Calories</span><b>${n.kcal==null?"—":Math.round(n.kcal)}</b></div>
+    <div class="dvh">% of household's weekly target*</div>
+    ${L("<b>Total Fat</b>",n.fat,"g")}${L("<b>Sodium</b>",n.sodium,"mg")}${L("<b>Total Carbohydrate</b>",n.carbs,"g")}${L("Dietary Fiber",n.fiber,"g",null,"ind")}${L("Total Sugars",n.sugar,"g",null,"ind")}
+    ${L("<b>Protein</b>",n.protein,"g",pw,"thick")}
+    <div class="foot">* Share of ${esc(hh.persona)}'s ${hh.protein_target.toLocaleString()} g weekly protein target.</div></div>`;
+}
+async function lookup(code){
+  code=String(code).replace(/\D/g,"");if(code.length<6){toast("Enter a full barcode (8–14 digits).");return}
+  ST.lookup={busy:true,code};render();
+  try{
+    const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,quantity,nutriments,allergens_tags,ingredients_text_en,ingredients_text,nova_group`);
+    const j=await r.json();
+    if(j.status!==1||!j.product){ST.lookup={err:`No product found for ${code} in Open Food Facts.`,code}}
+    else{const p=j.product,nu=p.nutriments||{};const g=k=>nu[k+"_100g"]!=null?+nu[k+"_100g"]:null;
+      const n={kcal:g("energy-kcal"),fat:g("fat"),carbs:g("carbohydrates"),sugar:g("sugars"),fiber:g("fiber"),protein:g("proteins"),sodium:g("sodium")!=null?g("sodium")*1000:null,nova:p.nova_group};
+      n.missing=["kcal","protein","sugar","sodium"].some(k=>n[k]==null);
+      ST.lookup={code,name:p.product_name||"Unnamed product",brand:p.brands||"",qty:p.quantity||"",n,allergens:(p.allergens_tags||[]).map(a=>a.replace(/^\w+:/,"")),ingr:p.ingredients_text_en||p.ingredients_text||"",basis:"per 100 g",src:"Open Food Facts"}}
+  }catch(e){ST.lookup={err:"Couldn't reach Open Food Facts. Check your internet connection, or pick a product from the catalogue below.",code}}
+  render();
+}
+function staple(pid){
+  const p=P[PIX[pid]],g=p.grams||0,k=g?100/g:1;
+  const n={kcal:p.kcal*k,fat:p.fat*k,carbs:p.carbs*k,sugar:p.sugar*k,fiber:p.fiber*k,protein:p.protein*k,sodium:p.sodium*k};
+  ST.lookup={code:pid,name:p.name,brand:"Your catalogue",qty:p.unit,n,allergens:p.allergens,ingr:"",basis:g?"per 100 g":"per "+p.unit,src:"products.csv (USDA)",price:p.price,pid};
+  render();
+}
+function facts(hh){const ppl=[hh.n_adults+" adult"+(hh.n_adults>1?"s":""),hh.n_children?hh.n_children+" child"+(hh.n_children>1?"ren":""):""].filter(Boolean).join(", ");
+  return `<div class="facts"><span class="fact">${ppl}</span><span class="fact diet">${esc(hh.diet[0].toUpperCase()+hh.diet.slice(1))}</span>${hh.exclusions.map(a=>`<span class="fact alg">No ${esc(a)}</span>`).join("")}<span class="fact">Budget <b>${money(hh.budget,0)}</b>/wk</span><span class="fact">Protein <b>${hh.protein_target.toLocaleString()} g</b>/wk</span><span class="fact">Eats out <b>${pct(hh.eats_out)}</b> of meals</span><span class="fact muted">${esc(hh.id)}</span></div>`}
+
+const views={};
+let _wasteMoney=true;const DATA_W=()=>_wasteMoney;
+function polsFor(hh){const live=realResults(hh);if(live){_wasteMoney=Object.values(live.pols).every(p=>p.waste_cost!=null);return live.pols}_wasteMoney=true;return model(hh).pols}
+function renderHH(){const groups=[...new Set(H.map(h=>h.persona))];
+  document.getElementById("hhsel").innerHTML=groups.map(g=>`<optgroup label="${esc(g)}">${H.filter(h=>h.persona===g).map(h=>`<option value="${h.id}" ${h.id===ST.hh?"selected":""}>${esc(h.persona)} · ${h.n_people} ${h.n_people>1?"people":"person"} · ${money(h.budget,0)}/wk${h.diet!=="omnivore"?" · "+h.diet:""}${h.exclusions.length?" · no "+h.exclusions.join(", "):""}</option>`).join("")}</optgroup>`).join("")}
+
+
+/* ===================== Views (navigation uses buttons, never links: links break inside Streamlit's frame) ===================== */
+ST.view=ST.view||"week"; ST.kitchenAfter=ST.kitchenAfter??true;
+const CATC={fruit:"--c-produce",vegetables:"--c-produce",dairy:"--c-dairy",protein:"--c-protein",grains:"--c-grains",legumes:"--c-legumes",beverages:"--c-bev",fats_oils:"--c-fat",processed:"--c-proc"};
+const ico=p=>`<span class="ico" style="--c:var(${CATC[p.category]||"--c-proc"})" aria-hidden="true">${esc(p.name[0].toUpperCase())}</span>`;
+const curWeek=()=>ST.scrub??TRAIN_END;
+const weekNo=w=>w-TRAIN_END+1, NTEST=NW-TRAIN_END;
+function freshness(p,bs){const tot=bs.reduce((a,b)=>a+b.q,0);if(tot<0.01)return {k:"out",cls:"x",txt:"Out",frac:0};
+  if(p.shelf>=60)return {k:"long",cls:"n",txt:"Keeps for months",frac:1};
+  const d=Math.min(...bs.map(b=>daysLeft(b,p)));return {k:d<=3?"soon":"fresh",cls:d<=1?"x":d<=3?"w":"f",txt:d<=1?"Use today":`${d} days left`,frac:Math.max(.06,d/p.shelf),d}}
+function tile(p,i,st,extra=""){const bs=st.inv[i],f=freshness(p,bs),tot=stockOf(st,i);
+  return `<div class="tile ${f.k==="out"?"out":""}"><div class="top">${ico(p)}<div style="min-width:0"><div class="nm">${esc(p.name)}</div><div class="amt">${tot>0.01?friendly(tot,p):"none left"}</div></div></div>
+    <div class="meter"><i class="${f.cls}" style="width:${f.frac*100}%"></i></div><span class="left ${f.cls}">${f.txt}</span>${extra}</div>`}
+const why=(p,i,S)=>{const fc=S.fc[i],h=stockOf(S.pre,i),b=S.co[i];
+  if(b<0.01)return h>=fc*0.9?"You have enough at home already.":"Held back: more would likely spoil before you eat it.";
+  if(p.shelf<7&&b<fc*0.95-h)return `A little less than you'll use: it only keeps ${p.shelf} days, so a top-up later beats throwing it out.`;
+  return `You'll use about ${friendly(fc,p)} this week${h>0.01?` and have ${friendly(h,p)} at home`:""}.`};
+
+views.week=()=>{
+  const hh=HH(),w=curWeek(),S=pantryAt(hh,w),N=NAME(hh),fl=DATA.flags?.[hh.id]||{},promo=i=>(DATA.promos?.[PID[i]]||[])[w]||0;
+  const lines=P.map((p,i)=>[p,i]).filter(([,i])=>S.co[i]>0.01);
+  const total=lines.reduce((a,[p,i])=>a+S.co[i]*p.price,0),aTot=S.ao.reduce((a,q,i)=>a+q*P[i].price,0),left=hh.budget-total;
+  const prot=P.reduce((a,p,i)=>a+Math.min(stockOf(S.pre,i)+S.co[i],S.fc[i])*p.protein,0),pcov=prot/hh.protein_target;
+  const soon=P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.after,i)>0.01).map(([p,i])=>[p,i,freshness(p,S.after.inv[i])]).filter(x=>x[2].d<=3).sort((a,b)=>a[2].d-b[2].d);
+  const flags=[fl.away?.[w]&&"You're away this week, so the coach keeps fresh food to a minimum.",fl.guest?.[w]&&"Guests this week: expect to eat more than usual. The coach can't see this coming.",fl.holiday?.[w]&&"Holiday week: some foods sell much more than usual."].filter(Boolean);
+  return `<div class="stack">
+   <section class="hero" aria-label="This week's plan">
+    <div class="wk"><button data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span>WEEK ${weekNo(w)} OF ${NTEST}</span><button data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button></div>
+    <h1>${lines.length?`This week, buy <em>${lines.length} things</em> for ${money(total)}.`:"Skip the shop this week. You have what you need."}</h1>
+    <div class="hstats">
+     <div class="hstat"><b>${money(Math.abs(left))}</b><span>${left>=0?"under":"over"} your ${money(hh.budget,0)} budget</span></div>
+     <div class="hstat"><b>${pct(Math.min(pcov,9.99))}</b><span>of your protein</span></div>
+     <div class="hstat"><b>${money(S.ec.waste_cost)}</b><span>likely to be wasted</span></div>
+    </div>
+    ${flags.map(f=>`<div class="flag">${esc(f)}</div>`).join("")}
+   </section>
+
+   <section class="card"><div class="sechead"><div><h3>Use these first</h3><p class="sub">${soon.length?"These will go off soon. Plan your first meals around them.":"Nothing is about to go off this week."}</p></div>${soon.length?`<button class="link" data-go="cook">What to cook →</button>`:""}</div>
+    ${soon.length?`<div class="strip">${soon.slice(0,8).map(([p,i])=>tile(p,i,S.after)).join("")}</div>`:""}</section>
+
+   <section aria-label="Shopping list"><div class="receipt">
+    <h4>Shopping list</h4><div class="c">${esc(hh.persona)} · week ${weekNo(w)} · tap an item to see why</div><hr>
+    ${lines.length?lines.map(([p,i])=>`<details><summary><span class="nm">${esc(p.name)}${promo(i)>0.01?`<span class="sale">SALE −${Math.round(promo(i)*100)}%</span>`:""}</span><span class="p">${money(S.co[i]*p.price)}</span><span class="q">${friendly(S.co[i],p)}</span></summary><div class="why">${esc(why(p,i,S))}</div></details>`).join(""):`<div class="c" style="padding:12px 0">Nothing to buy.</div>`}
+    <hr><div class="rl tot"><span>Total</span><span>${money(total)}</span></div><hr>
+    <div class="budgetline"><span>Budget <b>${money(hh.budget,0)}</b></span><span>−</span><span>Basket <b>${money(total)}</b></span><span>=</span><span class="bl ${left<0?"over":""}"><b>${money(left)}</b> ${left<0?"over":"left"}</span></div>
+    <div style="margin-top:12px"><div class="rnote" style="display:flex;justify-content:space-between;margin:0"><span>Protein for the week</span><span>${pct(pcov)}</span></div><div class="ptrk"><i style="width:${Math.min(100,pcov*100)}%"></i></div></div>
+    ${S.notes.length?`<hr>${S.notes.map(n=>`<p class="rnote">* ${esc(n)}</p>`).join("")}`:""}
+    ${lines.some(([,i])=>promo(i)>0.01)?`<p class="rnote">* Sale tags come from the synthetic weekly prices; totals use the reference prices in products.csv.</p>`:""}
+   </div></section>
+
+   <section class="card"><h3>Compared with your usual shop</h3><p class="sub">"Usual" means buying what you used over the last four weeks.</p>
+    <div class="vs" style="margin-top:12px">
+     <div class="me"><span class="eyebrow">${esc(N.coach)}</span><b>${money(total)}</b><span class="small">${money(S.ec.waste_cost)} likely wasted</span></div>
+     <div><span class="eyebrow">Your usual shop</span><b>${money(aTot)}</b><span class="small">${money(S.ea.waste_cost)} likely wasted</span></div>
+    </div>
+    <p class="small muted" style="margin:10px 0 0">The coach ${aTot-total>=0?`saves you ${money(aTot-total)}`:`spends ${money(total-aTot)} more`} and ${S.ea.waste_cost-S.ec.waste_cost>=0?`wastes ${money(S.ea.waste_cost-S.ec.waste_cost)} less food`:`wastes ${money(S.ec.waste_cost-S.ea.waste_cost)} more`} this week. ${isLive(hh)?"":"Demo simulation."}</p>
+   </section>
+  </div>`;
+};
+
+views.kitchen=()=>{
+  const hh=HH(),w=curWeek(),S=pantryAt(hh,w),st=ST.kitchenAfter?S.after:S.pre;
+  const items=P.map((p,i)=>[p,i]).filter(([,i])=>relevant(hh,i)).map(([p,i])=>[p,i,freshness(p,st.inv[i])]);
+  const G=[["soon","Use first","var(--warn)"],["fresh","Fresh","var(--fresh)"],["long","Cupboard & freezer","var(--s-avg)"],["out","Ran out","var(--bad)"]];
+  return `<div class="stack">
+   <div><h2 style="font-size:30px">Your kitchen</h2><p class="sub">Week ${weekNo(w)} · ${ST.kitchenAfter?"after this week's shop":"Monday morning, before you shop"}</p></div>
+   <div class="chips" role="group" aria-label="When"><button class="chip" data-kafter="0" aria-pressed="${!ST.kitchenAfter}">Before you shop</button><button class="chip" data-kafter="1" aria-pressed="${ST.kitchenAfter}">After you shop</button>
+     <span style="flex:1"></span><button class="chip" data-wk="-1" ${w<=TRAIN_END?"disabled":""}>‹ Week</button><button class="chip" data-wk="1" ${w>=NW-1?"disabled":""}>Week ›</button></div>
+   ${G.map(([k,label,c])=>{const g=items.filter(x=>x[2].k===k);if(!g.length)return "";g.sort((a,b)=>(a[2].d??99)-(b[2].d??99));
+     return `<section class="group"><h4><i class="dotc" style="background:${c}"></i>${label} <span class="n">${g.length}</span></h4><div class="kgrid">${g.map(([p,i])=>tile(p,i,st)).join("")}</div></section>`}).join("")}
+  </div>`;
+};
+
+views.cook=()=>{
+  const hh=HH(),w=curWeek(),S=pantryAt(hh,w),ideas=mealIdeas(hh,S.after),py=DATA.meals?.[hh.id];
+  const card=(m,top)=>`<article class="meal ${top?"top":""}"><span class="eyebrow">${esc(m.r.meal_type)} · ${m.r.prep_time_min} min · serves ${m.r.servings}</span>
+     <h4>${esc(m.r.name)}</h4><p class="reason">${esc(m.reason)}</p>
+     <div class="macro"><span><b>${Math.round(m.kcal)}</b> kcal</span><span><b>${Math.round(m.protein)} g</b> protein</span><span><b>${money(m.cost)}</b> a serving</span></div>
+     <div class="ings">${m.ing.map(x=>{const u=m.urgent.includes(x);return `<span class="ing ${u?(x.d<=1?"x":"w"):""}">${esc(x.p.name)} · ${friendly(x.q,x.p)}</span>`}).join("")}</div></article>`;
+  return `<div class="stack">
+   <div><h2 style="font-size:30px">Cook these first</h2><p class="sub">Meals you can make right now from what's at home, starting with food that's about to go off. Week ${weekNo(w)}.</p></div>
+   ${py&&py.length?`<div class="mgrid">${py.map(m=>`<article class="meal top"><span class="eyebrow">Suggested by the meal planner</span><h4>${esc(m.name)}</h4><p class="reason">${esc(m.reason||"")}</p><div class="macro"><span><b>${Math.round(m.kcal_per_serving)}</b> kcal</span><span><b>${Math.round(m.protein_g_per_serving)} g</b> protein</span><span><b>${money(+m.cost_per_serving)}</b> a serving</span></div></article>`).join("")}</div>`:""}
+   ${ideas.length?`<div class="mgrid">${ideas.slice(0,6).map((m,i)=>card(m,i===0&&m.urgent.length)).join("")}</div>`:`<div class="empty">Nothing can be made fully from this week's kitchen. Try another week.</div>`}
+   <footer class="note">Calories, protein and cost are worked out from products.csv, never by the AI.</footer>
+  </div>`;
+};
+
+views.scan=()=>{
+  const hh=HH(),L=ST.lookup;
+  const val=P.filter(p=>p.protein>0&&hh.ok.has(p.id)).map(p=>({p,v:p.protein/p.price})).sort((a,b)=>b.v-a.v),vmax=val[0]?.v||1;
+  let res="";
+  if(L?.busy)res=`<div class="card"><p class="muted" style="margin:0">Looking up ${esc(L.code)}…</p></div>`;
+  else if(L?.err)res=`<div class="card"><p style="margin:0;color:var(--bad)">${esc(L.err)}</p></div>`;
+  else if(L){const f=fitScore(L.n,hh,L.allergens);
+    if(L.pid&&!hh.ok.has(L.pid)&&!L.allergens.some(a=>hh.exclusions.includes(a))){f.s=Math.min(f.s,20);f.cls="c-bad";f.label="Not for you";f.ins.unshift(["b",`Not part of your ${hh.diet} diet.`])}
+    const rp=L.pid&&DATA.real_prices?.[L.pid],pp=L.pid&&P[PIX[L.pid]];
+    res=`<div class="card"><div class="scanres"><div class="stack" style="gap:14px">
+      <div><span class="eyebrow">${L.pid?"Your catalogue":"Open Food Facts · "+esc(L.code)}</span><h3 style="font-size:24px;margin-top:4px">${esc(L.name)}</h3><div class="small muted">${esc([L.pid?"":L.brand,L.qty].filter(Boolean).join(" · "))}</div></div>
+      <div class="verdict"><span class="ring ${f.cls}">${f.s}</span><div><b style="font-family:var(--f-display);font-size:20px">${f.label}</b><div class="small muted">for ${esc(hh.persona.toLowerCase())}</div></div></div>
+      <ul class="ins">${f.ins.map(([k,t])=>`<li class="${k}">${esc(t)}</li>`).join("")||"<li>No concerns found.</li>"}</ul>
+      ${rp?`<div class="rp"><span class="eyebrow">What it costs in real stores</span><span><b class="mono" style="font-size:20px">${money(rp.median)}</b> <span class="small muted">typical, per ${esc(L.qty)}</span></span><span class="small">From ${money(rp.low)} to ${money(rp.high)} across ${rp.stores} US stores (${rp.n} prices, Open Prices)</span></div>`:""}
+      ${pp&&pp.protein>0.5?`<p class="small muted" style="margin:0">${money(pp.price/pp.protein*10)} per 10 g of protein at the reference price.</p>`:""}
+      ${L.ingr?`<p class="small muted" style="margin:0"><b>Ingredients:</b> ${esc(L.ingr.slice(0,400))}</p>`:""}
+     </div>${nfLabel(L.n,hh,L.basis)}</div></div>`}
+  return `<div class="stack">
+   <div><h2 style="font-size:30px">Is it worth buying?</h2><p class="sub">Scan a barcode or pick something from the catalogue to see if it fits your diet, allergies and protein goal.</p></div>
+   <div class="card"><form id="bcForm" class="search"><input id="bc" type="text" inputmode="numeric" autocomplete="off" placeholder="Type a barcode, e.g. 737628064502" aria-label="Barcode" value="${esc(L&&!L.pid?L.code:"")}"><button class="btn primary" type="submit">Check</button></form>
+    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="small muted" for="stsel">or pick from the catalogue</label>
+     <select id="stsel" class="hhsel" style="max-width:100%"><option value="">Choose a product…</option>${[...new Set(P.map(p=>p.category))].map(c=>`<optgroup label="${esc(c.replace(/_/g," & "))}">${P.filter(p=>p.category===c).map(p=>`<option value="${p.id}" ${L?.pid===p.id?"selected":""}>${esc(p.name)}${hh.ok.has(p.id)?"":" (not for you)"}</option>`).join("")}</optgroup>`).join("")}</select></div></div>
+   ${res}
+   <section class="card"><h3>Most protein for your money</h3><p class="sub">From the foods that fit your diet.</p>
+    <ol class="vlist" style="margin-top:12px">${val.slice(0,6).map(x=>`<li>${ico(x.p)}<div style="min-width:0"><b>${esc(x.p.name)}</b> <span class="small muted">${money(x.p.price)} / ${esc(x.p.unit)}</span><div class="vtrk"><i style="width:${x.v/vmax*100}%"></i></div></div><span class="mono small">${Math.round(x.v)} g per $</span></li>`).join("")}</ol></section>
+  </div>`;
+};
+
+views.impact=()=>{
+  const hh=HH(),pols=polsFor(hh),live=isLive(hh),N=NAME(hh),c=pols.coach,a=pols.average_rule,wm=_wasteMoney;
+  const wkey=wm?"waste_cost":"waste_units";
+  const wasteCut=a[wkey]?1-c[wkey]/a[wkey]:0,save52=(a.weekly_cost-c.weekly_cost)*52;
+  const coachW=c.weekly||[],thr=wm?0.5:0.2,wf=coachW.filter(r=>(r.waste_cost??r.waste_units)<thr).length;
+  const MET=[{k:"waste",label:"Food wasted",f:r=>r.waste_cost??r.waste_units,ax:v=>wm?"$"+fx(v,v<10?1:0):fx(v,1)},{k:"cost",label:"Spend",f:r=>r.spend,ax:v=>"$"+Math.round(v)},{k:"so",label:"Empty-shelf days",f:r=>r.stockout_days,ax:v=>fx(v,0)}];
+  const M=MET.find(m=>m.k===ST.metric)||MET[0];
+  const series=[{name:"Your usual shop",color:"var(--s-avg)",values:roll((a.weekly||[]).map(M.f).map(v=>+v||0))},{name:N.coach,color:"var(--accent)",focus:true,values:roll(coachW.map(M.f).map(v=>+v||0))}];
+  const METRICS2=[{k:"cost",label:"Spend / wk",get:p=>p.weekly_cost,fmt:v=>money(v),lower:true},{k:"waste",label:"Wasted / wk",get:p=>p[wkey],fmt:v=>wm?money(v):fx(v,2),lower:true},{k:"so",label:"Empty-shelf days",get:p=>p.stockout_days,fmt:v=>fx(v,1),lower:true},{k:"pr",label:"Protein met",get:p=>p.protein_target_met,fmt:v=>pct(v),lower:false}];
+  const best=METRICS2.map(m=>{const v=ORDER.map(k=>+m.get(pols[k]));return m.lower?Math.min(...v):Math.max(...v)});
+  return `<div class="stack">
+   <div class="stack" style="gap:10px"><span class="badge ${live?"live":"demo"}" style="justify-self:start"><span class="dot"></span>${live?"Results from the trained agent":"Demo simulation"}</span>
+    <p class="big">Over a simulated year, the coach would waste <em>${Math.max(0,Math.round(wasteCut*100))}% less food</em>${save52>0?` and save <em>${money(save52,0)}</em>`:""} for this household.</p>
+    ${facts(hh)}</div>
+   <div class="trio">
+    <div><span class="eyebrow">Money saved</span><b>${money(Math.max(0,save52),0)}</b><span class="small muted">a year vs your usual shop</span></div>
+    <div><span class="eyebrow">Food not thrown out</span><b>${wm&&!live?fx(Math.max(0,(a.waste_kg-c.waste_kg)*52),0)+" kg":fx(Math.max(0,(a.waste_units-c.waste_units)*52),0)+" units"}</b><span class="small muted">a year</span></div>
+    <div><span class="eyebrow">Protein goal met</span><b>${pct(c.protein_target_met)}</b><span class="small muted">on average each week</span></div>
+   </div>
+   <section class="card"><div class="sechead"><h3>Week by week</h3><div class="chips">${MET.map(m=>`<button class="chip" data-metric="${m.k}" aria-pressed="${m.k===M.k}">${m.label}</button>`).join("")}</div></div>
+    ${lineChart(series,{yfmt:M.ax,label:M.label+" per week"})}
+    <div class="legend">${series.map(s=>`<span><i class="sw" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}<span class="muted">4-week average</span></div></section>
+   <section class="card"><h3>Waste-free weeks: ${wf} of ${coachW.length}</h3><p class="sub">Each square is a week. Green means almost nothing was thrown away.</p>
+    <div class="weeks">${coachW.map(r=>{const v=r.waste_cost??r.waste_units;return `<i class="${v<thr?"ok":v<thr*4?"mid":"hi"}" title="${wm?money(v):fx(v,2)} wasted"></i>`}).join("")}</div></section>
+   <details class="judges"><summary>Compare all four buying strategies</summary>
+    <p class="small muted" style="margin:8px 0 0">Fixed list buys the same every week. Average rule buys what was used recently. Forecast rule buys the forecast minus what's at home. ${live?"The RL agent is the trained policy.":"Coach (preview) is a stand-in tuned on the first half of the data; the RL agent replaces it when results/results.json exists."}</p>
+    <div class="pscroll"><div class="pgrid"><div class="h">Strategy</div>${METRICS2.map(m=>`<div class="h">${m.label}</div>`).join("")}
+     ${ORDER.map(k=>`<div class="${k==="coach"?"me":""}"><b>${esc(N[k])}</b></div>${METRICS2.map((m,j)=>{const v=+m.get(pols[k]);return `<div class="v ${k==="coach"?"me":""} ${Math.abs(v-best[j])<1e-9?"best":""}">${m.fmt(v)}</div>`}).join("")}`).join("")}
+    </div></div></details>
+   <footer class="note">All figures are simulated on the team's demand model. They are not real savings.</footer>
+  </div>`;
+};
+
+/* ===================== Shell ===================== */
+function render(){
+  const v=views[ST.view]?ST.view:"week";
+  document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.go===v?"page":"false"));
+  renderHH();
+  try{app.innerHTML=views[v]()}catch(e){console.error(e);app.innerHTML=`<div class="empty">Something went wrong: ${esc(e.message)}</div>`}
+}
+function go(v){ST.view=v;render();window.scrollTo({top:0})}
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button");if(!t||t.disabled)return;const d=t.dataset;
+  if(d.go)go(d.go);
+  else if(d.wk){ST.scrub=Math.max(TRAIN_END,Math.min(NW-1,curWeek()+ +d.wk));render()}
+  else if(d.kafter){ST.kitchenAfter=d.kafter==="1";render()}
+  else if(d.metric){ST.metric=d.metric;save();render()}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="hhsel"){ST.hh=e.target.value;ST.lookup=ST.lookup?.pid?ST.lookup:null;save();render();return}
+  if(e.target.id==="stsel"&&e.target.value)staple(e.target.value);
+});
+document.addEventListener("submit",e=>{if(e.target.id==="bcForm"){e.preventDefault();lookup(document.getElementById("bc").value)}});
+if(!["waste","cost","so"].includes(ST.metric))ST.metric="waste";
+render();
+</script>
