@@ -9,3 +9,17 @@ egg_fried_rice,Egg fried rice,dinner,2,20,eggs:0.25;rice:0.15;spinach:0.25,veget
 lentil_tomato_soup,Lentil tomato soup,dinner,3,35,lentils:0.4;tomatoes:0.8;spinach:0.5,vegetarian;budget;high_protein
 chicken_lentil_stew,Chicken lentil stew,dinner,3,40,chicken_breast:0.5;lentils:0.3;tomatoes:0.6,high_protein
 chicken_spinach_sandwich,Chicken spinach sandwich,lunch,2,15,bread:0.3;chicken_breast:0.2;tomatoes:0.3;spinach:0.25,high_protein;quick
+peanut_butter_toast_banana,Peanut butter banana toast,breakfast,1,5,bread:0.08;peanut_butter:0.06;bananas:0.12,vegan;quick;budget
+cheese_veggie_omelette,Cheese and veggie omelette,breakfast,1,10,eggs:0.17;cheddar_cheese:0.15;spinach:0.2;bell_peppers:0.1;butter:0.01,vegetarian;high_protein;quick
+overnight_oats_yogurt,Overnight oats with yogurt and apple,breakfast,1,5,oats:0.1;yogurt:0.3;apples:0.1;peanut_butter:0.02,vegetarian;quick;budget
+avocado_egg_toast,Avocado egg toast,breakfast,1,10,bread:0.06;avocados:0.125;eggs:0.17,vegetarian;quick
+soy_banana_smoothie,Soy banana oat smoothie,breakfast,1,5,plant_milk:0.3;bananas:0.15;oats:0.04;peanut_butter:0.03,vegan;quick
+tofu_spinach_scramble,Tofu scramble with potatoes and spinach,breakfast,2,20,tofu:0.5;spinach:0.5;tomatoes:0.4;potatoes:0.2;onions:0.05;olive_oil:0.01,vegan;high_protein
+black_bean_burrito_bowl,Black bean burrito bowl,lunch,2,20,black_beans_canned:1;rice:0.15;avocados:0.125;tomatoes:0.5;onions:0.1;cheddar_cheese:0.2,vegetarian;budget
+tuna_pasta_salad,Tuna pasta salad,lunch,2,15,pasta:0.3;canned_tuna:2;tomatoes:0.6;onions:0.05;olive_oil:0.02,pescatarian;high_protein;quick
+chicken_veggie_wrap,Chicken and veggie wrap,lunch,2,15,tortillas:0.3;chicken_breast:0.4;bell_peppers:0.33;spinach:0.5;yogurt:0.2,high_protein;quick
+lentil_carrot_soup,Lentil carrot soup,lunch,3,35,lentils:0.3;carrots:0.3;onions:0.15;potatoes:0.2;olive_oil:0.02,vegan;budget;use_it_first
+tofu_veggie_stir_fry,Tofu veggie stir fry,dinner,3,20,tofu:1;rice:0.15;broccoli:0.5;carrots:0.2;bell_peppers:0.67;onions:0.1;olive_oil:0.02,vegan;high_protein
+chickpea_spinach_curry,Chickpea spinach curry,dinner,3,30,chickpeas_canned:2;spinach:1;tomatoes:1;onions:0.2;rice:0.18;olive_oil:0.02,vegan;budget
+salmon_potato_broccoli,Baked salmon with potatoes and broccoli,dinner,3,30,salmon_fillet:0.75;potatoes:0.4;broccoli:0.6;olive_oil:0.03,pescatarian;high_protein
+beef_veggie_pasta,Beef and veggie pasta,dinner,4,30,ground_beef:0.6;pasta:0.4;tomatoes:1.5;onions:0.2;carrots:0.2;olive_oil:0.02,family;budget
