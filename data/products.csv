@@ -1,0 +1,13 @@
+product_id,name,category,unit,price_usd,shelf_life_days,kcal_per_unit,protein_g_per_unit,allergens
+milk,Milk,dairy,1 L,1.40,7,640,32,milk
+eggs,Eggs,protein,12 count,3.50,21,840,72,egg
+chicken_breast,Chicken breast,protein,500 g,4.50,3,600,115,
+rice,Rice,grains,1 kg,2.50,365,3600,70,
+bread,Bread,grains,1 loaf,3.00,5,1300,45,gluten
+bananas,Bananas,fruit,1 kg,1.50,5,890,11,
+apples,Apples,fruit,1 kg,3.00,21,520,3,
+tomatoes,Tomatoes,vegetables,500 g,2.50,6,90,4,
+spinach,Spinach,vegetables,200 g,2.50,5,46,6,
+lentils,Lentils,legumes,500 g,2.00,365,1700,125,
+yogurt,Yogurt,dairy,500 g,3.00,14,300,20,milk
+oats,Oats,grains,500 g,2.50,365,1900,65,gluten
