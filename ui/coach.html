@@ -3,237 +3,277 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: a single-column consumer app. Coach hero up top, then the receipt; kitchen as item tiles;
-   the policy comparison lives in a short "Impact" story, with the full table folded away. */
+/* Layout: 12-column grid, 8px spacing scale. Plan = summary → pipeline → list (7 cols) + meals & use-first (5 cols).
+   Gamification lives in a points pill and a Rewards panel; floating +10 bubbles sit on food that's about to expire. */
 :root{
-  --bg:#F1F4F2; --surface:#FFFFFF; --sunk:#E7ECE9; --ink:#14221C; --muted:#5B6A63; --line:#D6DED9;
-  --accent:#0E7C86; --accent-ink:#FFFFFF; --accent-soft:#D9EFEF;
-  --hero:#0F3B3F; --hero-ink:#F2F7F5; --hero-muted:#A9C6C4;
-  --fresh:#2E8B57; --fresh-soft:#DDF0E4; --warn:#B9770E; --warn-soft:#F9EBD2; --bad:#C8402F; --bad-soft:#F8DFDB;
-  --s-avg:#8A979F; --s-fc:#3E5466; --s-fixed:#B3BDC4;
-  --paper:#FFFFFF; --paper-ink:#1C2630;
-  --c-produce:#3E9B5A; --c-dairy:#3F86D0; --c-protein:#D0574F; --c-grains:#C08A22; --c-legumes:#8E6A47; --c-bev:#8467CC; --c-fat:#A99525; --c-proc:#7D8D99;
+  --bg:#F5F7F6; --surface:#FFFFFF; --sunk:#EEF2F0; --ink:#13201B; --ink-2:#33423C; --muted:#56655F; --line:#DCE3DF;
+  --accent:#0B7480; --accent-ink:#FFFFFF; --accent-soft:#E0F1F2;
+  --good:#1F7A4A; --good-soft:#E1F2E8; --warn:#9A5B00; --warn-soft:#FBEBD0; --bad:#B4382A; --bad-soft:#FBE3DF;
+  --gold:#B7791F; --gold-soft:#FBF0DC;
+  --l-fixed:#A3AEB5; --l-fc:#4F6575;
+  --shadow:0 1px 1px rgba(16,32,26,.04),0 2px 6px -2px rgba(16,32,26,.08);
+  --shadow-up:0 1px 2px rgba(16,32,26,.06),0 12px 28px -12px rgba(16,32,26,.22);
+  --c-produce:#2F8A4E; --c-dairy:#2F74BC; --c-protein:#BC4A42; --c-grains:#A2711A; --c-legumes:#7E5C3D; --c-bev:#7356B8; --c-fat:#8C7C1A; --c-proc:#66757E;
   --f-display:"Familjen Grotesk","Avenir Next","Segoe UI",system-ui,sans-serif;
   --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-  --r:18px;
+  --r:14px; --s1:8px; --s2:16px; --s3:24px; --s4:32px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0D1512; --surface:#16211D; --sunk:#111A17; --ink:#E5EDE9; --muted:#97A8A0; --line:#26332E;
-  --accent:#3CC3CC; --accent-ink:#06282B; --accent-soft:#143A3C;
-  --hero:#123E42; --hero-ink:#EAF4F1; --hero-muted:#9FC1BF;
-  --fresh:#4CC38A; --fresh-soft:#163528; --warn:#F0B44C; --warn-soft:#3A2D14; --bad:#F07468; --bad-soft:#3D1D19;
-  --s-avg:#7E909D; --s-fc:#B4C3CE; --s-fixed:#566874;
-  --paper:#F3F1EA; --paper-ink:#1C2630; color-scheme:dark}}
+  --bg:#0E1513; --surface:#161F1C; --sunk:#111917; --ink:#E7EEEA; --ink-2:#C9D4CF; --muted:#9DAEA7; --line:#27332F;
+  --accent:#43C4CC; --accent-ink:#062629; --accent-soft:#133537;
+  --good:#5BC98F; --good-soft:#15342A; --warn:#F2B957; --warn-soft:#38291182; --bad:#F2806F; --bad-soft:#3D1E1A;
+  --gold:#F2B957; --gold-soft:#33280F;
+  --l-fixed:#5E6E77; --l-fc:#AFC0CB;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 2px 8px -2px rgba(0,0,0,.4); --shadow-up:0 12px 32px -10px rgba(0,0,0,.6);
+  --c-produce:#5BC27C; --c-dairy:#6AA8E8; --c-protein:#EE837A; --c-grains:#E0AE4F; --c-legumes:#C49A72; --c-bev:#A88EEB; --c-fat:#CDBB52; --c-proc:#97A6AE;
+  color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0D1512; --surface:#16211D; --sunk:#111A17; --ink:#E5EDE9; --muted:#97A8A0; --line:#26332E;
-  --accent:#3CC3CC; --accent-ink:#06282B; --accent-soft:#143A3C;
-  --hero:#123E42; --hero-ink:#EAF4F1; --hero-muted:#9FC1BF;
-  --fresh:#4CC38A; --fresh-soft:#163528; --warn:#F0B44C; --warn-soft:#3A2D14; --bad:#F07468; --bad-soft:#3D1D19;
-  --s-avg:#7E909D; --s-fc:#B4C3CE; --s-fixed:#566874;
-  --paper:#F3F1EA; --paper-ink:#1C2630; color-scheme:dark}
+  --bg:#0E1513; --surface:#161F1C; --sunk:#111917; --ink:#E7EEEA; --ink-2:#C9D4CF; --muted:#9DAEA7; --line:#27332F;
+  --accent:#43C4CC; --accent-ink:#062629; --accent-soft:#133537;
+  --good:#5BC98F; --good-soft:#15342A; --warn:#F2B957; --warn-soft:#382911; --bad:#F2806F; --bad-soft:#3D1E1A;
+  --gold:#F2B957; --gold-soft:#33280F;
+  --l-fixed:#5E6E77; --l-fc:#AFC0CB;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 2px 8px -2px rgba(0,0,0,.4); --shadow-up:0 12px 32px -10px rgba(0,0,0,.6);
+  --c-produce:#5BC27C; --c-dairy:#6AA8E8; --c-protein:#EE837A; --c-grains:#E0AE4F; --c-legumes:#C49A72; --c-bev:#A88EEB; --c-fat:#CDBB52; --c-proc:#97A6AE;
+  color-scheme:dark}
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
 body{color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;margin:0}
-h1,h2,h3,h4{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.wrap{max-width:780px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+@media (max-width:560px){.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
-.muted{color:var(--muted)} .small{font-size:14px}
-.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:14px} .xs{font-size:13px}
+.label{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.01em}
 
-/* header + nav */
-header.top{background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);position:sticky;top:env(safe-area-inset-top,0px);z-index:5;border-bottom:1px solid var(--line)}
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.bar{display:flex;align-items:center;gap:12px;padding-block:12px 10px;flex-wrap:wrap}
-.mark{width:34px;height:34px;border-radius:11px;background:var(--accent);display:grid;place-items:center;flex:none}
-.mark svg{width:20px;height:20px}
-.brand{font-family:var(--f-display);font-weight:700;font-size:18px}
-.who{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0;font-size:14px;color:var(--muted)}
-.hhsel{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23788' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center;border-radius:999px;padding:7px 34px 7px 14px;font-weight:700;font-size:14px;max-width:min(340px,70vw);color:var(--ink)}
-nav.seg{display:flex;gap:4px;background:var(--sunk);border-radius:999px;padding:4px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none}
-nav.seg button{flex:1 0 auto;border:0;background:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
-nav.seg button[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-main{padding-block:20px 64px}
-@media (max-width:560px){.wl{display:none}.who{margin-left:0;width:100%}.hhsel{max-width:100%;width:100%}nav.seg button{padding:8px 10px;font-size:13px}}
-.stack{display:grid;gap:18px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
-.card h3{font-size:19px;font-weight:700}
-.sub{margin:4px 0 0;color:var(--muted);font-size:15px}
-.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
-.btn{border:1px solid var(--line);background:var(--surface);padding:9px 16px;border-radius:999px;font-weight:700;font-size:14px}
+.bar{display:flex;align-items:center;gap:var(--s2);height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:17px;white-space:nowrap}
+.mark{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center}
+nav.tabs{display:flex;gap:2px;margin-left:var(--s3)}
+nav.tabs button{border:0;background:none;padding:8px 12px;border-radius:9px;font-weight:700;font-size:15px;color:var(--muted)}
+nav.tabs button:hover{color:var(--ink);background:var(--sunk)}
+nav.tabs button[aria-current="page"]{color:var(--ink);background:var(--surface);box-shadow:var(--shadow)}
+.right{margin-left:auto;display:flex;align-items:center;gap:var(--s1)}
+.hhsel{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23788' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 10px center;border-radius:9px;padding:7px 30px 7px 12px;font-weight:700;font-size:14px;max-width:270px;box-shadow:var(--shadow)}
+.pts{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));background:var(--gold-soft);color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px;box-shadow:var(--shadow)}
+.pts svg{color:var(--gold)}
+.pts.pulse{animation:pulse .5s ease}
+@keyframes pulse{40%{transform:scale(1.12)}}
+@media (max-width:860px){.bar{height:auto;flex-wrap:wrap;padding-block:10px;row-gap:10px}nav.tabs{order:3;margin-left:0;width:100%;overflow-x:auto}.right{margin-left:auto}.hhsel{max-width:46vw}}
+
+main{padding-block:var(--s3) 72px}
+.page{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--s3)}
+.c12{grid-column:span 12}.c7{grid-column:span 7}.c5{grid-column:span 5}.c4{grid-column:span 4}.c8{grid-column:span 8}.c6{grid-column:span 6}.c3{grid-column:span 3}
+@media (max-width:900px){.c7,.c5,.c4,.c8,.c6{grid-column:span 12}.c3{grid-column:span 6}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s3);min-width:0}
+.card.tight{padding:var(--s2) var(--s3)}
+.ch{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2);flex-wrap:wrap}
+.ch h2{font-size:18px;font-weight:700}
+.ch p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:9px;font-weight:700;font-size:14px;box-shadow:var(--shadow)}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.link{border:0;background:none;color:var(--accent);font-weight:700;padding:0;font-size:15px}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;background:var(--surface);font-weight:700}
-.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
-.badge.demo{background:var(--warn-soft);color:var(--warn)} .badge.live{background:var(--fresh-soft);color:var(--fresh)}
-.badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.icon-btn{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);border-radius:9px;box-shadow:var(--shadow)}
+.icon-btn:disabled{opacity:.4;cursor:default}
+.link{border:0;background:none;padding:0;color:var(--accent);font-weight:700}
+.seg{display:inline-flex;background:var(--sunk);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.t-sale{background:var(--warn-soft);color:var(--warn)} .t-meal{background:var(--accent-soft);color:var(--accent)} .t-rule{background:var(--sunk);color:var(--ink-2)}
+.t-demo{background:var(--warn-soft);color:var(--warn)} .t-live{background:var(--good-soft);color:var(--good)}
 
-/* hero */
-.hero{background:var(--hero);color:var(--hero-ink);border-radius:24px;padding:22px 22px 20px;display:grid;gap:14px;position:relative;overflow:hidden}
-.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 45%,transparent),transparent 70%);pointer-events:none}
-.hero .eyebrow{color:var(--hero-muted)}
-.hero h1{font-size:clamp(26px,5.4vw,38px);font-weight:700;line-height:1.08;position:relative;z-index:1}
-.hero h1 em{font-style:normal;color:color-mix(in srgb,var(--accent) 70%,#fff)}
-.hstats{display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
-.hstat{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;display:grid;line-height:1.25}
-.hstat b{font-family:var(--f-display);font-size:19px}
-.hstat span{font-size:12px;color:var(--hero-muted)}
-.wk{display:flex;align-items:center;gap:8px;position:relative;z-index:1}
-.wk button{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:var(--hero-ink);font-size:16px;line-height:1}
-.wk button:disabled{opacity:.35;cursor:default}
-.wk span{font-family:var(--f-mono);font-size:13px;color:var(--hero-muted)}
-.flag{position:relative;z-index:1;background:rgba(240,180,76,.16);border:1px solid rgba(240,180,76,.35);color:#F7D9A2;border-radius:12px;padding:8px 12px;font-size:14px}
+/* summary */
+.summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s3);align-items:end}
+.wkctl{display:flex;align-items:center;gap:var(--s1);margin-bottom:var(--s1)}
+.wkctl .label{min-width:9.5em;text-align:center}
+.total{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,6vw,56px);line-height:1;letter-spacing:-.02em}
+.total small{font-size:.38em;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:10px}
+.kpis{display:flex;gap:var(--s3);flex-wrap:wrap}
+.kpi{display:grid;gap:2px;min-width:7.5em}
+.kpi b{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.1}
+.kpi .good{color:var(--good)} .kpi .bad{color:var(--bad)}
+@media (max-width:760px){.summary{grid-template-columns:minmax(0,1fr)}}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:14px;margin-top:var(--s2)}
 
-/* use-first strip */
-.strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
-.tile{border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:8px;background:var(--surface);min-width:0}
-.tile .top{display:flex;align-items:center;gap:10px;min-width:0}
-.ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:14px;flex:none;background:color-mix(in srgb,var(--c) 18%,var(--surface));color:var(--c)}
-.tile .nm{font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tile .amt{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
-.left{font-size:13px;font-weight:700}
-.left.x{color:var(--bad)} .left.w{color:var(--warn)} .left.f{color:var(--fresh)} .left.n{color:var(--muted)}
-.meter{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
-.meter i{display:block;height:100%;border-radius:3px}
-.meter i.x{background:var(--bad)} .meter i.w{background:var(--warn)} .meter i.f{background:var(--fresh)} .meter i.n{background:var(--s-avg)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.step{padding:14px 16px;display:grid;gap:2px;position:relative;min-width:0}
+.step+.step{border-left:1px solid var(--line)}
+.step+.step::before{content:"";position:absolute;left:-7px;top:50%;width:12px;height:12px;background:var(--surface);border-top:1px solid var(--line);border-right:1px solid var(--line);transform:translateY(-50%) rotate(45deg)}
+.step .k{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.step b{font-family:var(--f-display);font-size:18px;line-height:1.2}
+.step span:last-child{font-size:13px;color:var(--muted)}
+.step.final{background:var(--accent-soft)}
+@media (max-width:900px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}.step+.step{border-left:0}.step{border-top:1px solid var(--line)}.step:nth-child(-n+2){border-top:0}.step:nth-child(even){border-left:1px solid var(--line)}.step::before{display:none}.step.final{grid-column:span 2}}
 
-/* receipt */
-.receipt{background:var(--paper);color:var(--paper-ink);font-family:var(--f-mono);font-size:14px;padding:24px 22px 30px;border-radius:6px;box-shadow:0 1px 0 var(--line),0 14px 34px -22px rgba(10,30,40,.5);
-  -webkit-mask:radial-gradient(circle 7px at 50% 100%,transparent 98%,#000) bottom/18px 100% repeat-x;mask:radial-gradient(circle 7px at 50% 100%,transparent 98%,#000) bottom/18px 100% repeat-x}
-.receipt h4{font-family:var(--f-mono);font-size:15px;text-align:center;letter-spacing:.16em;text-transform:uppercase}
-.receipt .c{text-align:center;color:#5F6B75;font-size:12px}
-.receipt hr{border:0;border-top:1px dashed #9AA6AF;margin:12px 0}
-.receipt details{border-bottom:1px dotted #D3D9DD}
-.receipt details:last-of-type{border-bottom:0}
-.receipt summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:7px 0;cursor:pointer}
-.receipt summary::-webkit-details-marker{display:none}
-.receipt summary .q{grid-column:1;color:#5F6B75;font-size:12px}
-.receipt summary .p{grid-column:2;grid-row:1;text-align:right}
-.receipt summary .nm::after{content:" +";color:#9AA6AF}
-.receipt details[open] summary .nm::after{content:" −"}
-.receipt .why{font-family:var(--f-body);font-size:13px;color:#4A5660;padding:0 0 10px;line-height:1.45}
-.rl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:3px 0}
-.rl.tot{font-weight:600;font-size:16px}
-.rnote{font-size:12px;color:#5F6B75;margin:4px 0}
-.budgetline{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;justify-content:center;font-size:13px}
-.budgetline b{font-size:16px}
-.bl{color:#1E7A48;font-weight:600} .bl.over{color:#B23A2B}
-.ptrk{height:8px;background:#DDE3E7;border-radius:4px;overflow:hidden;margin-top:4px}
-.ptrk i{display:block;height:100%;background:#1E7A48}
-.sale{font-size:10px;font-weight:600;color:#9A5B00;background:#FBE9C7;border-radius:3px;padding:1px 5px;margin-left:6px;white-space:nowrap;vertical-align:1px}
-.vs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.vs>div{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:2px}
-.vs>div.me{border-color:var(--accent);background:var(--accent-soft)}
-.vs b{font-family:var(--f-display);font-size:20px}
-
-/* kitchen grid */
-.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px}
-.group{display:grid;gap:10px}
-.group h4{font-size:16px;display:flex;align-items:center;gap:8px}
-.group h4 .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:500}
-.dotc{width:10px;height:10px;border-radius:50%}
-.tile.out{opacity:.62;border-style:dashed}
+/* list */
+.list{display:grid}
+.cat{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:14px 0 6px;border-bottom:1px solid var(--line)}
+.cat:first-child{padding-top:0}
+details.li{border-bottom:1px solid var(--line)}
+details.li summary{list-style:none;display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:9px 0;cursor:pointer}
+details.li summary::-webkit-details-marker{display:none}
+details.li summary:hover .nm{color:var(--accent)}
+.li .nm{font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
+.li .q{font-family:var(--f-mono);font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.li .p{font-family:var(--f-mono);font-size:14px;text-align:right;min-width:4.5em}
+.chev{transition:transform .15s;color:var(--muted)}
+details.li[open] .chev{transform:rotate(90deg)}
+.trace{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center;padding:2px 0 12px 40px;font-size:13px;color:var(--ink-2)}
+.trace .s{background:var(--sunk);border-radius:6px;padding:2px 8px}
+.trace .s b{font-family:var(--f-mono);font-weight:600}
+.trace .arr{color:var(--muted)}
+.trace .why{flex-basis:100%;color:var(--muted);margin-top:2px}
+.ico{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:13px;background:color-mix(in srgb,var(--c) 15%,var(--surface));color:var(--c);flex:none}
+.foot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;padding-top:var(--s2);font-size:14px}
+.foot b{font-family:var(--f-mono)}
+.foot .tot{font-family:var(--f-display);font-size:20px;font-weight:700}
+.more{margin-top:var(--s1);width:100%;border:1px dashed var(--line);background:none;border-radius:9px;padding:8px;font-weight:700;font-size:14px;color:var(--ink-2)}
+.bar2{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.bar2 i{display:block;height:100%;border-radius:3px;background:var(--good)}
 
 /* meals */
-.meal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:10px}
-.meal.top{border:2px solid var(--accent)}
-.meal h4{font-size:20px;font-weight:700}
-.meal .reason{margin:0;font-size:15px}
-.macro{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
-.macro b{font-family:var(--f-display);font-size:18px;color:var(--ink)}
-.ings{display:flex;flex-wrap:wrap;gap:6px}
-.ing{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--muted)}
-.ing.w{background:var(--warn-soft);color:var(--warn);font-weight:700}
-.ing.x{background:var(--bad-soft);color:var(--bad);font-weight:700}
-.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.meals{display:grid;gap:10px}
+.meal{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:12px;position:relative;background:var(--surface)}
+.meal.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent-soft) 55%,var(--surface))}
+.check{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;margin-top:2px;background:var(--surface)}
+.meal.on .check{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.meal h3{font-size:16px;font-weight:700;line-height:1.3}
+.meal .m{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:2px}
+.meal .m b{color:var(--ink);font-weight:700}
+.meal .r{font-size:13px;color:var(--good);font-weight:700;margin-top:4px}
+.mealbtn{all:unset;display:contents;cursor:pointer}
 
-/* impact */
-.big{font-family:var(--f-display);font-size:clamp(24px,4.6vw,32px);font-weight:700;line-height:1.15;margin:0}
-.big em{font-style:normal;color:var(--fresh)}
-.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.trio>div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:2px}
-.trio b{font-family:var(--f-display);font-size:26px;color:var(--fresh)}
-@media (max-width:620px){.trio{grid-template-columns:minmax(0,1fr)}}
-.weeks{display:grid;grid-template-columns:repeat(26,minmax(0,1fr));gap:3px;margin-top:10px}
-.weeks i{display:block;aspect-ratio:1;max-width:100%;border-radius:3px;background:var(--sunk)}
-.weeks i.ok{background:var(--fresh)} .weeks i.mid{background:var(--warn)} .weeks i.hi{background:var(--bad)}
+/* use first + inventory tiles */
+.uf{display:grid;gap:8px}
+.ufi{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);position:relative}
+.ufi:last-child{border-bottom:0}
+.dl{font-size:13px;font-weight:700;white-space:nowrap}
+.dl.x{color:var(--bad)} .dl.w{color:var(--warn)} .dl.f{color:var(--good)} .dl.n{color:var(--muted)}
+.grid-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:12px}
+.tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;box-shadow:var(--shadow)}
+.tile .hd{display:flex;gap:10px;align-items:center;min-width:0}
+.tile .nm{font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .amt{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.tile.out{box-shadow:none;background:transparent;border-style:dashed}
+.tile.out .nm,.tile.out .ico{opacity:.6}
+.meter{height:5px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:3px}
+.meter i.x{background:var(--bad)} .meter i.w{background:var(--warn)} .meter i.f{background:var(--good)} .meter i.n{background:var(--l-fixed)}
+.gh{display:flex;align-items:center;gap:8px;margin:var(--s3) 0 var(--s1);font-family:var(--f-display);font-weight:700;font-size:16px}
+.gh:first-child{margin-top:0}
+.gh .n{font-family:var(--f-mono);font-weight:500;font-size:13px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%}
+
+/* floating points bubble */
+.float{position:absolute;top:-10px;right:-8px;z-index:2;border:0;border-radius:999px;padding:4px 9px;font-weight:700;font-size:12px;color:#3A2600;background:linear-gradient(#FFD983,#F2B54A);box-shadow:0 1px 1px rgba(0,0,0,.1),0 6px 14px -6px rgba(183,121,31,.7);display:inline-flex;gap:4px;align-items:center}
+.ufi .float{position:static;margin-left:4px}
+.float:hover{filter:brightness(1.05)}
+@media (prefers-reduced-motion:no-preference){.float{animation:bob 2.4s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-3px)}}}
+.done-tag{display:inline-flex;gap:4px;align-items:center;color:var(--good);font-weight:700;font-size:13px}
+.flyer{position:fixed;z-index:50;pointer-events:none;font-weight:700;color:#3A2600;background:#FFD983;border-radius:999px;padding:3px 9px;font-size:12px;transition:transform .7s cubic-bezier(.3,.7,.3,1),opacity .7s}
+
+/* results */
+.kgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s2)}
+@media (max-width:760px){.kgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s2) 20px;display:grid;gap:4px}
+.stat b{font-family:var(--f-display);font-size:28px;font-weight:700;line-height:1.1}
+.delta{font-size:13px;font-weight:700}
+.delta.good{color:var(--good)} .delta.bad{color:var(--bad)} .delta.flat{color:var(--muted)}
 svg.chart text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:8px}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.sw{width:14px;height:4px;border-radius:2px;display:inline-block}
-details.judges{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px}
-details.judges summary{font-family:var(--f-display);font-weight:700;font-size:17px;cursor:pointer}
-.pscroll{overflow-x:auto;margin-top:12px}
-.pgrid{display:grid;grid-template-columns:minmax(130px,1.1fr) repeat(4,minmax(0,1fr));min-width:600px;font-size:14px}
-.pgrid>div{padding:9px 8px;border-bottom:1px solid var(--line)}
-.pgrid .h{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.pgrid .me{background:var(--accent-soft)}
-.pgrid .v{font-family:var(--f-mono)}
-.best{color:var(--fresh);font-weight:700}
-.facts{display:flex;flex-wrap:wrap;gap:6px}
-.fact{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
-.fact b{font-family:var(--f-mono);font-weight:600}
-.fact.diet{background:var(--fresh-soft);border-color:transparent;color:var(--fresh);font-weight:700}
-.fact.alg{background:var(--bad-soft);border-color:transparent;color:var(--bad);font-weight:700}
+.legend{display:flex;gap:var(--s2);flex-wrap:wrap;font-size:14px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:16px;height:3px;border-radius:2px;display:inline-block}
+.sw.dash{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)!important;height:2px}
+details.more-d{margin-top:var(--s2)} details.more-d summary{cursor:pointer;font-weight:700;color:var(--accent)}
+table.cmp{border-collapse:collapse;width:100%;min-width:560px;font-size:14px;margin-top:var(--s2)}
+table.cmp th,table.cmp td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left}
+table.cmp th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+table.cmp td{font-family:var(--f-mono)} table.cmp td:first-child{font-family:var(--f-body);font-weight:700}
+table.cmp tr.me td{background:var(--accent-soft)}
+.best{color:var(--good);font-weight:600}
+.scroll{overflow-x:auto}
 
 /* scan */
-.search{display:flex;gap:8px}
-.search .btn{flex:none}
-input[type=text]{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:10px 16px;width:100%;min-width:0}
-.nf{background:var(--paper);color:#000;border:1px solid #000;padding:6px 8px;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;width:100%;max-width:330px}
-.nf h5{font-size:28px;font-weight:900;margin:0;line-height:1}
+.search{display:flex;gap:var(--s1)}
+input[type=text]{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 12px;width:100%;min-width:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.04)}
+.nf{background:#fff;color:#000;border:1px solid #000;padding:6px 8px;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;width:100%;max-width:320px}
+.nf h5{font-size:26px;font-weight:900;margin:0;line-height:1}
 .nf .sv{border-bottom:10px solid #000;padding:3px 0 4px;font-size:13px;display:flex;justify-content:space-between;font-weight:700;gap:8px}
 .nf .cal{display:flex;justify-content:space-between;align-items:end;border-bottom:5px solid #000;padding:2px 0}
-.nf .cal b{font-size:28px;font-weight:900;line-height:1}
+.nf .cal b{font-size:26px;font-weight:900;line-height:1}
 .nf .dvh{text-align:right;font-size:11px;font-weight:700;border-bottom:1px solid #000;padding:2px 0}
 .nf .ln{display:flex;justify-content:space-between;border-bottom:1px solid #000;font-size:13px;padding:2px 0;gap:8px}
-.nf .ln.ind{padding-left:14px}
-.nf .ln.thick{border-bottom:8px solid #000}
-.nf .foot{font-size:10px;padding-top:4px;line-height:1.3}
-.verdict{display:flex;gap:14px;align-items:center}
-.ring{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:20px;border:4px solid currentColor;flex:none}
-.c-good{color:var(--fresh)} .c-ok{color:var(--warn)} .c-bad{color:var(--bad)}
-.ins{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.nf .ln.ind{padding-left:14px} .nf .ln.thick{border-bottom:8px solid #000}
+.nf .foot{font-size:10px;padding-top:4px;line-height:1.3;display:block}
+.verdict{display:flex;gap:var(--s2);align-items:center}
+.ring{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:18px;border:4px solid currentColor;flex:none}
+.c-good{color:var(--good)} .c-ok{color:var(--warn)} .c-bad{color:var(--bad)}
+.ins{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .ins li{display:grid;grid-template-columns:10px minmax(0,1fr);gap:10px;font-size:15px}
-.ins li::before{content:"";width:10px;height:10px;border-radius:50%;margin-top:7px;background:var(--muted)}
-.ins li.g::before{background:var(--fresh)} .ins li.w::before{background:var(--warn)} .ins li.b::before{background:var(--bad)}
-.scanres{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:start}
-@media (max-width:640px){.scanres{grid-template-columns:minmax(0,1fr)}}
+.ins li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:8px;background:var(--muted)}
+.ins li.g::before{background:var(--good)} .ins li.w::before{background:var(--warn)} .ins li.b::before{background:var(--bad)}
 .vlist{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.vlist li{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center}
-.vtrk{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:4px}
-.vtrk i{display:block;height:100%;background:var(--accent)}
-.rp{display:grid;gap:4px;padding:12px 14px;border-radius:14px;background:var(--sunk)}
-.empty{padding:26px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
-footer.note{font-size:13px;color:var(--muted);display:grid;gap:4px;padding-top:6px}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;z-index:20}
-@media (prefers-reduced-motion:no-preference){.meter i,.ptrk i,.vtrk i{transition:width .45s ease}main>.stack{animation:rise .28s ease}@keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}}
+.vlist li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center}
+.vt{height:5px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:4px}
+.vt i{display:block;height:100%;background:var(--accent)}
+
+@media (max-width:700px){.scanres{grid-template-columns:minmax(0,1fr)!important}}
+/* rewards drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,20,16,.35);z-index:30}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:var(--surface);z-index:31;box-shadow:var(--shadow-up);display:flex;flex-direction:column;padding:calc(var(--s3) + env(safe-area-inset-top,0px)) max(var(--s3),env(safe-area-inset-right,0px)) calc(var(--s3) + env(safe-area-inset-bottom,0px)) var(--s3);overflow-y:auto;gap:var(--s3)}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .22s ease}@keyframes slide{from{transform:translateX(24px);opacity:.4}}}
+.dhead{display:flex;justify-content:space-between;align-items:center}
+.lvl{display:grid;gap:6px}
+.lvl b{font-family:var(--f-display);font-size:30px}
+.score{display:flex;gap:var(--s2);align-items:center}
+.sring text{fill:var(--ink)}
+.parts{display:grid;gap:8px;flex:1}
+.pl{display:flex;justify-content:space-between;font-size:13px}
+.streak{display:flex;gap:var(--s2);align-items:center}
+.flame{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--sunk);color:var(--muted)}
+.flame.on{background:var(--gold-soft);color:var(--gold)}
+.wkdots{display:flex;gap:4px;margin-left:auto}
+.wkdots i{width:12px;height:12px;border-radius:3px;background:var(--bad-soft)}
+.wkdots i.ok{background:var(--good)}
+.badges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bdg{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
+.bdg b{color:var(--ink);font-size:14px;display:block;line-height:1.25}
+.bdg .md{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--sunk)}
+.bdg.got{border-style:solid;border-color:color-mix(in srgb,var(--gold) 40%,var(--line));background:var(--gold-soft)}
+.bdg.got .md{background:var(--gold);color:var(--surface)}
+.earn{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}
+.earn li{display:flex;justify-content:space-between;gap:12px}
+.earn b{font-family:var(--f-mono);color:var(--gold)}
+
+.empty{padding:var(--s3);text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;z-index:40;box-shadow:var(--shadow-up)}
+footer.fine{grid-column:span 12;font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.meter i,.bar2 i,.vt i{transition:width .4s ease}.btn,.seg button,nav.tabs button,.meal{transition:background .15s,border-color .15s,box-shadow .15s}}
 </style>
 
-<header class="top">
-  <div class="wrap">
-    <div class="bar">
-      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2"/><path d="M10 11.5l1.8 1.8L15.5 9.6"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></div>
-      <span class="brand">Grocery Coach</span>
-      <label class="who" for="hhsel"><span class="wl">Shopping for</span> <select id="hhsel" class="hhsel"></select></label>
-    </div>
-    <nav class="seg" id="nav" aria-label="Sections">
-      <button data-go="week">This week</button>
-      <button data-go="kitchen">Kitchen</button>
-      <button data-go="cook">Cook</button>
-      <button data-go="scan">Scan</button>
-      <button data-go="impact">Impact</button>
-    </nav>
-  </div>
-</header>
+<header class="top"><div class="wrap"><div class="bar">
+  <div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent-ink)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>Grocery Coach</div>
+  <nav class="tabs" id="nav" aria-label="Sections">
+    <button data-go="plan">Plan</button><button data-go="inventory">Inventory</button><button data-go="results">Results</button><button data-go="scan">Scan</button>
+  </nav>
+  <div class="right"><label for="hhsel" class="sr">Household</label><select id="hhsel" class="hhsel"></select>
+    <button class="pts" id="pts" data-rewards="1" aria-label="Points and rewards"></button></div>
+</div></div></header>
 <main class="wrap" id="app"></main>
-<div class="toast" id="toast" hidden></div>
+<div id="drawer"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script id="coach-data" type="application/json">__COACH_DATA__</script>
 <script>
@@ -311,7 +351,8 @@ function run(pol,hh,M,from,to,recFrom,ids=ALL,constrained=true){
   const st={inv:P.map(()=>[])},f=dayF(hh.weekend_boost),out=[];
   for(let w=from;w<to;w++){
     let o=order(pol,hh,w,st,M);if(constrained)o=constrain(o,st,hh,M.avg)[0];
-    const r=stepWeek(st,o,P.map(p=>DEM[hh.id][p.id][w]),hh,f,ids);if(w>=recFrom)out.push(r);
+    const r=stepWeek(st,o,P.map(p=>DEM[hh.id][p.id][w]),hh,f,ids);
+    r.sale=o.filter((q,i)=>q>0.01&&((DATA.promos?.[PID[i]]||[])[w]||0)>0.01).length;if(w>=recFrom)out.push(r);
   }
   return {weekly:out,st};
 }
@@ -353,13 +394,13 @@ const ORDER=["coach","forecast_rule","average_rule","fixed"];
 /* ===================== Charts ===================== */
 function roll(a,k=4){return a.map((_,i)=>{const s=a.slice(Math.max(0,i-k+1),i+1);return s.reduce((x,y)=>x+y,0)/s.length})}
 function niceStep(v){if(v<=0)return 1;const e=Math.pow(10,Math.floor(Math.log10(v)));const m=v/e;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*e}
-function lineChart(series,{yfmt=v=>v,label}){
-  const W=760,H=250,L=52,Rr=28,T=14,B=30,n=Math.max(...series.map(s=>s.values.length));
+function lineChart(series,{yfmt=v=>v,label,W=760,H=250,L=52,Rr=28,T=14,B=30}){
+  const n=Math.max(...series.map(s=>s.values.length));
   if(n<2)return '<div class="empty">No weekly series in results.json yet.</div>';
   const lo=0,top=Math.max(...series.flatMap(s=>s.values))*1.05||1,step=niceStep(top/4),hi=Math.ceil(top/step)*step;
   const X=i=>L+i/(n-1)*(W-L-Rr),Y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
   const ticks=[];for(let t=0;t<=hi+1e-9;t+=step)ticks.push(t);
-  const xt=[0,Math.round((n-1)/4),Math.round((n-1)/2),Math.round(3*(n-1)/4),n-1];
+  const xt=W<500?[0,Math.round((n-1)/2),n-1]:[0,Math.round((n-1)/4),Math.round((n-1)/2),Math.round(3*(n-1)/4),n-1];
   const sorted=[...series].sort((a,b)=>(a.focus?1:0)-(b.focus?1:0));
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">
     ${ticks.map(t=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${L-8}" y="${Y(t)+4}" text-anchor="end">${yfmt(t)}</text>`).join("")}
@@ -458,89 +499,226 @@ function renderHH(){const groups=[...new Set(H.map(h=>h.persona))];
   document.getElementById("hhsel").innerHTML=groups.map(g=>`<optgroup label="${esc(g)}">${H.filter(h=>h.persona===g).map(h=>`<option value="${h.id}" ${h.id===ST.hh?"selected":""}>${esc(h.persona)} · ${h.n_people} ${h.n_people>1?"people":"person"} · ${money(h.budget,0)}/wk${h.diet!=="omnivore"?" · "+h.diet:""}${h.exclusions.length?" · no "+h.exclusions.join(", "):""}</option>`).join("")}</optgroup>`).join("")}
 
 
-/* ===================== Views (navigation uses buttons, never links: links break inside Streamlit's frame) ===================== */
-ST.view=ST.view||"week"; ST.kitchenAfter=ST.kitchenAfter??true;
+
+/* ===================== Game layer: fridge score, rescue missions, streaks & badges =====================
+   The fridge score uses the same signals the agent is rewarded on (waste, spend vs budget, protein, empty shelves),
+   so people and the agent chase the same number. Progress is read from the coach's simulated weeks. */
+const DAYN=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const nRel=hh=>P.filter((_,i)=>relevant(hh,i)).length||1;
+function fridgeScore(r,hh){
+  const waste=35*(1-Math.min(1,(r.waste_cost||0)/(0.08*hh.budget)));
+  const budget=r.spend<=hh.budget?25:25*Math.max(0,1-((r.spend-hh.budget)/hh.budget)/0.2);
+  const protein=25*Math.min(1,r.protein_target_met||0);
+  const shelves=15*(1-Math.min(1,(r.stockout_days||0)/(nRel(hh)*7*0.25)));
+  const total=Math.round(waste+budget+protein+shelves);
+  return {total,grade:total>=90?"Excellent":total>=75?"Great":total>=60?"Good":"Needs work",
+    parts:[["Little waste",waste,35],["On budget",budget,25],["Protein goal",protein,25],["Shelves stocked",shelves,15]]};
+}
+const wasteFree=(r,hh)=>(r.waste_cost||0)<Math.max(0.5,0.01*hh.budget);
+let MISS={};try{MISS=JSON.parse(localStorage.getItem("grocery-coach-missions")||"{}")||{}}catch(e){MISS={}}
+const saveMiss=()=>{try{localStorage.setItem("grocery-coach-missions",JSON.stringify(MISS))}catch(e){}};
+const mkey=(hh,w,pid)=>hh.id+":"+w+":"+pid;
+const rescuedCount=hh=>Object.keys(MISS).filter(k=>k.startsWith(hh.id+":")).length;
+function missions(hh,w,S){
+  const ideas=mealIdeas(hh,S.after);
+  return P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.after,i)>0.01)
+    .map(([p,i])=>{const f=freshness(p,S.after.inv[i]);return {p,i,f,meal:ideas.find(m=>m.ing.some(x=>x.pid===p.id)),done:!!MISS[mkey(hh,w,p.id)]}})
+    .filter(m=>m.f.d<=3).sort((a,b)=>a.f.d-b.f.d);
+}
+const BADGES=[
+  ["firstwf","First waste-free week","Almost nothing thrown away in a week","leaf"],
+  ["streak3","On a roll","3 waste-free weeks in a row","flame"],
+  ["month","Zero-waste month","4 waste-free weeks in a row","cal"],
+  ["budget4","Budget keeper","Under budget 4 weeks running","coin"],
+  ["protein4","Protein pro","Protein goal met 4 weeks running","bolt"],
+  ["score90","Top of the class","A fridge score of 90 or more","star"],
+  ["sale","Sale hunter","3 or more sale items in one shop","tag"],
+  ["rescuer","Rescuer","Complete 3 rescue missions","buoy"],
+];
+const GLYPH={leaf:'<path d="M5 19c8 0 14-6 14-14C11 5 5 11 5 19zM5 19l7-7"/>',flame:'<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-6 2 1 3 2 3 4 0-3-1-5 0-8z"/>',
+  cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4M9 15l2 2 4-4"/>',coin:'<circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5v11"/>',
+  bolt:'<path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z"/>',star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/>',
+  tag:'<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="7.5" r="1.5"/>',buoy:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M6.3 6.3l3.2 3.2M14.5 14.5l3.2 3.2M17.7 6.3l-3.2 3.2M9.5 14.5l-3.2 3.2"/>'};
+const glyph=(k,sz=22)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[k]}</svg>`;
+function progress(hh,w){
+  const recs=model(hh).pols.coach.weekly.slice(0,Math.max(0,w-TRAIN_END));
+  const earned={};const mark=(k,i)=>{if(earned[k]==null)earned[k]=i};
+  let wf=0,bud=0,pro=0,best=0;
+  recs.forEach((r,i)=>{const s=fridgeScore(r,hh).total;
+    wf=wasteFree(r,hh)?wf+1:0;bud=r.spend<=hh.budget?bud+1:0;pro=(r.protein_target_met||0)>=1?pro+1:0;best=Math.max(best,wf);
+    if(wf>=1)mark("firstwf",i);if(wf>=3)mark("streak3",i);if(wf>=4)mark("month",i);if(bud>=4)mark("budget4",i);if(pro>=4)mark("protein4",i);if(s>=90)mark("score90",i);if((r.sale||0)>=3)mark("sale",i)});
+  const resc=rescuedCount(hh);if(resc>=3)earned.rescuer=-1;
+  const xp=Math.round(recs.reduce((a,r)=>a+fridgeScore(r,hh).total,0)+resc*10);
+  return {recs,streak:wf,best,earned,xp,level:1+Math.floor(xp/500),toNext:500-xp%500,resc};
+}
+
+
+/* ===================== Helpers ===================== */
+ST.view=ST.view||"plan"; ST.invAfter=ST.invAfter??true; ST.invFilter=ST.invFilter||"all"; ST.picks=ST.picks||{}; ST.showAll=false;
 const CATC={fruit:"--c-produce",vegetables:"--c-produce",dairy:"--c-dairy",protein:"--c-protein",grains:"--c-grains",legumes:"--c-legumes",beverages:"--c-bev",fats_oils:"--c-fat",processed:"--c-proc"};
-const ico=p=>`<span class="ico" style="--c:var(${CATC[p.category]||"--c-proc"})" aria-hidden="true">${esc(p.name[0].toUpperCase())}</span>`;
-const curWeek=()=>ST.scrub??TRAIN_END;
-const weekNo=w=>w-TRAIN_END+1, NTEST=NW-TRAIN_END;
+const ico=p=>`<span class="ico" style="--c:var(${CATC[p.category]||"--c-proc"})" aria-hidden="true">${esc(p.name[0])}</span>`;
+const curWeek=()=>ST.scrub??TRAIN_END, weekNo=w=>w-TRAIN_END+1, NTEST=NW-TRAIN_END;
+const catName=c=>({fats_oils:"Oils & fats"}[c]||c[0].toUpperCase()+c.slice(1));
+const CHEV='<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const STAR=(s=16)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/></svg>`;
 function freshness(p,bs){const tot=bs.reduce((a,b)=>a+b.q,0);if(tot<0.01)return {k:"out",cls:"x",txt:"Out",frac:0};
   if(p.shelf>=60)return {k:"long",cls:"n",txt:"Keeps for months",frac:1};
   const d=Math.min(...bs.map(b=>daysLeft(b,p)));return {k:d<=3?"soon":"fresh",cls:d<=1?"x":d<=3?"w":"f",txt:d<=1?"Use today":`${d} days left`,frac:Math.max(.06,d/p.shelf),d}}
-function tile(p,i,st,extra=""){const bs=st.inv[i],f=freshness(p,bs),tot=stockOf(st,i);
-  return `<div class="tile ${f.k==="out"?"out":""}"><div class="top">${ico(p)}<div style="min-width:0"><div class="nm">${esc(p.name)}</div><div class="amt">${tot>0.01?friendly(tot,p):"none left"}</div></div></div>
-    <div class="meter"><i class="${f.cls}" style="width:${f.frac*100}%"></i></div><span class="left ${f.cls}">${f.txt}</span>${extra}</div>`}
-const why=(p,i,S)=>{const fc=S.fc[i],h=stockOf(S.pre,i),b=S.co[i];
-  if(b<0.01)return h>=fc*0.9?"You have enough at home already.":"Held back: more would likely spoil before you eat it.";
-  if(p.shelf<7&&b<fc*0.95-h)return `A little less than you'll use: it only keeps ${p.shelf} days, so a top-up later beats throwing it out.`;
-  return `You'll use about ${friendly(fc,p)} this week${h>0.01?` and have ${friendly(h,p)} at home`:""}.`};
+const pkey=(hh,w)=>hh.id+":"+w;
 
-views.week=()=>{
-  const hh=HH(),w=curWeek(),S=pantryAt(hh,w),N=NAME(hh),fl=DATA.flags?.[hh.id]||{},promo=i=>(DATA.promos?.[PID[i]]||[])[w]||0;
-  const lines=P.map((p,i)=>[p,i]).filter(([,i])=>S.co[i]>0.01);
-  const total=lines.reduce((a,[p,i])=>a+S.co[i]*p.price,0),aTot=S.ao.reduce((a,q,i)=>a+q*P[i].price,0),left=hh.budget-total;
-  const prot=P.reduce((a,p,i)=>a+Math.min(stockOf(S.pre,i)+S.co[i],S.fc[i])*p.protein,0),pcov=prot/hh.protein_target;
-  const soon=P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.after,i)>0.01).map(([p,i])=>[p,i,freshness(p,S.after.inv[i])]).filter(x=>x[2].d<=3).sort((a,b)=>a[2].d-b[2].d);
-  const flags=[fl.away?.[w]&&"You're away this week, so the coach keeps fresh food to a minimum.",fl.guest?.[w]&&"Guests this week: expect to eat more than usual. The coach can't see this coming.",fl.holiday?.[w]&&"Holiday week: some foods sell much more than usual."].filter(Boolean);
-  return `<div class="stack">
-   <section class="hero" aria-label="This week's plan">
-    <div class="wk"><button data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span>WEEK ${weekNo(w)} OF ${NTEST}</span><button data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button></div>
-    <h1>${lines.length?`This week, buy <em>${lines.length} things</em> for ${money(total)}.`:"Skip the shop this week. You have what you need."}</h1>
-    <div class="hstats">
-     <div class="hstat"><b>${money(Math.abs(left))}</b><span>${left>=0?"under":"over"} your ${money(hh.budget,0)} budget</span></div>
-     <div class="hstat"><b>${pct(Math.min(pcov,9.99))}</b><span>of your protein</span></div>
-     <div class="hstat"><b>${money(S.ec.waste_cost)}</b><span>likely to be wasted</span></div>
-    </div>
-    ${flags.map(f=>`<div class="flag">${esc(f)}</div>`).join("")}
+/* ===================== Meals → grocery needs (roadmap step 3) ===================== */
+function mealOptions(hh,S){
+  return R.filter(r=>Object.keys(r.ingredients).every(pid=>PIX[pid]!=null&&hh.ok.has(pid))).map(r=>{
+    const mult=hh.n_people/r.servings;
+    const ing=Object.entries(r.ingredients).map(([pid,q])=>{const i=PIX[pid],p=P[i],bs=S.pre.inv[i];return {pid,i,p,q:q*mult,home:stockOf(S.pre,i),d:bs.length?Math.min(...bs.map(b=>daysLeft(b,p))):null}});
+    const rescue=ing.filter(x=>x.p.shelf<60&&x.home>0.01&&x.d!=null&&x.d<=4);
+    const per=k=>Object.entries(r.ingredients).reduce((a,[pid,q])=>a+q*P[PIX[pid]][k],0)/r.servings;
+    const score=rescue.length*3+(r.tags.includes("high_protein")?1:0)+(r.tags.includes("budget")?.6:0)+per("protein")/25;
+    return {r,ing,rescue,kcal:per("kcal"),protein:per("protein"),cost:per("price"),score};
+  }).sort((a,b)=>b.score-a.score);
+}
+function picks(hh,w,opts){const k=pkey(hh,w);if(!ST.picks[k])ST.picks[k]=opts.slice(0,3).map(o=>o.r.id);return ST.picks[k]}
+function planWeek(hh,w){
+  const M=model(hh),S=pantryAt(hh,w),opts=mealOptions(hh,S),sel=new Set(picks(hh,w,opts)),chosen=opts.filter(o=>sel.has(o.r.id));
+  const raw=order("coach",hh,w,S.pre,M);
+  const need=P.map(()=>0);chosen.forEach(o=>o.ing.forEach(x=>need[x.i]+=x.q));
+  const add=P.map((_,i)=>Math.max(0,need[i]-stockOf(S.pre,i)-S.co[i]));
+  const fin=S.co.map((q,i)=>q+(add[i]>0.05?add[i]:0));
+  const f=dayF(hh.weekend_boost),exp=o=>{const s=clone(S.pre);return stepWeek(s,o,S.fc,hh,f,ALL)};
+  const ef=exp(fin),fixedO=constrain(order("fixed",hh,w,S.pre,M),S.pre,hh,M.avg)[0],efx=exp(fixedO);
+  const total=fin.reduce((a,q,i)=>a+q*P[i].price,0),fixedTot=fixedO.reduce((a,q,i)=>a+q*P[i].price,0);
+  const prot=P.reduce((a,p,i)=>a+Math.min(stockOf(S.pre,i)+fin[i],Math.max(S.fc[i],need[i]))*p.protein,0);
+  return {S,opts,sel,chosen,raw,need,add,fin,ef,efx,total,fixedTot,pcov:prot/hh.protein_target,
+    fcCost:S.fc.reduce((a,q,i)=>a+q*P[i].price,0),rawCost:raw.reduce((a,q,i)=>a+q*P[i].price,0),rawN:raw.filter(q=>q>0.01).length};
+}
+
+/* ===================== Points (gamification lives here, not on the pages) ===================== */
+let MEALP={};try{MEALP=JSON.parse(localStorage.getItem("grocery-coach-mealpts")||"{}")||{}}catch(e){MEALP={}}
+const saveMealP=()=>{try{localStorage.setItem("grocery-coach-mealpts",JSON.stringify(MEALP))}catch(e){}};
+function points(hh,w){const g=progress(hh,w),mp=Object.keys(MEALP).filter(k=>k.startsWith(hh.id+":")).length*5;
+  const wk=Math.round(g.recs.reduce((a,r)=>a+fridgeScore(r,hh).total,0)/10);return {g,total:wk+g.resc*10+mp,wk,mp}}
+function renderPts(){const hh=HH(),pt=points(hh,curWeek());document.getElementById("pts").innerHTML=`${STAR()}<span class="num">${pt.total.toLocaleString()}</span><span class="sr"> points, open rewards</span>`}
+function fly(from,amount){
+  const pill=document.getElementById("pts");if(!from||!pill)return;
+  const a=from instanceof Element?from.getBoundingClientRect():from,b=pill.getBoundingClientRect();if(!a||(!a.left&&!a.top))return;
+  if(!matchMedia("(prefers-reduced-motion: reduce)").matches){const f=document.createElement("span");f.className="flyer";f.textContent="+"+amount;f.style.left=a.left+"px";f.style.top=a.top+"px";document.body.appendChild(f);
+    requestAnimationFrame(()=>{f.style.transform=`translate(${b.left-a.left}px,${b.top-a.top}px) scale(.7)`;f.style.opacity="0.2"});setTimeout(()=>f.remove(),750)}
+  setTimeout(()=>{pill.classList.remove("pulse");void pill.offsetWidth;pill.classList.add("pulse")},600);
+}
+function rescueItem(pid,el){const hh=HH(),w=curWeek(),k=mkey(hh,w,pid);if(MISS[k])return;MISS[k]=1;saveMiss();fly(el,10);
+  const n=rescuedCount(hh);toast(`Rescued the ${P[PIX[pid]].name.toLowerCase()}. +10 points`+(n===3?" · Rescuer badge earned":""));setTimeout(render,250)}
+
+/* ===================== Pages ===================== */
+views.plan=()=>{
+  const hh=HH(),w=curWeek(),X=planWeek(hh,w),S=X.S,N=NAME(hh),fl=DATA.flags?.[hh.id]||{},promo=i=>(DATA.promos?.[PID[i]]||[])[w]||0;
+  const lines=P.map((p,i)=>[p,i]).filter(([,i])=>X.fin[i]>0.01);
+  const left=hh.budget-X.total,saveVsFixed=X.fixedTot-X.total;
+  const flags=[fl.away?.[w]&&"You're away this week, so the plan keeps fresh food to a minimum.",fl.guest?.[w]&&"Guests this week. Expect to eat more than usual; the forecast can't see this coming.",fl.holiday?.[w]&&"Holiday week. Some foods sell much more than usual."].filter(Boolean);
+  const cats=[...new Set(lines.map(([p])=>p.category))];
+  let shown=0;const LIM=ST.showAll?999:12;
+  const listHTML=cats.map(c=>{const ls=lines.filter(([p])=>p.category===c);const vis=ls.filter(()=>shown++<LIM);if(!vis.length)return "";
+    return `<div class="cat">${esc(catName(c))}</div>${vis.map(([p,i])=>{const fc=S.fc[i],h=stockOf(S.pre,i),forMeal=X.add[i]>0.05;
+      const why=forMeal?`Added so you have enough for ${list(X.chosen.filter(o=>o.ing.some(x=>x.i===i)).map(o=>o.r.name))}.`:p.shelf<7&&X.raw[i]<fc-h-0.01?`A little under expected use: it keeps only ${p.shelf} days.`:h>0.01?"Tops up what's at home to cover the week.":"Covers what you're expected to use this week.";
+      return `<details class="li"><summary>${ico(p)}<span class="nm">${esc(p.name)}${promo(i)>0.01?`<span class="tag t-sale">Sale −${Math.round(promo(i)*100)}%</span>`:""}${forMeal?`<span class="tag t-meal">For meals</span>`:""}</span><span class="q">${friendly(X.fin[i],p)}</span><span class="p">${money(X.fin[i]*p.price)}</span></summary>
+       <div class="trace"><span class="s">Forecast <b>${friendly(fc,p)}</b></span><span class="arr">−</span><span class="s">At home <b>${h>0.01?friendly(h,p):"0"}</b></span><span class="arr">→</span><span class="s">${esc(N.coach)} <b>${friendly(X.raw[i],p)}</b></span>${Math.abs(S.co[i]-X.raw[i])>0.01?`<span class="arr">→</span><span class="s">Rules <b>${friendly(S.co[i],p)}</b></span>`:""}${forMeal?`<span class="arr">→</span><span class="s">Meals <b>+${friendly(X.add[i],p)}</b></span>`:""}<span class="why">${esc(why)}</span></div></details>`}).join("")}`}).join("");
+  const uf=P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.pre,i)>0.01).map(([p,i])=>[p,i,freshness(p,S.pre.inv[i])]).filter(x=>x[2].d<=3).sort((a,b)=>a[2].d-b[2].d);
+  const adds=X.add.filter(a=>a>0.05).length;
+  return `<div class="page">
+   <section class="c12" aria-label="This week's shop"><div class="summary">
+    <div><div class="wkctl"><button class="icon-btn" data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span class="label">Week ${weekNo(w)} of ${NTEST}</span><button class="icon-btn" data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button></div>
+     <div class="total num">${money(X.total)}<small>${lines.length} items this week</small></div></div>
+    <div class="kpis">
+     <div class="kpi"><span class="label">Budget</span><b class="${left<0?"bad":"good"} num">${money(Math.abs(left),0)} ${left<0?"over":"left"}</b><span class="xs muted">of ${money(hh.budget,0)}</span></div>
+     <div class="kpi"><span class="label">Protein</span><b class="num">${pct(Math.min(X.pcov,9.99))}</b><span class="xs muted">of weekly goal</span></div>
+     <div class="kpi"><span class="label">Likely waste</span><b class="num">${money(X.ef.waste_cost)}</b><span class="xs muted">fixed list: ${money(X.efx.waste_cost)}</span></div>
+     <div class="kpi"><span class="label">vs fixed list</span><b class="${saveVsFixed>=0?"good":"bad"} num">${saveVsFixed>=0?"−":"+"}${money(Math.abs(saveVsFixed),0)}</b><span class="xs muted">same list every week</span></div>
+    </div></div>
+    ${flags.map(f=>`<div class="note">${esc(f)}</div>`).join("")}
    </section>
 
-   <section class="card"><div class="sechead"><div><h3>Use these first</h3><p class="sub">${soon.length?"These will go off soon. Plan your first meals around them.":"Nothing is about to go off this week."}</p></div>${soon.length?`<button class="link" data-go="cook">What to cook →</button>`:""}</div>
-    ${soon.length?`<div class="strip">${soon.slice(0,8).map(([p,i])=>tile(p,i,S.after)).join("")}</div>`:""}</section>
-
-   <section aria-label="Shopping list"><div class="receipt">
-    <h4>Shopping list</h4><div class="c">${esc(hh.persona)} · week ${weekNo(w)} · tap an item to see why</div><hr>
-    ${lines.length?lines.map(([p,i])=>`<details><summary><span class="nm">${esc(p.name)}${promo(i)>0.01?`<span class="sale">SALE −${Math.round(promo(i)*100)}%</span>`:""}</span><span class="p">${money(S.co[i]*p.price)}</span><span class="q">${friendly(S.co[i],p)}</span></summary><div class="why">${esc(why(p,i,S))}</div></details>`).join(""):`<div class="c" style="padding:12px 0">Nothing to buy.</div>`}
-    <hr><div class="rl tot"><span>Total</span><span>${money(total)}</span></div><hr>
-    <div class="budgetline"><span>Budget <b>${money(hh.budget,0)}</b></span><span>−</span><span>Basket <b>${money(total)}</b></span><span>=</span><span class="bl ${left<0?"over":""}"><b>${money(left)}</b> ${left<0?"over":"left"}</span></div>
-    <div style="margin-top:12px"><div class="rnote" style="display:flex;justify-content:space-between;margin:0"><span>Protein for the week</span><span>${pct(pcov)}</span></div><div class="ptrk"><i style="width:${Math.min(100,pcov*100)}%"></i></div></div>
-    ${S.notes.length?`<hr>${S.notes.map(n=>`<p class="rnote">* ${esc(n)}</p>`).join("")}`:""}
-    ${lines.some(([,i])=>promo(i)>0.01)?`<p class="rnote">* Sale tags come from the synthetic weekly prices; totals use the reference prices in products.csv.</p>`:""}
+   <section class="c12" aria-label="How the list is made"><div class="pipe">
+    <div class="step"><span class="k">1 · Forecast</span><b>${money(X.fcCost,0)} of food</b><span>expected use this week</span></div>
+    <div class="step"><span class="k">2 · ${isLive(hh)?"RL plan":"Purchase plan"}</span><b>${X.rawN} items · ${money(X.rawCost,0)}</b><span>${isLive(hh)?"from the RL agent":"stand-in for the RL agent"}</span></div>
+    <div class="step"><span class="k">3 · Rules</span><b>${S.notes.length?S.notes.length+" change"+(S.notes.length>1?"s":""):"All clear"}</b><span>budget, stock, diet, allergies</span></div>
+    <div class="step"><span class="k">4 · Meals</span><b>${X.chosen.length} meal${X.chosen.length===1?"":"s"}${adds?` · +${adds}`:""}</b><span>${adds?`item${adds>1?"s":""} added for recipes`:"covered by the plan"}</span></div>
+    <div class="step final"><span class="k">Shopping list</span><b>${money(X.total)}</b><span>${lines.length} items</span></div>
    </div></section>
 
-   <section class="card"><h3>Compared with your usual shop</h3><p class="sub">"Usual" means buying what you used over the last four weeks.</p>
-    <div class="vs" style="margin-top:12px">
-     <div class="me"><span class="eyebrow">${esc(N.coach)}</span><b>${money(total)}</b><span class="small">${money(S.ec.waste_cost)} likely wasted</span></div>
-     <div><span class="eyebrow">Your usual shop</span><b>${money(aTot)}</b><span class="small">${money(S.ea.waste_cost)} likely wasted</span></div>
-    </div>
-    <p class="small muted" style="margin:10px 0 0">The coach ${aTot-total>=0?`saves you ${money(aTot-total)}`:`spends ${money(total-aTot)} more`} and ${S.ea.waste_cost-S.ec.waste_cost>=0?`wastes ${money(S.ea.waste_cost-S.ec.waste_cost)} less food`:`wastes ${money(S.ec.waste_cost-S.ea.waste_cost)} more`} this week. ${isLive(hh)?"":"Demo simulation."}</p>
+   <section class="c7 card" aria-label="Shopping list"><div class="ch"><div><h2>Shopping list</h2><p>Open any item to see how the amount was worked out.</p></div>${isLive(hh)?`<span class="tag t-live">RL agent</span>`:`<span class="tag t-demo">Demo simulation</span>`}</div>
+    <div class="list">${listHTML||`<div class="empty">Nothing to buy this week.</div>`}</div>
+    ${lines.length>12?`<button class="more" data-showall="1">${ST.showAll?"Show fewer":`Show all ${lines.length} items`}</button>`:""}
+    <div class="foot"><span>Total</span><span class="tot num">${money(X.total)}</span>
+     <span class="muted">Budget ${money(hh.budget,0)}</span><span class="mono ${left<0?"c-bad":"c-good"}">${money(left)} ${left<0?"over":"left"}</span></div>
+    ${S.notes.length?`<div class="note" style="background:var(--sunk)"><span>${S.notes.map(esc).join(" ")}</span></div>`:""}
    </section>
+
+   <div class="c5" style="display:grid;gap:var(--s3);align-content:start">
+    <section class="card" aria-label="Meals this week"><div class="ch"><div><h2>Meals this week</h2><p>Picked meals change the shopping list.</p></div><span class="label">${X.chosen.length} picked</span></div>
+     <div class="meals">${X.opts.slice(0,6).map(o=>{const on=X.sel.has(o.r.id),mk=pkey(hh,w)+":"+o.r.id;
+       return `<div class="meal ${on?"on":""}"><button class="mealbtn" data-pick="${o.r.id}" aria-pressed="${on}"><span class="check" aria-hidden="true">${on?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>':""}</span>
+        <span style="min-width:0;display:block"><h3>${esc(o.r.name)}</h3><span class="m"><span><b>${Math.round(o.protein)} g</b> protein</span><span><b>${Math.round(o.kcal)}</b> kcal</span><span><b>${money(o.cost)}</b>/serving</span><span>${o.r.prep_time_min} min</span></span>
+        ${o.rescue.length?`<span class="r" style="display:block">Uses up ${esc(list(o.rescue.map(x=>x.p.name.toLowerCase())))}</span>`:""}</span></button>
+        ${o.rescue.length&&on&&!MEALP[mk]?`<button class="float" data-mealpts="${o.r.id}" aria-label="Claim 5 points for using up food">${STAR(11)}+5</button>`:""}</div>`}).join("")}</div>
+    </section>
+    <section class="card" aria-label="Use first"><div class="ch"><div><h2>Use first</h2><p>${uf.length?"At home and close to its date.":"Nothing at home is close to its date."}</p></div></div>
+     ${uf.length?`<div class="uf">${uf.slice(0,6).map(([p,i,f])=>{const done=MISS[mkey(hh,w,p.id)];return `<div class="ufi">${ico(p)}<div style="min-width:0"><b>${esc(p.name)}</b><div class="xs muted mono">${friendly(stockOf(S.pre,i),p)}</div></div>
+       <div style="display:flex;align-items:center;gap:8px"><span class="dl ${f.cls}">${f.txt}</span>${done?`<span class="done-tag">Rescued</span>`:`<button class="float" data-rescue="${p.id}" aria-label="Mark ${esc(p.name)} as used up for 10 points">${STAR(11)}+10</button>`}</div></div>`}).join("")}</div>`:""}
+    </section>
+   </div>
+   <footer class="fine">${isLive(hh)?"Purchase plan from the trained RL agent.":"Demo simulation: the purchase plan is a stand-in tuned on the first half of the demand history; it switches to the RL agent when results/results.json exists."} Calories, protein and cost are computed from products.csv.</footer>
   </div>`;
 };
 
-views.kitchen=()=>{
-  const hh=HH(),w=curWeek(),S=pantryAt(hh,w),st=ST.kitchenAfter?S.after:S.pre;
+views.inventory=()=>{
+  const hh=HH(),w=curWeek(),X=planWeek(hh,w),S=X.S;
+  const st=ST.invAfter?(()=>{const a=clone(S.pre);X.fin.forEach((q,i)=>{if(q>1e-9)a.inv[i].push({q,age:0})});return a})():S.pre;
   const items=P.map((p,i)=>[p,i]).filter(([,i])=>relevant(hh,i)).map(([p,i])=>[p,i,freshness(p,st.inv[i])]);
-  const G=[["soon","Use first","var(--warn)"],["fresh","Fresh","var(--fresh)"],["long","Cupboard & freezer","var(--s-avg)"],["out","Ran out","var(--bad)"]];
-  return `<div class="stack">
-   <div><h2 style="font-size:30px">Your kitchen</h2><p class="sub">Week ${weekNo(w)} · ${ST.kitchenAfter?"after this week's shop":"Monday morning, before you shop"}</p></div>
-   <div class="chips" role="group" aria-label="When"><button class="chip" data-kafter="0" aria-pressed="${!ST.kitchenAfter}">Before you shop</button><button class="chip" data-kafter="1" aria-pressed="${ST.kitchenAfter}">After you shop</button>
-     <span style="flex:1"></span><button class="chip" data-wk="-1" ${w<=TRAIN_END?"disabled":""}>‹ Week</button><button class="chip" data-wk="1" ${w>=NW-1?"disabled":""}>Week ›</button></div>
-   ${G.map(([k,label,c])=>{const g=items.filter(x=>x[2].k===k);if(!g.length)return "";g.sort((a,b)=>(a[2].d??99)-(b[2].d??99));
-     return `<section class="group"><h4><i class="dotc" style="background:${c}"></i>${label} <span class="n">${g.length}</span></h4><div class="kgrid">${g.map(([p,i])=>tile(p,i,st)).join("")}</div></section>`}).join("")}
+  const G=[["soon","Use first","var(--warn)"],["fresh","Fresh","var(--good)"],["long","Cupboard & freezer","var(--l-fixed)"],["out","Out of stock","var(--bad)"]];
+  const filt=ST.invFilter,cnt=k=>items.filter(x=>x[2].k===k).length;
+  const value=items.reduce((a,[p,i])=>a+stockOf(st,i)*p.price,0);
+  return `<div class="page">
+   <section class="c12"><div class="summary"><div><div class="wkctl"><button class="icon-btn" data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span class="label">Week ${weekNo(w)} of ${NTEST}</span><button class="icon-btn" data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button></div>
+     <div class="total num">${money(value,0)}<small>of food at home</small></div></div>
+     <div class="kpis"><div class="kpi"><span class="label">Use first</span><b class="num" style="color:var(--warn)">${cnt("soon")}</b><span class="xs muted">within 3 days</span></div>
+      <div class="kpi"><span class="label">Fresh</span><b class="num">${cnt("fresh")}</b><span class="xs muted">items</span></div>
+      <div class="kpi"><span class="label">Out of stock</span><b class="num" style="color:var(--bad)">${cnt("out")}</b><span class="xs muted">items</span></div></div></div></section>
+   <section class="c12" style="display:flex;gap:var(--s2);flex-wrap:wrap;justify-content:space-between">
+    <div class="seg" role="group" aria-label="When"><button data-inv="0" aria-pressed="${!ST.invAfter}">Before shopping</button><button data-inv="1" aria-pressed="${ST.invAfter}">After shopping</button></div>
+    <div class="seg" role="group" aria-label="Show"><button data-filt="all" aria-pressed="${filt==="all"}">All</button><button data-filt="soon" aria-pressed="${filt==="soon"}">Use first</button><button data-filt="out" aria-pressed="${filt==="out"}">Out</button></div>
+   </section>
+   <section class="c12">${G.filter(([k])=>filt==="all"||filt===k).map(([k,label,c])=>{const g=items.filter(x=>x[2].k===k).sort((a,b)=>(a[2].d??99)-(b[2].d??99));if(!g.length)return "";
+     return `<h2 class="gh"><i class="dot" style="background:${c}"></i>${label} <span class="n">${g.length}</span></h2><div class="grid-tiles">${g.map(([p,i,f])=>{const done=MISS[mkey(hh,w,p.id)];
+      return `<div class="tile ${f.k==="out"?"out":""}"><div class="hd">${ico(p)}<div style="min-width:0"><div class="nm">${esc(p.name)}</div><div class="amt">${f.k==="out"?"none left":friendly(stockOf(st,i),p)}</div></div></div>
+       <div class="meter"><i class="${f.cls}" style="width:${f.frac*100}%"></i></div><span class="dl ${f.cls}">${done&&f.k==="soon"?"Rescued":f.txt}</span>
+       ${f.k==="soon"&&!done?`<button class="float" data-rescue="${p.id}" aria-label="Mark ${esc(p.name)} as used up for 10 points">${STAR(11)}+10</button>`:""}</div>`}).join("")}</div>`}).join("")||`<div class="empty">Nothing here.</div>`}</section>
   </div>`;
 };
 
-views.cook=()=>{
-  const hh=HH(),w=curWeek(),S=pantryAt(hh,w),ideas=mealIdeas(hh,S.after),py=DATA.meals?.[hh.id];
-  const card=(m,top)=>`<article class="meal ${top?"top":""}"><span class="eyebrow">${esc(m.r.meal_type)} · ${m.r.prep_time_min} min · serves ${m.r.servings}</span>
-     <h4>${esc(m.r.name)}</h4><p class="reason">${esc(m.reason)}</p>
-     <div class="macro"><span><b>${Math.round(m.kcal)}</b> kcal</span><span><b>${Math.round(m.protein)} g</b> protein</span><span><b>${money(m.cost)}</b> a serving</span></div>
-     <div class="ings">${m.ing.map(x=>{const u=m.urgent.includes(x);return `<span class="ing ${u?(x.d<=1?"x":"w"):""}">${esc(x.p.name)} · ${friendly(x.q,x.p)}</span>`}).join("")}</div></article>`;
-  return `<div class="stack">
-   <div><h2 style="font-size:30px">Cook these first</h2><p class="sub">Meals you can make right now from what's at home, starting with food that's about to go off. Week ${weekNo(w)}.</p></div>
-   ${py&&py.length?`<div class="mgrid">${py.map(m=>`<article class="meal top"><span class="eyebrow">Suggested by the meal planner</span><h4>${esc(m.name)}</h4><p class="reason">${esc(m.reason||"")}</p><div class="macro"><span><b>${Math.round(m.kcal_per_serving)}</b> kcal</span><span><b>${Math.round(m.protein_g_per_serving)} g</b> protein</span><span><b>${money(+m.cost_per_serving)}</b> a serving</span></div></article>`).join("")}</div>`:""}
-   ${ideas.length?`<div class="mgrid">${ideas.slice(0,6).map((m,i)=>card(m,i===0&&m.urgent.length)).join("")}</div>`:`<div class="empty">Nothing can be made fully from this week's kitchen. Try another week.</div>`}
-   <footer class="note">Calories, protein and cost are worked out from products.csv, never by the AI.</footer>
+views.results=()=>{
+  const hh=HH(),pols=polsFor(hh),live=isLive(hh),N=NAME(hh),c=pols.coach,fx0=pols.fixed,fc=pols.forecast_rule,wm=_wasteMoney,wk=wm?"waste_cost":"waste_units";
+  const delta=(a,b,lower=true,isPct=false)=>{if(a==null||b==null)return "";const d=a-b,rel=b?d/Math.abs(b):0,good=lower?d<0:d>0,flat=Math.abs(isPct?d:rel)<0.02;
+    return `<span class="delta ${flat?"flat":good?"good":"bad"}">${isPct?(d>=0?"+":"−")+Math.abs(Math.round(d*100))+" pts":(d<=0?"−":"+")+Math.abs(Math.round(rel*100))+"%"} vs fixed list</span>`};
+  const L=[["fixed","Fixed list","var(--l-fixed)",true],["forecast_rule","Forecast + rules","var(--l-fc)",false],["coach",N.coach,"var(--accent)",false]];
+  const chart=(key,label,fmt)=>{const series=L.map(([k,n,col,dash])=>({name:n,color:col,dash,focus:k==="coach",values:roll((pols[k].weekly||[]).map(r=>+(key==="spend"?r.spend:key==="waste"?(r.waste_cost??r.waste_units):r.stockout_days)||0))}));
+    return `<section class="c4 card"><div class="ch"><div><h2>${label}</h2><p>per week, 4-week average</p></div></div>${lineChart(series,{yfmt:fmt,label:label+" per week",W:340,H:200,L:44,Rr:20,T:10,B:26})}</section>`};
+  const save=(fx0.weekly_cost-c.weekly_cost)*52;
+  const T=[["Spend / week",p=>p.weekly_cost,v=>money(v),true],["Food wasted / week",p=>p[wk],v=>wm?money(v):fx(v,2),true],["Empty-shelf days / week",p=>p.stockout_days,v=>fx(v,1),true],["Protein goal met",p=>p.protein_target_met,v=>pct(v),false]];
+  const best=T.map(([,g,,lo])=>{const v=ORDER.map(k=>+g(pols[k]));return lo?Math.min(...v):Math.max(...v)});
+  return `<div class="page">
+   <section class="c12"><div class="ch" style="margin:0"><div><h1 style="font-size:28px">${live?"RL agent":"Coach"} vs fixed shopping</h1><p class="small">${esc(hh.persona)} · ${pols.coach.weekly?.length||52} simulated weeks the policies never saw in training${save>0?` · saves ${money(save,0)} a year`:""}</p></div><span class="tag ${live?"t-live":"t-demo"}">${live?"results.json":"Demo simulation"}</span></div></section>
+   <section class="c12 kgrid">
+    <div class="stat"><span class="label">Spend / week</span><b class="num">${money(c.weekly_cost)}</b>${delta(c.weekly_cost,fx0.weekly_cost)}</div>
+    <div class="stat"><span class="label">Food wasted / week</span><b class="num">${wm?money(c[wk]):fx(c[wk],2)}</b>${delta(c[wk],fx0[wk])}</div>
+    <div class="stat"><span class="label">Empty-shelf days / week</span><b class="num">${fx(c.stockout_days,1)}</b>${delta(c.stockout_days,fx0.stockout_days)}</div>
+    <div class="stat"><span class="label">Protein goal met</span><b class="num">${pct(c.protein_target_met)}</b>${delta(c.protein_target_met,fx0.protein_target_met,false,true)}</div>
+   </section>
+   <section class="c12 legend" aria-label="Legend">${L.map(([,n,col,dash])=>`<span style="color:${col}"><i class="sw ${dash?"dash":""}" style="background:${col}"></i><span style="color:var(--ink)">${esc(n)}</span></span>`).join("")}</section>
+   ${chart("spend","Spending",v=>"$"+Math.round(v))}${chart("waste","Food waste",v=>wm?"$"+fx(v,v<10?1:0):fx(v,1))}${chart("so","Shortages",v=>fx(v,0)+"d")}
+   <section class="c12 card"><div class="ch"><div><h2>All strategies</h2><p>Mean per simulated week. Green is best in each column.</p></div></div>
+    <div class="scroll"><table class="cmp"><thead><tr><th>Strategy</th>${T.map(([n])=>`<th>${n}</th>`).join("")}</tr></thead><tbody>
+    ${ORDER.slice().reverse().map(k=>`<tr class="${k==="coach"?"me":""}"><td>${esc({fixed:"Fixed list",average_rule:"Recent average",forecast_rule:"Forecast + rules",coach:N.coach}[k])}</td>${T.map(([,g,f],j)=>{const v=+g(pols[k]);return `<td class="${Math.abs(v-best[j])<1e-9?"best":""}">${f(v)}</td>`}).join("")}</tr>`).join("")}
+    </tbody></table></div></section>
+   <footer class="fine">All figures are simulated on the team's demand model, not real savings. ${live?"":"The coach is a stand-in until the RL agent writes results/results.json."}</footer>
   </div>`;
 };
 
@@ -548,83 +726,78 @@ views.scan=()=>{
   const hh=HH(),L=ST.lookup;
   const val=P.filter(p=>p.protein>0&&hh.ok.has(p.id)).map(p=>({p,v:p.protein/p.price})).sort((a,b)=>b.v-a.v),vmax=val[0]?.v||1;
   let res="";
-  if(L?.busy)res=`<div class="card"><p class="muted" style="margin:0">Looking up ${esc(L.code)}…</p></div>`;
-  else if(L?.err)res=`<div class="card"><p style="margin:0;color:var(--bad)">${esc(L.err)}</p></div>`;
+  if(L?.busy)res=`<p class="muted" style="margin:0">Looking up ${esc(L.code)}…</p>`;
+  else if(L?.err)res=`<p style="margin:0;color:var(--bad)">${esc(L.err)}</p>`;
   else if(L){const f=fitScore(L.n,hh,L.allergens);
-    if(L.pid&&!hh.ok.has(L.pid)&&!L.allergens.some(a=>hh.exclusions.includes(a))){f.s=Math.min(f.s,20);f.cls="c-bad";f.label="Not for you";f.ins.unshift(["b",`Not part of your ${hh.diet} diet.`])}
-    const rp=L.pid&&DATA.real_prices?.[L.pid],pp=L.pid&&P[PIX[L.pid]];
-    res=`<div class="card"><div class="scanres"><div class="stack" style="gap:14px">
-      <div><span class="eyebrow">${L.pid?"Your catalogue":"Open Food Facts · "+esc(L.code)}</span><h3 style="font-size:24px;margin-top:4px">${esc(L.name)}</h3><div class="small muted">${esc([L.pid?"":L.brand,L.qty].filter(Boolean).join(" · "))}</div></div>
-      <div class="verdict"><span class="ring ${f.cls}">${f.s}</span><div><b style="font-family:var(--f-display);font-size:20px">${f.label}</b><div class="small muted">for ${esc(hh.persona.toLowerCase())}</div></div></div>
-      <ul class="ins">${f.ins.map(([k,t])=>`<li class="${k}">${esc(t)}</li>`).join("")||"<li>No concerns found.</li>"}</ul>
-      ${rp?`<div class="rp"><span class="eyebrow">What it costs in real stores</span><span><b class="mono" style="font-size:20px">${money(rp.median)}</b> <span class="small muted">typical, per ${esc(L.qty)}</span></span><span class="small">From ${money(rp.low)} to ${money(rp.high)} across ${rp.stores} US stores (${rp.n} prices, Open Prices)</span></div>`:""}
-      ${pp&&pp.protein>0.5?`<p class="small muted" style="margin:0">${money(pp.price/pp.protein*10)} per 10 g of protein at the reference price.</p>`:""}
-      ${L.ingr?`<p class="small muted" style="margin:0"><b>Ingredients:</b> ${esc(L.ingr.slice(0,400))}</p>`:""}
-     </div>${nfLabel(L.n,hh,L.basis)}</div></div>`}
-  return `<div class="stack">
-   <div><h2 style="font-size:30px">Is it worth buying?</h2><p class="sub">Scan a barcode or pick something from the catalogue to see if it fits your diet, allergies and protein goal.</p></div>
-   <div class="card"><form id="bcForm" class="search"><input id="bc" type="text" inputmode="numeric" autocomplete="off" placeholder="Type a barcode, e.g. 737628064502" aria-label="Barcode" value="${esc(L&&!L.pid?L.code:"")}"><button class="btn primary" type="submit">Check</button></form>
-    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="small muted" for="stsel">or pick from the catalogue</label>
-     <select id="stsel" class="hhsel" style="max-width:100%"><option value="">Choose a product…</option>${[...new Set(P.map(p=>p.category))].map(c=>`<optgroup label="${esc(c.replace(/_/g," & "))}">${P.filter(p=>p.category===c).map(p=>`<option value="${p.id}" ${L?.pid===p.id?"selected":""}>${esc(p.name)}${hh.ok.has(p.id)?"":" (not for you)"}</option>`).join("")}</optgroup>`).join("")}</select></div></div>
-   ${res}
-   <section class="card"><h3>Most protein for your money</h3><p class="sub">From the foods that fit your diet.</p>
-    <ol class="vlist" style="margin-top:12px">${val.slice(0,6).map(x=>`<li>${ico(x.p)}<div style="min-width:0"><b>${esc(x.p.name)}</b> <span class="small muted">${money(x.p.price)} / ${esc(x.p.unit)}</span><div class="vtrk"><i style="width:${x.v/vmax*100}%"></i></div></div><span class="mono small">${Math.round(x.v)} g per $</span></li>`).join("")}</ol></section>
+    if(L.pid&&!hh.ok.has(L.pid)&&!L.allergens.some(a=>hh.exclusions.includes(a))){f.s=Math.min(f.s,20);f.cls="c-bad";f.label="Not for this household";f.ins.unshift(["b",`Not part of a ${hh.diet} diet.`])}
+    const rp=L.pid&&DATA.real_prices?.[L.pid];
+    res=`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s3);align-items:start" class="scanres">
+      <div style="display:grid;gap:var(--s2)"><div><span class="label">${L.pid?"From your catalogue":"Open Food Facts · "+esc(L.code)}</span><h2 style="font-size:22px">${esc(L.name)}</h2><span class="small muted">${esc([L.pid?"":L.brand,L.qty].filter(Boolean).join(" · "))}</span></div>
+       <div class="verdict"><span class="ring ${f.cls}">${f.s}</span><div><b style="font-family:var(--f-display);font-size:19px">${f.label}</b><div class="xs muted">for ${esc(hh.persona.toLowerCase())}</div></div></div>
+       <ul class="ins">${f.ins.map(([k,t])=>`<li class="${k}">${esc(t)}</li>`).join("")||"<li>No concerns found.</li>"}</ul>
+       ${rp?`<p class="small" style="margin:0"><b>In real stores:</b> typically <b class="mono">${money(rp.median)}</b> per ${esc(L.qty)}, from ${money(rp.low)} to ${money(rp.high)} across ${rp.stores} US stores.</p>`:""}</div>
+      ${nfLabel(L.n,hh,L.basis)}</div>`}
+  return `<div class="page">
+   <section class="c8 card"><div class="ch"><div><h2>Check a product</h2><p>See whether it fits this household's diet, allergies and protein goal.</p></div></div>
+    <form id="bcForm" class="search"><label for="bc" class="sr">Barcode</label><input id="bc" type="text" inputmode="numeric" autocomplete="off" placeholder="Barcode, e.g. 737628064502" value="${esc(L&&!L.pid?L.code:"")}"><button class="btn primary" type="submit">Check</button></form>
+    <div style="display:flex;gap:10px;align-items:center;margin:12px 0 var(--s3);flex-wrap:wrap"><label class="small muted" for="stsel">or pick from your catalogue</label><select id="stsel" class="hhsel" style="max-width:100%"><option value="">Choose a product…</option>${[...new Set(P.map(p=>p.category))].map(c=>`<optgroup label="${esc(catName(c))}">${P.filter(p=>p.category===c).map(p=>`<option value="${p.id}" ${L?.pid===p.id?"selected":""}>${esc(p.name)}${hh.ok.has(p.id)?"":" (not for this household)"}</option>`).join("")}</optgroup>`).join("")}</select></div>
+    ${res||`<div class="empty">Results appear here.</div>`}</section>
+   <section class="c4 card"><div class="ch"><div><h2>Most protein per dollar</h2><p>Foods that fit this household's diet.</p></div></div>
+    <ol class="vlist">${val.slice(0,8).map(x=>`<li>${ico(x.p)}<div style="min-width:0"><b class="small">${esc(x.p.name)}</b><div class="vt"><i style="width:${x.v/vmax*100}%"></i></div></div><span class="mono xs">${Math.round(x.v)} g/$</span></li>`).join("")}</ol></section>
   </div>`;
 };
 
-views.impact=()=>{
-  const hh=HH(),pols=polsFor(hh),live=isLive(hh),N=NAME(hh),c=pols.coach,a=pols.average_rule,wm=_wasteMoney;
-  const wkey=wm?"waste_cost":"waste_units";
-  const wasteCut=a[wkey]?1-c[wkey]/a[wkey]:0,save52=(a.weekly_cost-c.weekly_cost)*52;
-  const coachW=c.weekly||[],thr=wm?0.5:0.2,wf=coachW.filter(r=>(r.waste_cost??r.waste_units)<thr).length;
-  const MET=[{k:"waste",label:"Food wasted",f:r=>r.waste_cost??r.waste_units,ax:v=>wm?"$"+fx(v,v<10?1:0):fx(v,1)},{k:"cost",label:"Spend",f:r=>r.spend,ax:v=>"$"+Math.round(v)},{k:"so",label:"Empty-shelf days",f:r=>r.stockout_days,ax:v=>fx(v,0)}];
-  const M=MET.find(m=>m.k===ST.metric)||MET[0];
-  const series=[{name:"Your usual shop",color:"var(--s-avg)",values:roll((a.weekly||[]).map(M.f).map(v=>+v||0))},{name:N.coach,color:"var(--accent)",focus:true,values:roll(coachW.map(M.f).map(v=>+v||0))}];
-  const METRICS2=[{k:"cost",label:"Spend / wk",get:p=>p.weekly_cost,fmt:v=>money(v),lower:true},{k:"waste",label:"Wasted / wk",get:p=>p[wkey],fmt:v=>wm?money(v):fx(v,2),lower:true},{k:"so",label:"Empty-shelf days",get:p=>p.stockout_days,fmt:v=>fx(v,1),lower:true},{k:"pr",label:"Protein met",get:p=>p.protein_target_met,fmt:v=>pct(v),lower:false}];
-  const best=METRICS2.map(m=>{const v=ORDER.map(k=>+m.get(pols[k]));return m.lower?Math.min(...v):Math.max(...v)});
-  return `<div class="stack">
-   <div class="stack" style="gap:10px"><span class="badge ${live?"live":"demo"}" style="justify-self:start"><span class="dot"></span>${live?"Results from the trained agent":"Demo simulation"}</span>
-    <p class="big">Over a simulated year, the coach would waste <em>${Math.max(0,Math.round(wasteCut*100))}% less food</em>${save52>0?` and save <em>${money(save52,0)}</em>`:""} for this household.</p>
-    ${facts(hh)}</div>
-   <div class="trio">
-    <div><span class="eyebrow">Money saved</span><b>${money(Math.max(0,save52),0)}</b><span class="small muted">a year vs your usual shop</span></div>
-    <div><span class="eyebrow">Food not thrown out</span><b>${wm&&!live?fx(Math.max(0,(a.waste_kg-c.waste_kg)*52),0)+" kg":fx(Math.max(0,(a.waste_units-c.waste_units)*52),0)+" units"}</b><span class="small muted">a year</span></div>
-    <div><span class="eyebrow">Protein goal met</span><b>${pct(c.protein_target_met)}</b><span class="small muted">on average each week</span></div>
-   </div>
-   <section class="card"><div class="sechead"><h3>Week by week</h3><div class="chips">${MET.map(m=>`<button class="chip" data-metric="${m.k}" aria-pressed="${m.k===M.k}">${m.label}</button>`).join("")}</div></div>
-    ${lineChart(series,{yfmt:M.ax,label:M.label+" per week"})}
-    <div class="legend">${series.map(s=>`<span><i class="sw" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}<span class="muted">4-week average</span></div></section>
-   <section class="card"><h3>Waste-free weeks: ${wf} of ${coachW.length}</h3><p class="sub">Each square is a week. Green means almost nothing was thrown away.</p>
-    <div class="weeks">${coachW.map(r=>{const v=r.waste_cost??r.waste_units;return `<i class="${v<thr?"ok":v<thr*4?"mid":"hi"}" title="${wm?money(v):fx(v,2)} wasted"></i>`}).join("")}</div></section>
-   <details class="judges"><summary>Compare all four buying strategies</summary>
-    <p class="small muted" style="margin:8px 0 0">Fixed list buys the same every week. Average rule buys what was used recently. Forecast rule buys the forecast minus what's at home. ${live?"The RL agent is the trained policy.":"Coach (preview) is a stand-in tuned on the first half of the data; the RL agent replaces it when results/results.json exists."}</p>
-    <div class="pscroll"><div class="pgrid"><div class="h">Strategy</div>${METRICS2.map(m=>`<div class="h">${m.label}</div>`).join("")}
-     ${ORDER.map(k=>`<div class="${k==="coach"?"me":""}"><b>${esc(N[k])}</b></div>${METRICS2.map((m,j)=>{const v=+m.get(pols[k]);return `<div class="v ${k==="coach"?"me":""} ${Math.abs(v-best[j])<1e-9?"best":""}">${m.fmt(v)}</div>`}).join("")}`).join("")}
-    </div></div></details>
-   <footer class="note">All figures are simulated on the team's demand model. They are not real savings.</footer>
-  </div>`;
-};
+/* ===================== Rewards panel ===================== */
+function sring(score,size=92){const r=size/2-7,c=2*Math.PI*r;return `<svg class="sring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="Fridge score ${score} of 100"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="8"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c*score/100} ${c}" transform="rotate(-90 ${size/2} ${size/2})"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" style="font-family:var(--f-display);font-weight:700;font-size:${size*.32}px">${score}</text></svg>`}
+function drawer(){
+  const hh=HH(),w=curWeek(),pt=points(hh,w),g=pt.g,lvl=1+Math.floor(pt.total/250),into=pt.total%250;
+  const last=g.recs.at(-1),sc=last?fridgeScore(last,hh):fridgeScore(planWeek(hh,w).ef,hh);
+  return `<div class="scrim" data-close="1"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="rwt">
+   <div class="dhead"><h2 id="rwt" style="font-size:22px">Rewards</h2><button class="icon-btn" data-close="1" aria-label="Close rewards">✕</button></div>
+   <div class="lvl"><span class="label">Level ${lvl} · ${esc(hh.persona)}</span><b class="num" style="display:flex;align-items:center;gap:8px;color:var(--ink)"><span style="color:var(--gold)">${STAR(26)}</span>${pt.total.toLocaleString()} points</b>
+    <div class="bar2" style="height:8px"><i style="width:${into/2.5}%;background:var(--gold)"></i></div><span class="xs muted">${250-into} points to level ${lvl+1}</span></div>
+   <div><span class="label">${last?"Last week's fridge score":"Projected fridge score"}</span>
+    <div class="score" style="margin-top:8px">${sring(sc.total)}<div class="parts">${sc.parts.map(([n,v,m])=>`<div><div class="pl"><span>${n}</span><span class="mono">${Math.round(v)}/${m}</span></div><div class="bar2"><i style="width:${v/m*100}%"></i></div></div>`).join("")}</div></div>
+    <p class="xs muted" style="margin:8px 0 0">Built from the same four goals the AI is trained on, so you and the coach chase the same score.</p></div>
+   <div class="streak"><span class="flame ${g.streak?"on":""}">${glyph("flame",24)}</span><div><b style="font-family:var(--f-display);font-size:20px">${g.streak} week${g.streak===1?"":"s"}</b><div class="xs muted">waste-free streak${g.best>g.streak?` · best ${g.best}`:""}</div></div>
+    <div class="wkdots" aria-label="Last 8 weeks">${g.recs.slice(-8).map(r=>`<i class="${wasteFree(r,hh)?"ok":""}"></i>`).join("")}</div></div>
+   <div><span class="label">Badges · ${Object.keys(g.earned).length} of ${BADGES.length}</span>
+    <div class="badges" style="margin-top:8px">${BADGES.map(([k,name,desc,ic])=>{const e=g.earned[k];return `<div class="bdg ${e!=null?"got":""}"><span class="md">${glyph(ic,18)}</span><span><b>${name}</b><span class="xs">${e!=null?(e>=0?"Week "+(e+1):"Earned"):desc}</span></span></div>`}).join("")}</div></div>
+   <div><span class="label">How to earn points</span><ul class="earn" style="margin-top:8px">
+    <li><span>Tap a floating <b style="font-family:var(--f-body)">+10</b> to rescue food before it expires</span><b>+10</b></li>
+    <li><span>Pick a meal that uses up food at home</span><b>+5</b></li>
+    <li><span>Finish a week (a tenth of its fridge score)</span><b>+${sc.total?Math.round(sc.total/10):"~8"}</b></li></ul></div>
+  </aside>`;
+}
 
 /* ===================== Shell ===================== */
 function render(){
-  const v=views[ST.view]?ST.view:"week";
+  const v=views[ST.view]?ST.view:"plan";
   document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.go===v?"page":"false"));
-  renderHH();
+  renderHH();renderPts();
   try{app.innerHTML=views[v]()}catch(e){console.error(e);app.innerHTML=`<div class="empty">Something went wrong: ${esc(e.message)}</div>`}
+  document.getElementById("drawer").innerHTML=ST.rewards?drawer():"";
 }
 function go(v){ST.view=v;render();window.scrollTo({top:0})}
 document.addEventListener("click",e=>{
-  const t=e.target.closest("button");if(!t||t.disabled)return;const d=t.dataset;
+  const t=e.target.closest("button,[data-close]");if(!t||t.disabled)return;const d=t.dataset;
   if(d.go)go(d.go);
-  else if(d.wk){ST.scrub=Math.max(TRAIN_END,Math.min(NW-1,curWeek()+ +d.wk));render()}
-  else if(d.kafter){ST.kitchenAfter=d.kafter==="1";render()}
-  else if(d.metric){ST.metric=d.metric;save();render()}
+  else if(d.wk){const r0=t.getBoundingClientRect(),w0=curWeek();ST.scrub=Math.max(TRAIN_END,Math.min(NW-1,w0+ +d.wk));if(ST.scrub===w0)return;const g0=points(HH(),w0).total;render();const g1=points(HH(),curWeek()).total;if(g1>g0)fly(r0,g1-g0)}
+  else if(d.showall){ST.showAll=!ST.showAll;render()}
+  else if(d.pick){const hh=HH(),w=curWeek(),k=pkey(hh,w),a=ST.picks[k]||[];ST.picks[k]=a.includes(d.pick)?a.filter(x=>x!==d.pick):[...a,d.pick];render();
+    toast(ST.picks[k].includes(d.pick)?"Added to this week. The shopping list is updated.":"Removed. The shopping list is updated.")}
+  else if(d.mealpts){const hh=HH(),k=pkey(hh,curWeek())+":"+d.mealpts;if(!MEALP[k]){MEALP[k]=1;saveMealP();fly(t.getBoundingClientRect(),5);toast("+5 points for using up food");setTimeout(render,250)}}
+  else if(d.rescue)rescueItem(d.rescue,t.getBoundingClientRect());
+  else if(d.inv){ST.invAfter=d.inv==="1";render()}
+  else if(d.filt){ST.invFilter=d.filt;render()}
+  else if(d.rewards){ST.rewards=true;render();document.querySelector(".drawer [data-close]")?.focus()}
+  else if(d.close){ST.rewards=false;render();document.getElementById("pts").focus()}
 });
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ST.rewards){ST.rewards=false;render();document.getElementById("pts").focus()}});
 document.addEventListener("change",e=>{
   if(e.target.id==="hhsel"){ST.hh=e.target.value;ST.lookup=ST.lookup?.pid?ST.lookup:null;save();render();return}
   if(e.target.id==="stsel"&&e.target.value)staple(e.target.value);
 });
 document.addEventListener("submit",e=>{if(e.target.id==="bcForm"){e.preventDefault();lookup(document.getElementById("bc").value)}});
-if(!["waste","cost","so"].includes(ST.metric))ST.metric="waste";
 render();
 </script>
