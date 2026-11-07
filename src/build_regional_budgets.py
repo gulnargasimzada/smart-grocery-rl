@@ -41,7 +41,11 @@ COLUMNS = [
     "calibration_percentile", "calibration_weeks", "n_calibration_weeks",
     "calib_mean_cost_usd", "calib_median_cost_usd", "calib_p75_cost_usd",
     "budget_ratio_to_original", "budget_source",
+    # Scenario columns (appended; the columns above are the original P75 results, unchanged)
+    "normal_budget_usd", "challenging_budget_usd", "tight_budget_usd", "calib_p90_cost_usd",
 ]
+NORMAL_PERCENTILE = 90  # "normal" scenario (default); "challenging" = P75; "tight" = original budget
+SCENARIOS = {"normal": "normal_budget_usd", "challenging": "challenging_budget_usd", "tight": "tight_budget_usd"}
 
 
 def weekly_costs() -> pd.DataFrame:
@@ -71,8 +75,11 @@ def build_budgets(costs: pd.DataFrame | None = None) -> pd.DataFrame:
     stats = g.agg(
         n_calibration_weeks="count", calib_mean_cost_usd="mean", calib_median_cost_usd="median",
         calib_p75_cost_usd=lambda s: np.percentile(s, PERCENTILE),
+        calib_p90_cost_usd=lambda s: np.percentile(s, NORMAL_PERCENTILE),
     ).reset_index()
     stats["calibrated_budget_usd"] = np.ceil(stats["calib_p75_cost_usd"]).astype(int)
+    stats["normal_budget_usd"] = np.ceil(stats["calib_p90_cost_usd"]).astype(int)
+    stats["challenging_budget_usd"] = stats["calibrated_budget_usd"]
     df = stats.merge(
         hh[["household_id", "weekly_budget_usd"]].rename(columns={"weekly_budget_usd": "original_budget_usd"}),
         on="household_id", how="left",
@@ -81,7 +88,9 @@ def build_budgets(costs: pd.DataFrame | None = None) -> pd.DataFrame:
     df["calibration_weeks"] = f"{lo}-{hi} normal weeks only"
     df["budget_ratio_to_original"] = df["calibrated_budget_usd"] / df["original_budget_usd"]
     df["budget_source"] = "synthetic"
-    for c in ["calib_mean_cost_usd", "calib_median_cost_usd", "calib_p75_cost_usd", "budget_ratio_to_original"]:
+    df["tight_budget_usd"] = df["original_budget_usd"]
+    for c in ["calib_mean_cost_usd", "calib_median_cost_usd", "calib_p75_cost_usd", "calib_p90_cost_usd",
+              "budget_ratio_to_original"]:
         df[c] = df[c].round(4)
     df = df.sort_values(["household_id", "region_id"]).reset_index(drop=True)
     return df[COLUMNS]
@@ -114,6 +123,51 @@ def summarise(v: pd.DataFrame, by: list[str]) -> pd.DataFrame:
             "original_mean_ratio": g["ratio_orig"].mean(),
         })
     return v.groupby(by).apply(f, include_groups=False)
+
+
+def scenario_table(costs: pd.DataFrame, budgets: pd.DataFrame, by_region: bool = True) -> pd.DataFrame:
+    """Over-budget rate and mean cost/budget per scenario on held-out weeks 78-103."""
+    lo, hi = VALID_WEEKS
+    v = costs[costs["week"].between(lo, hi)].merge(
+        budgets[["household_id", "region_id", *SCENARIOS.values()]], on=["household_id", "region_id"]
+    )
+    rows = []
+    for region, g in [*v.groupby("region_id"), ("ALL", v)] if by_region else [("ALL", v)]:
+        for name, col in SCENARIOS.items():
+            ratio = g["cost"] / g[col]
+            n = g["normal_week"]
+            rows.append({
+                "region_id": region, "scenario": name,
+                "over_pct_all": 100 * (ratio > 1).mean(),
+                "over_pct_normal": 100 * (ratio[n] > 1).mean(),
+                "mean_ratio_all": ratio.mean(),
+                "mean_ratio_normal": ratio[n].mean(),
+                "mean_budget_usd": g[col].mean(),
+            })
+    return pd.DataFrame(rows).set_index(["region_id", "scenario"])
+
+
+def write_scenario_report(costs: pd.DataFrame, budgets: pd.DataFrame) -> None:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    t = scenario_table(costs, budgets)
+    t.to_csv(REPORT_DIR / "scenarios_by_region.csv")
+    lines = [
+        "# Budget scenarios: validation on held-out weeks 78-103 (SYNTHETIC budgets)",
+        "",
+        "| Scenario | Budget column | Definition |",
+        "|---|---|---|",
+        f"| normal (default) | `normal_budget_usd` | P{NORMAL_PERCENTILE} of normal-week cost, weeks 0-77, rounded up |",
+        f"| challenging | `challenging_budget_usd` (= `calibrated_budget_usd`) | P{PERCENTILE} of normal-week cost, weeks 0-77, rounded up |",
+        "| tight | `tight_budget_usd` (= `original_budget_usd`) | original budget from households.csv |",
+        "",
+        "`all` = every held-out week; `normal` = held-out weeks without guest/away/holiday flag.",
+        "Cost = recorded demand x regional price (diagnostic, not RL spending). Calibration never uses weeks 78-103.",
+        "",
+        md(t),
+        "",
+    ]
+    (REPORT_DIR / "scenarios.md").write_text("\n".join(lines))
+    print("\n".join(lines))
 
 
 def md(df: pd.DataFrame) -> str:
@@ -195,6 +249,17 @@ def check() -> int:
         ok(False, f"committed file differs from rebuild: {str(e)[:120]}")
     fresh2 = build_budgets(weekly_costs())
     ok(fresh.equals(fresh2), "two rebuilds are identical (deterministic)")
+    ok((committed["challenging_budget_usd"] == committed["calibrated_budget_usd"]).all(),
+       "challenging scenario equals the preserved P75 budget")
+    ok((committed["tight_budget_usd"] == committed["original_budget_usd"]).all(),
+       "tight scenario equals the original household budget")
+    ok((committed["normal_budget_usd"] >= committed["challenging_budget_usd"]).all(),
+       "normal (P90) budget >= challenging (P75) budget")
+    ok((committed["normal_budget_usd"] == np.ceil(committed["calib_p90_cost_usd"] - 1e-4)).all(),
+       "normal budget = ceil(P90 of calibration costs)")
+    t = scenario_table(costs, committed, by_region=False).loc["ALL"]
+    ok(t.loc["normal", "over_pct_normal"] < t.loc["challenging", "over_pct_normal"] < t.loc["tight", "over_pct_normal"],
+       "over-budget rate ordering: normal < challenging < tight")
     lo, hi = CALIB_WEEKS
     cal_weeks = costs[costs["week"].between(lo, hi) & costs["normal_week"]]["week"]
     ok(cal_weeks.max() <= 77, "calibration uses weeks <= 77 only (no leakage from validation weeks)")
@@ -213,6 +278,7 @@ def main() -> None:
     budgets = build_budgets(costs)
     budgets.to_csv(OUT_FILE, index=False)
     write_report(budgets, validate(costs, budgets))
+    write_scenario_report(costs, budgets)
     print(f"\nwrote {OUT_FILE.relative_to(ROOT)} ({len(budgets)} rows)")
 
 

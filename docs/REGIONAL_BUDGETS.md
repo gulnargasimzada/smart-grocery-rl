@@ -15,6 +15,16 @@
 | `budget_ratio_to_original` | `calibrated_budget_usd / original_budget_usd` |
 | `budget_source` | Always `synthetic` |
 
+## Scenarios (columns appended; the P75 columns above are preserved unchanged)
+| Scenario | Column | Definition |
+|---|---|---|
+| normal (default) | `normal_budget_usd` | P90 of normal-week cost, weeks 0-77, rounded up |
+| challenging | `challenging_budget_usd` | P75 (same as `calibrated_budget_usd`) |
+| tight | `tight_budget_usd` | original household budget (same as `original_budget_usd`) |
+
+`calib_p90_cost_usd` holds the P90 cost used for the normal scenario. Validation per scenario and region:
+`results/regional_budgets/scenarios.md`.
+
 ## Method
 - Weekly cost = sum over products of `demand_units` x regional `price_usd` (cost of recorded demand, not RL spending).
 - Calibration: weeks 0-77, excluding any week with `guest_week`, `away_week` or `holiday_week` set.
