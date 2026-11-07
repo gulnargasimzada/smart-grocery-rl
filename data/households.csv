@@ -1,4 +1,31 @@
-household_id,persona,n_people,weekly_budget_usd,weekly_protein_target_g,demand_scale,weekend_boost,demand_noise,allergen_exclusions,description
-hh_student,Budget student,1,30,300,1.0,1.30,0.25,,Single student on a tight grocery budget
-hh_couple,Working couple,2,55,600,1.9,1.20,0.20,,Two adults with regular weekday routines
-hh_family,Family of four,4,100,1100,3.6,1.35,0.30,,Two adults and two children; more weekend cooking
+household_id,persona,n_adults,n_children,n_people,diet,allergen_exclusions,eats_out_share,kcal_per_adult_day,weekly_budget_usd,weekly_protein_target_g,weekend_boost,demand_noise,guest_prob,description
+hh_student,Student,1,0,1,omnivore,,0.25,2000,55,340,1.3,0.25,0.06,Student: 1 adult(s); tight budget ($55/week)
+hh_couple,Working couple,2,0,2,omnivore,,0.25,2000,120,680,1.2,0.2,0.06,Working couple: 2 adult(s); normal budget ($120/week)
+hh_family,Family with children,2,2,4,omnivore,,0.12,2000,220,1290,1.35,0.3,0.06,"Family with children: 2 adult(s), 2 child(ren); normal budget ($220/week)"
+hh_04,Student,1,0,1,omnivore,,0.33,2000,45,300,1.37,0.27,0.05,Student: 1 adult(s); tight budget ($45/week)
+hh_05,Student,1,0,1,omnivore,,0.32,2000,45,310,1.37,0.3,0.05,Student: 1 adult(s); tight budget ($45/week)
+hh_06,Student,1,0,1,omnivore,,0.27,2000,50,330,1.33,0.31,0.08,Student: 1 adult(s); tight budget ($50/week)
+hh_07,Student,1,0,1,omnivore,peanut,0.35,2000,45,300,1.28,0.27,0.06,"Student: 1 adult(s), allergy: peanut; tight budget ($45/week)"
+hh_08,Working couple,2,0,2,omnivore,,0.25,2000,110,680,1.29,0.22,0.07,Working couple: 2 adult(s); normal budget ($110/week)
+hh_09,Working couple,2,0,2,omnivore,,0.2,2000,135,730,1.18,0.23,0.06,Working couple: 2 adult(s); normal budget ($135/week)
+hh_10,Working couple,2,0,2,omnivore,,0.28,2000,115,660,1.17,0.2,0.08,Working couple: 2 adult(s); normal budget ($115/week)
+hh_11,Working couple,2,0,2,pescatarian,,0.26,2000,110,670,1.26,0.19,0.07,"Working couple: 2 adult(s), pescatarian; normal budget ($110/week)"
+hh_12,Family with children,2,3,5,vegetarian,soy,0.14,2000,240,1500,1.31,0.31,0.07,"Family with children: 2 adult(s), 3 child(ren), vegetarian, allergy: soy; normal budget ($240/week)"
+hh_13,Family with children,2,2,4,omnivore,,0.18,2000,210,1210,1.39,0.32,0.09,"Family with children: 2 adult(s), 2 child(ren); normal budget ($210/week)"
+hh_14,Family with children,2,2,4,omnivore,,0.1,2000,225,1320,1.36,0.29,0.1,"Family with children: 2 adult(s), 2 child(ren); normal budget ($225/week)"
+hh_15,Family with children,2,2,4,omnivore,,0.11,2000,250,1310,1.43,0.33,0.07,"Family with children: 2 adult(s), 2 child(ren); normal budget ($250/week)"
+hh_16,Family with children,2,2,4,vegetarian,,0.14,2000,190,1260,1.32,0.29,0.1,"Family with children: 2 adult(s), 2 child(ren), vegetarian; normal budget ($190/week)"
+hh_17,Athlete,2,0,2,omnivore,,0.19,2800,175,1250,1.11,0.19,0.04,Athlete: 2 adult(s); normal budget ($175/week)
+hh_18,Athlete,2,0,2,omnivore,,0.19,2800,180,1250,1.1,0.19,0.04,Athlete: 2 adult(s); normal budget ($180/week)
+hh_19,Athlete,1,0,1,omnivore,,0.14,2800,95,660,1.05,0.16,0.06,Athlete: 1 adult(s); normal budget ($95/week)
+hh_20,Vegetarian household,1,0,1,vegetarian,,0.28,2000,45,300,1.2,0.25,0.07,"Vegetarian household: 1 adult(s), vegetarian; normal budget ($45/week)"
+hh_21,Vegetarian household,2,0,2,vegetarian,gluten,0.26,2000,85,620,1.29,0.21,0.08,"Vegetarian household: 2 adult(s), vegetarian, allergy: gluten; normal budget ($85/week)"
+hh_22,Vegetarian household,2,0,2,vegetarian,,0.21,2000,110,660,1.27,0.2,0.07,"Vegetarian household: 2 adult(s), vegetarian; normal budget ($110/week)"
+hh_23,Vegan household,1,0,1,vegan,peanut,0.26,2000,50,280,1.18,0.24,0.05,"Vegan household: 1 adult(s), vegan, allergy: peanut; tight budget ($50/week)"
+hh_24,Vegan household,2,0,2,vegan,,0.2,2000,90,620,1.19,0.3,0.05,"Vegan household: 2 adult(s), vegan; tight budget ($90/week)"
+hh_25,Senior couple,2,0,2,omnivore,,0.09,1800,120,890,1.11,0.16,0.05,Senior couple: 2 adult(s); tight budget ($120/week)
+hh_26,Senior couple,2,0,2,omnivore,,0.08,1800,130,900,1.11,0.12,0.04,Senior couple: 2 adult(s); tight budget ($130/week)
+hh_27,Senior couple,2,0,2,omnivore,,0.07,1800,110,910,1.11,0.16,0.05,Senior couple: 2 adult(s); tight budget ($110/week)
+hh_28,Shared student house,4,0,4,vegetarian,,0.3,2200,190,1270,1.28,0.32,0.06,"Shared student house: 4 adult(s), vegetarian; tight budget ($190/week)"
+hh_29,Shared student house,4,0,4,vegetarian,,0.27,2200,200,1330,1.32,0.35,0.08,"Shared student house: 4 adult(s), vegetarian; tight budget ($200/week)"
+hh_30,Single professional,1,0,1,omnivore,peanut,0.49,2000,45,230,1.22,0.27,0.07,"Single professional: 1 adult(s), allergy: peanut; comfortable budget ($45/week)"
