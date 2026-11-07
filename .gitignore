@@ -1,2 +1,12 @@
 data/usda_raw/
 data/demand_daily.csv
+# Python caches
+__pycache__/
+*.pyc
+
+# Local secrets and OS files
+.env
+.DS_Store
+
+# Open Prices raw snapshot (~80 MB), re-downloaded by src/fetch_open_prices.py
+data/open_prices_raw/
