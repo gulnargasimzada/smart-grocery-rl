@@ -1,0 +1,11 @@
+recipe_id,name,meal_type,servings,prep_time_min,ingredients,tags
+oatmeal_banana,Banana oatmeal,breakfast,1,10,oats:0.1;milk:0.25;bananas:0.12,vegetarian;budget
+egg_spinach_scramble,Spinach egg scramble,breakfast,1,10,eggs:0.25;spinach:0.5;bread:0.1,vegetarian;high_protein
+yogurt_fruit_bowl,Yogurt fruit bowl,breakfast,1,5,yogurt:0.4;apples:0.2;oats:0.06,vegetarian;quick
+banana_yogurt_smoothie,Banana yogurt smoothie,breakfast,1,5,yogurt:0.3;bananas:0.2;milk:0.2;oats:0.04,vegetarian;quick;use_it_first
+banana_oat_pancakes,Banana oat pancakes,breakfast,2,20,oats:0.15;bananas:0.25;eggs:0.17;milk:0.15,vegetarian;use_it_first
+chicken_rice_bowl,Chicken rice bowl,dinner,2,30,chicken_breast:0.5;rice:0.2;tomatoes:0.5,high_protein
+egg_fried_rice,Egg fried rice,dinner,2,20,eggs:0.25;rice:0.15;spinach:0.25,vegetarian;budget
+lentil_tomato_soup,Lentil tomato soup,dinner,3,35,lentils:0.4;tomatoes:0.8;spinach:0.5,vegetarian;budget;high_protein
+chicken_lentil_stew,Chicken lentil stew,dinner,3,40,chicken_breast:0.5;lentils:0.3;tomatoes:0.6,high_protein
+chicken_spinach_sandwich,Chicken spinach sandwich,lunch,2,15,bread:0.3;chicken_breast:0.2;tomatoes:0.3;spinach:0.25,high_protein;quick
