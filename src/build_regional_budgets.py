@@ -8,10 +8,12 @@ Method
 cost(h, r, w) = sum_p demand_units(h, w, p) * price_usd(r, w, p)   (diagnostic cost of
 recorded demand, not RL spending).
 Calibration uses NORMAL weeks only (guest_week = away_week = holiday_week = 0) in the
-calibration window (weeks 0-77). Budget = P75 of those costs, rounded UP to a whole USD.
+calibration window (weeks 0-77). Budgets are rounded UP to a whole USD. Three scenarios:
+  normal      = P90 of those costs (default)   -> normal_budget_usd
+  challenging = P75 (Step 1B result, kept as calibrated_budget_usd) -> challenging_budget_usd
+  tight       = original households.csv budget -> tight_budget_usd
 Validation uses the held-out weeks 78-103 (never used for calibration).
-The original `weekly_budget_usd` from households.csv is kept as `original_budget_usd`
-for the fixed-budget comparison scenario.
+The original `weekly_budget_usd` from households.csv is kept as `original_budget_usd` (= tight scenario).
 
 ALL BUDGETS ARE SYNTHETIC ASSUMPTIONS for the demo, not real household data.
 
@@ -191,7 +193,7 @@ def write_report(budgets: pd.DataFrame, v: pd.DataFrame) -> None:
     worst = by_pair.sort_values("calibrated_over_pct_normal", ascending=False).head(10)
     ratio = budgets.groupby("region_id")["budget_ratio_to_original"].agg(["min", "mean", "max"])
     lines = [
-        "# Regional household budgets: calibration and validation (SYNTHETIC)",
+        "# Regional household budgets: P75 (challenging) vs. original (tight) validation (SYNTHETIC)",
         "",
         "All budgets are synthetic assumptions for the demo, not real household data.",
         f"Calibration: P{PERCENTILE} of weekly cost of recorded demand, weeks {CALIB_WEEKS[0]}-{CALIB_WEEKS[1]},"
@@ -199,6 +201,7 @@ def write_report(budgets: pd.DataFrame, v: pd.DataFrame) -> None:
         f"Validation: held-out weeks {VALID_WEEKS[0]}-{VALID_WEEKS[1]} ({VALID_WEEKS[1]-VALID_WEEKS[0]+1} weeks)."
         " `all` includes guest/away/holiday weeks; `normal` excludes them.",
         "`calibrated_*` uses `calibrated_budget_usd`; `original_*` uses the fixed budget from households.csv.",
+        "The normal (P90) scenario is reported in scenarios.md.",
         "Reproduce: `python -m src.build_regional_budgets`; verify: `python -m src.build_regional_budgets --check`.",
         "",
         "## Over-budget rate by region (held-out weeks)",

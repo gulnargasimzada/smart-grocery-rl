@@ -1,9 +1,10 @@
-# Regional household budgets: calibration and validation (SYNTHETIC)
+# Regional household budgets: P75 (challenging) vs. original (tight) validation (SYNTHETIC)
 
 All budgets are synthetic assumptions for the demo, not real household data.
 Calibration: P75 of weekly cost of recorded demand, weeks 0-77, normal weeks only (no guest, away or holiday flag), rounded up to whole USD.
 Validation: held-out weeks 78-103 (26 weeks). `all` includes guest/away/holiday weeks; `normal` excludes them.
 `calibrated_*` uses `calibrated_budget_usd`; `original_*` uses the fixed budget from households.csv.
+The normal (P90) scenario is reported in scenarios.md.
 Reproduce: `python -m src.build_regional_budgets`; verify: `python -m src.build_regional_budgets --check`.
 
 ## Over-budget rate by region (held-out weeks)
