@@ -122,11 +122,13 @@ class GroceryEnv(gym.Env):
     metadata = {"render_modes": []}
 
     def __init__(self, household_id: str = "hh_student", region_id: str = "durham_nc", budget_scenario: str = "normal",
-                 storage_scenario: str = "default", horizon: int = HORIZON, forecast_fn=None, root: Path = ROOT):
+                 storage_scenario: str = "default", horizon: int = HORIZON, forecast_fn=None, root: Path = ROOT,
+                 start_range: tuple[int, int] = TRAIN_START_RANGE):
         super().__init__()
         self.d = GroceryData(household_id, region_id, budget_scenario, storage_scenario, root)
         self.horizon = horizon
         self.forecast_fn = forecast_fn
+        self.start_range = start_range               # inclusive range from which reset() samples a start week
         self.stock_cap_weeks = STOCK_CAP_WEEKS       # attribute so diagnostics can relax it
         n = self.d.n
         self.action_space = spaces.Box(0.0, 1e6, shape=(n,), dtype=np.float32)   # order quantities in purchase units
@@ -189,7 +191,7 @@ class GroceryEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
         options = options or {}
-        lo, hi = TRAIN_START_RANGE
+        lo, hi = self.start_range
         start = options.get("start_week")
         if start is None:
             start = int(self.np_random.integers(lo, hi + 1))
@@ -456,7 +458,7 @@ class GroceryEnv(gym.Env):
         self.cash["stockout_value"] += acc["stockout_value"]
 
         self.t += 1
-        truncated = self.t >= self.horizon
+        terminated = self.t >= self.horizon       # finite-horizon task: terminal charge defined, value after the last step is 0
         info = {
             "spend": spend, "waste_units": float(acc["wasted"].sum()), "waste_cost": acc["waste_cost"],
             "stockout_units": acc["stockout_units"], "stockout_days": acc["stockout_days"], "kcal": kcal,
@@ -468,14 +470,14 @@ class GroceryEnv(gym.Env):
         }
         reward = -(acc["consumed_cost"] + acc["waste_cost"] + STOCKOUT_MULT * acc["stockout_value"]) / d.weekly_budget \
                  - PROTEIN_WEIGHT * shortfall
-        if truncated:
+        if terminated:
             basis, credit, charge = self.terminal_valuation(self.week)
             self.cash["terminal_charge"] = charge
             reward -= charge / d.weekly_budget
             info.update(terminal_inventory_basis=basis, terminal_inventory_credit=credit, terminal_charge=charge,
                         episode_net_cost=self.cash["consumed_cost"] + self.cash["waste_cost"] + charge)
         info["obs_dict"] = self._obs_dict()
-        return self._obs(), float(reward), False, truncated, info
+        return self._obs(), float(reward), terminated, False, info
 
     # ------------------------------------------------------------------ observation
     def _forecast(self, week: int) -> np.ndarray | None:

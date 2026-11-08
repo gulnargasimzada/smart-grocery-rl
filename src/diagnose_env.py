@@ -77,7 +77,7 @@ def run_episode(env: GroceryEnv, policy: Policy, start: int) -> dict:
                cut_rounding=np.zeros(n), cut_cap=np.zeros(n), cut_storage=np.zeros(n), cut_budget=np.zeros(n), requested=np.zeros(n))
     while not done:
         week = env.week
-        _, r, _, done, info = env.step(policy.act(obs_dict))
+        _, r, done, _, info = env.step(policy.act(obs_dict))
         obs_dict = info["obs_dict"]
         price, dem = env.price_at(week), env.d.demand[week]
         tot["reward"] += r

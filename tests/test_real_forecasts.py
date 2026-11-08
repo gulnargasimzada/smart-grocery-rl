@@ -71,6 +71,6 @@ def test_real_forecasts_reach_the_wrapper_observation_and_no_out_of_episode_requ
         assert np.allclose(obs[4 * 36:5 * 36], np.clip(table.get("hh_student", start) / np.maximum(ref, 1e-6), 0, 4), atol=1e-6)
         done = False
         while not done:
-            obs, _, _, done, info = env.step(np.full(36, 0.5))
+            obs, _, done, _, info = env.step(np.full(36, 0.5))
         assert sorted(set(requested)) == list(range(start, start + 13))
         assert obs[-1] == 0.0

@@ -169,7 +169,8 @@ This project does **not** model real food-safety expiry. It models *simulated di
 - One step = one shopping decision at the start of a week, then 7 simulated days.
 - Start week: training samples from weeks 4-51 (so the episode ends by week 63); validation uses windows inside weeks 64-77 (start 64, 13 weeks);
   test uses two non-overlapping windows, 78-90 and 91-103. Weeks 0-3 are never used (no forecast history).
-- `terminated` is always False; `truncated` is True after the 13th step (time limit).
+- The 13th step returns `terminated = True` and the environment never truncates: it is a finite-horizon task whose terminal charge is part of the last reward, and the
+  observation includes the weeks left, so the value after the last step is 0 and PPO must not bootstrap from it (`docs/RL_PPO_PILOT.md`).
 
 ### Observation (flat `float32` vector, about 200 values)
 Per product (36 each), all scaled by the product's weekly reference demand `ref` (trailing 4-week mean demand):

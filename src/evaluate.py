@@ -164,7 +164,7 @@ def run_episode(spec: EpisodeSpec, policy: Policy | str, table: ForecastTable | 
     while not done:
         week = base.week
         action = policy.act_vec(obs) if policy.normalized_action else policy.act(obs_dict)
-        obs, reward, _, done, info = env.step(action)
+        obs, reward, done, _, info = env.step(action)
         obs_dict = info["obs_dict"]
         tot["reward"] += reward
         tot["cash_spend"] += info["spend"]

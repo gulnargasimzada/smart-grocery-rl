@@ -206,7 +206,7 @@ def test_terminal_observation_does_not_request_forecasts_outside_the_episode():
         env.reset(options={"start_week": start})
         done = False
         while not done:
-            obs, _, _, done, info = env.step(np.zeros(36))
+            obs, _, done, _, info = env.step(np.zeros(36))
         assert sorted(set(requested)) == list(range(start, start + 13))      # never week 64 / week 77 / the next episode
         assert obs[-1] == 0.0 and info["obs_dict"]["forecast"] is None        # terminal observation carries no forecast
 

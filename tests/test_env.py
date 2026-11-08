@@ -28,7 +28,7 @@ def run_episode(env: GroceryEnv, start: int, policy, collect=False):
     env.reset(options={"start_week": start})
     infos, rewards, done = [], [], False
     while not done:
-        _, r, term, done, info = env.step(policy(env))
+        _, r, done, _, info = env.step(policy(env))
         rewards.append(r)
         infos.append(info)
     return (rewards, infos) if collect else sum(rewards)
@@ -82,26 +82,39 @@ def test_same_actions_give_identical_results():
     assert [x["spend"] for x in i1] == [x["spend"] for x in i2]
 
 
-def test_episode_length_and_truncation():
+def test_episode_ends_with_termination_not_truncation():
+    """Finite-horizon task with a defined terminal charge: the 13th step terminates (value after it is exactly 0)."""
     env = make_env()
-    env.reset(options={"start_week": 91})
-    flags = [env.step(np.zeros(env.d.n))[3] for _ in range(HORIZON)]
-    assert flags == [False] * (HORIZON - 1) + [True]
+    env.reset(options={"start_week": 51})
+    out = [env.step(np.zeros(env.d.n)) for _ in range(HORIZON)]
+    assert [o[2] for o in out] == [False] * (HORIZON - 1) + [True]        # terminated only at the last step
+    assert [o[3] for o in out] == [False] * HORIZON                       # never truncated
+    assert "terminal_charge" in out[-1][4] and "terminal_charge" not in out[-2][4]
     with pytest.raises(ValueError):
         env.reset(options={"start_week": 92})            # would run past week 103
     with pytest.raises(ValueError):
         env.reset(options={"start_week": 3})             # no forecast history
 
 
+def test_sb3_does_not_bootstrap_from_the_terminal_observation():
+    from stable_baselines3.common.vec_env import DummyVecEnv
+    venv = DummyVecEnv([lambda: make_env()])
+    venv.env_method("reset", options={"start_week": 30})
+    venv.reset()
+    for i in range(HORIZON):
+        _, _, dones, infos = venv.step([np.zeros(36, dtype=np.float32)])
+    assert dones[0] and infos[0]["TimeLimit.truncated"] is False         # SB3 PPO bootstraps only when this is True
+
+
 # ---------------------------------------------------------------- conservation
-@pytest.mark.parametrize("start,seed,scale", [(4, 0, 2.0), (30, 1, 10.0), (51, 2, 60.0), (64, 3, 0.7), (78, 4, 5.0), (91, 5, 100.0)])
+@pytest.mark.parametrize("start,seed,scale", [(4, 0, 2.0), (30, 1, 10.0), (51, 2, 60.0), (64, 3, 0.7), (52, 4, 5.0), (40, 5, 100.0)])
 def test_inventory_and_cost_conservation_every_step(start, seed, scale):
     env = make_env()
     policy = random_policy(seed, scale)
     env.reset(options={"start_week": start})
     done = False
     while not done:
-        _, _, _, done, info = env.step(policy(env))
+        _, _, done, _, info = env.step(policy(env))
         assert_conserved(env)
         assert info["waste_units"] == pytest.approx(info["waste_units_quality"] + info["waste_units_safety_cutoff"])
         assert all(l.units > 0 for l in env.lots)
@@ -125,7 +138,7 @@ def test_order_pipeline_respects_budget_packages_and_storage(scale):
     env.reset(options={"start_week": 25})
     done = False
     while not done:
-        _, _, _, done, info = env.step(policy(env))
+        _, _, done, _, info = env.step(policy(env))
         assert info["spend"] <= env.d.weekly_budget + 1e-9
         steps = info["order"] / env.d.step_size
         assert np.allclose(steps, np.round(steps)), "order must be a whole number of package steps"

@@ -55,7 +55,7 @@ def test_half_action_reproduces_the_average_rule_baseline_exactly():
     while not done:
         order = pol.act(raw_info["obs_dict"])
         _, r2, _, _, raw_info = raw.step(order)
-        _, r1, _, done, info = env.step(np.full(36, 0.5))
+        _, r1, done, _, info = env.step(np.full(36, 0.5))
         assert np.allclose(info["proposed_order"], order)
         assert np.allclose(info["order"], raw_info["order"])
         r_w, r_raw = r_w + r1, r_raw + r2
@@ -89,7 +89,7 @@ def run_checked(env, actions_fn, start, base_check=True):
         week = base.week
         on_hand_before = base.on_hand_units().copy()
         ref, step = base.ref(week), base.d.step_size
-        _, _, _, done, info = env.step(actions_fn(base))
+        _, _, done, _, info = env.step(actions_fn(base))
         infos.append(info)
         prop, order = info["proposed_order"], info["order"]
         assert np.allclose(prop / step, np.round(prop / step)), "proposed order must be whole packages"
@@ -144,7 +144,7 @@ def test_wrapper_does_not_change_reward_or_dynamics():
     raw.reset(options={"start_week": 40})
     done = False
     while not done:
-        _, r1, _, done, i1 = env.step(rng.uniform(0, 1, 36))
+        _, r1, done, _, i1 = env.step(rng.uniform(0, 1, 36))
         _, r2, _, _, i2 = raw.step(i1["proposed_order"])
         assert r1 == pytest.approx(r2) and i1["spend"] == pytest.approx(i2["spend"])
     assert i1["episode_net_cost"] == pytest.approx(i2["episode_net_cost"])
@@ -158,7 +158,7 @@ def test_same_actions_give_identical_wrapped_episodes():
         env.reset(options={"start_week": 20})
         done, total = False, 0.0
         while not done:
-            _, r, _, done, info = env.step(rng.uniform(0, 1, 36).astype(np.float32))
+            _, r, done, _, info = env.step(rng.uniform(0, 1, 36).astype(np.float32))
             total += r
         out.append((total, info["episode_cash_spend"]))
     assert out[0] == out[1]
