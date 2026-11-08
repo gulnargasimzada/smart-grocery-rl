@@ -6,15 +6,21 @@ Step 2: XGBoost model. It predicts the RATIO  demand / reference  (reference = m
         sample weights = reference, so the training loss equals the absolute error in purchase units (= our MAE).
         Prediction = ratio * reference. Products a household can never eat have reference 0 and get prediction 0.
 
-Step 3: export + API for the team.
-        python -m src.forecast            evaluation only (baselines vs XGBoost on weeks 80-103)
+Step 3: Ridge regression (simple ML baseline) and a validation set to compare the models fairly.
+        Split of the weeks (set by the team captain):  TRAIN 0-63 | VALIDATION 64-77 | TEST 78-103.
+        Weeks 0-3 cannot be predicted (a forecast needs 4 weeks of history), so the model is trained on target weeks 4-63.
+        Models and parameters (Ridge alpha, XGBoost depth / trees) are chosen on the validation weeks only.
+        The chosen models are then retrained on weeks 4-77 and scored ONCE on the test weeks.
+
+Step 4: export + API for the team.
+        python -m src.forecast            validation comparison, then test results
         python -m src.forecast --export   also writes data/forecast_weekly.csv and trains + saves the final models
                                           (models/forecaster_with_events.json, models/forecaster_no_events.json)
         predict_next_week(history, household_id, week, guest=None, away=None)  -> {product_id: units}
         guest/away=None means "unknown": the model WITHOUT guest/away flags is used.
 
 Run from the repo root:  python -m src.forecast
-Time-based split: weeks 0-79 are history/training, weeks 80-103 are the test period (never used for training).
+Time-based split: the test weeks 78-103 are never used for training or for choosing parameters.
 Every prediction for week t uses only information from weeks before t, plus the event flags of week t
 (holiday is always known; guest/away weeks are known only if the household tells us in advance, so we also
 train a model WITHOUT the guest/away flags to show the honest result when they are not known).
@@ -26,9 +32,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.demand import HOLIDAY_WEEKS
+from src.demand import CATEGORY_KCAL_SHARE, HOLIDAY_WEEKS
 
-TRAIN_WEEKS = 80
+TRAIN_WEEKS = 78          # first TEST week (weeks before it are train + validation)
+VAL_START = 64           # first VALIDATION week (train targets are MIN_HISTORY .. VAL_START-1)
 KEYS = ["household_id", "product_id"]
 MIN_HISTORY = 4          # first week that has 4 weeks of history
 DIET_CODE = {"omnivore": 0, "pescatarian": 1, "vegetarian": 2, "vegan": 3}
@@ -66,9 +73,12 @@ def score(df: pd.DataFrame, pred_col: str) -> dict:
     return {"MAE": err.mean(), "WMAPE_%": 100 * err.sum() / df["demand_units"].sum()}
 
 
-def evaluate(df: pd.DataFrame, pred_cols: list, test_start: int = TRAIN_WEEKS) -> pd.DataFrame:
-    """Scores on the test weeks, overall and by event type."""
-    test = df[(df["week"] >= test_start)].dropna(subset=pred_cols).copy()
+def evaluate(df: pd.DataFrame, pred_cols: list, test_start: int = TRAIN_WEEKS, test_end: int | None = None) -> pd.DataFrame:
+    """Scores on the weeks test_start .. test_end-1 (default: to the last week), overall and by event type."""
+    test = df[df["week"] >= test_start]
+    if test_end is not None:
+        test = test[test["week"] < test_end]
+    test = test.dropna(subset=pred_cols).copy()
     test["event"] = event_label(test)
     rows = []
     for col in pred_cols:
@@ -76,6 +86,15 @@ def evaluate(df: pd.DataFrame, pred_cols: list, test_start: int = TRAIN_WEEKS) -
         for ev, part in test.groupby("event"):
             rows.append({"model": col, "slice": ev, "rows": len(part), **score(part, col)})
     return pd.DataFrame(rows)
+
+
+def summary_table(res: pd.DataFrame) -> pd.DataFrame:
+    """One row per model: MAE and WMAPE overall, and WMAPE per event type."""
+    allrows = res[res["slice"] == "all"].set_index("model")
+    out = allrows[["MAE", "WMAPE_%"]].copy()
+    for ev in ("normal", "guest", "holiday", "away"):
+        out[f"{ev}_%"] = res[res["slice"] == ev].set_index("model")["WMAPE_%"]
+    return out.round({"MAE": 4, "WMAPE_%": 1, "normal_%": 1, "guest_%": 1, "holiday_%": 1, "away_%": 1})
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -126,39 +145,126 @@ def build_features(weekly: pd.DataFrame, households: pd.DataFrame, products: pd.
     return df
 
 
-def make_model():
+XGB_GRID = [{"n_estimators": n, "max_depth": d} for n in (200, 400) for d in (4, 6)]
+RIDGE_ALPHAS = (0.1, 1.0, 10.0, 100.0)
+VARIANTS = {"no_guest_away": FEATURES_NO_EVENTS, "with_events": FEATURES_WITH_EVENTS}
+
+
+def make_model(n_estimators: int = 400, max_depth: int = 6):
     """XGBoost if it is installed, otherwise a scikit-learn model with the same interface (only for testing)."""
     try:
         from xgboost import XGBRegressor
-        return "xgboost", XGBRegressor(objective="reg:absoluteerror", n_estimators=400, learning_rate=0.05,
-                                       max_depth=6, subsample=0.8, colsample_bytree=0.8, min_child_weight=5,
+        return "xgboost", XGBRegressor(objective="reg:absoluteerror", n_estimators=n_estimators, learning_rate=0.05,
+                                       max_depth=max_depth, subsample=0.8, colsample_bytree=0.8, min_child_weight=5,
                                        tree_method="hist", random_state=0, n_jobs=-1)
     except ImportError:
         from sklearn.ensemble import HistGradientBoostingRegressor
-        return "sklearn-fallback", HistGradientBoostingRegressor(loss="absolute_error", max_iter=300,
-                                                                 learning_rate=0.08, max_depth=6, random_state=0)
+        return "sklearn-fallback", HistGradientBoostingRegressor(loss="absolute_error", max_iter=n_estimators // 2,
+                                                                 learning_rate=0.08, max_depth=max_depth, random_state=0)
 
 
-def fit_forecaster(df: pd.DataFrame, features: list, train_weeks: int = TRAIN_WEEKS):
-    """Trains on target weeks MIN_HISTORY .. train_weeks-1. Returns (model name, fitted model)."""
-    train = df[(df["week"] >= MIN_HISTORY) & (df["week"] < train_weeks) & (df["reference"] > 0)]
-    name, model = make_model()
+def training_rows(df: pd.DataFrame, first_week: int, end_week: int) -> pd.DataFrame:
+    return df[(df["week"] >= first_week) & (df["week"] < end_week) & (df["reference"] > 0)]
+
+
+def fit_forecaster(df: pd.DataFrame, features: list, train_weeks: int = TRAIN_WEEKS, first_week: int = MIN_HISTORY,
+                   params: dict | None = None):
+    """Trains XGBoost on target weeks first_week .. train_weeks-1. Returns (model name, fitted model)."""
+    train = training_rows(df, first_week, train_weeks)
+    name, model = make_model(**(params or {}))
     ratio = train["demand_units"] / train["reference"]
     model.fit(train[features], ratio, sample_weight=train["reference"])
     return name, model
 
 
-def predict_units(df: pd.DataFrame, model, features: list) -> pd.Series:
-    """Predicted demand in purchase units. Rows without a usable reference (no history / never eaten) get NaN / 0."""
-    ratio = pd.Series(model.predict(df[features]), index=df.index)
+def to_units(ratio: pd.Series, df: pd.DataFrame) -> pd.Series:
+    """ratio * reference. Rows without a usable reference (no history / never eaten) get NaN / 0."""
     pred = (ratio * df["reference"]).clip(lower=0)
     pred[df["reference"] == 0] = 0.0
     pred[df["reference"].isna()] = np.nan
     return pred
 
 
+def predict_units(df: pd.DataFrame, model, features: list) -> pd.Series:
+    """XGBoost prediction in purchase units."""
+    return to_units(pd.Series(model.predict(df[features]), index=df.index), df)
+
+
+# --- Ridge regression: a simple linear baseline -------------------------------------------------------------
+def ridge_matrix(df: pd.DataFrame, include_events: bool) -> pd.DataFrame:
+    """Scale-free features for the linear model: lags and averages are divided by the reference level."""
+    safe_ref = df["reference"].where(df["reference"] > 0)
+    x = pd.DataFrame(index=df.index)
+    for c in ("lag1", "lag2", "lag3", "lag4", "ma4"):
+        x[f"{c}_ratio"] = (df[c] / safe_ref).fillna(1.0)
+    x["std4_ratio"] = (df["std4"] / safe_ref).fillna(0.0)
+    for c in SEASON_FEATURES + HISTORY_EVENT_FEATURES + HOLIDAY_FEATURES + (EVENT_FEATURES if include_events else []):
+        x[c] = df[c].fillna(0.0)
+    cat = pd.Categorical(df["category_code"], categories=range(len(CATEGORY_KCAL_SHARE)))
+    return pd.concat([x, pd.get_dummies(cat, prefix="cat").astype(float).set_axis(df.index)], axis=1)
+
+
+def fit_ridge(df: pd.DataFrame, alpha: float, include_events: bool, first_week: int = MIN_HISTORY,
+              end_week: int = TRAIN_WEEKS):
+    from sklearn.linear_model import Ridge
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    train = training_rows(df, first_week, end_week)
+    model = make_pipeline(StandardScaler(), Ridge(alpha=alpha))
+    model.fit(ridge_matrix(train, include_events), train["demand_units"] / train["reference"],
+              ridge__sample_weight=train["reference"])
+    return model
+
+
+def ridge_units(df: pd.DataFrame, model, include_events: bool) -> pd.Series:
+    return to_units(pd.Series(model.predict(ridge_matrix(df, include_events)), index=df.index), df)
+
+
+# --- Model comparison with a validation set ------------------------------------------------------------------
+def val_score(df: pd.DataFrame, pred: pd.Series) -> dict:
+    rows = df[(df["week"] >= VAL_START) & (df["week"] < TRAIN_WEEKS)].copy()
+    rows["pred"] = pred.loc[rows.index]
+    return score(rows.dropna(subset=["pred"]), "pred")
+
+
+def compare_models(df: pd.DataFrame):
+    """Chooses the Ridge alpha and the XGBoost settings on the VALIDATION weeks (models trained on TRAIN weeks only),
+    then retrains the chosen models on train + validation and fills the pred_* columns used for the test results.
+    Returns (df, validation table, best settings)."""
+    val_rows, best = [], {}
+    for base in ("pred_last_week", "pred_ma4"):
+        val_rows.append({"model": base, "setting": "-", "chosen": "", **val_score(df, df[base])})
+    for variant, feats in VARIANTS.items():
+        events = variant == "with_events"
+
+        scored = []
+        for alpha in RIDGE_ALPHAS:
+            model = fit_ridge(df, alpha, events, end_week=VAL_START)
+            scored.append((val_score(df, ridge_units(df, model, events)), alpha))
+        best_alpha = min(scored, key=lambda t: t[0]["MAE"])[1]
+        for sc, alpha in scored:
+            val_rows.append({"model": f"ridge_{variant}", "setting": f"alpha={alpha}",
+                             "chosen": "*" if alpha == best_alpha else "", **sc})
+        df[f"pred_ridge_{variant}"] = ridge_units(df, fit_ridge(df, best_alpha, events, end_week=TRAIN_WEEKS), events)
+
+        scored = []
+        for params in XGB_GRID:
+            _, model = fit_forecaster(df, feats, train_weeks=VAL_START, params=params)
+            scored.append((val_score(df, predict_units(df, model, feats)), params))
+        best_params = min(scored, key=lambda t: t[0]["MAE"])[1]
+        for sc, params in scored:
+            val_rows.append({"model": f"xgb_{variant}", "setting": f"trees={params['n_estimators']},depth={params['max_depth']}",
+                             "chosen": "*" if params == best_params else "", **sc})
+        _, final = fit_forecaster(df, feats, train_weeks=TRAIN_WEEKS, params=best_params)
+        df[f"pred_xgb_{variant}"] = predict_units(df, final, feats)
+        best[variant] = best_params
+    return df, pd.DataFrame(val_rows), best
+
+
 MODEL_WITH_EVENTS = "models/forecaster_with_events.json"
 MODEL_NO_EVENTS = "models/forecaster_no_events.json"
+MODEL_EVAL_WITH_EVENTS = "models/eval/forecaster_with_events.json"   # trained on weeks before TRAIN_WEEKS only
+MODEL_EVAL_NO_EVENTS = "models/eval/forecaster_no_events.json"
 
 
 def save_forecaster(model, path: str) -> None:
@@ -183,7 +289,7 @@ def load_forecaster(path: str):
 
 def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest=None, away=None,
                       model=None, households: pd.DataFrame | None = None,
-                      products: pd.DataFrame | None = None) -> dict:
+                      products: pd.DataFrame | None = None, for_evaluation: bool = False) -> dict:
     """Forecast of `week` for ONE household: {product_id: demand in purchase units}.
 
     history: weekly demand rows (columns of data/demand_weekly.csv) that contain at least the weeks before `week`
@@ -191,13 +297,18 @@ def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest
     guest / away: True / False if the household knows about guests or a trip next week, None if unknown.
                   None uses the model without these flags; True/False uses the model with them.
     model: optional fitted model; by default the saved final model is loaded from models/.
+    for_evaluation: True loads the models in models/eval/ (trained on weeks 4-77 only). Use them whenever you measure
+                    accuracy or evaluate a policy on the test weeks 78-103; the default models saw those weeks.
     """
     households = pd.read_csv("data/households.csv") if households is None else households
     products = pd.read_csv("data/products.csv") if products is None else products
     use_events = guest is not None or away is not None
     features = FEATURES_WITH_EVENTS if use_events else FEATURES_NO_EVENTS
     if model is None:
-        model = load_forecaster(MODEL_WITH_EVENTS if use_events else MODEL_NO_EVENTS)
+        if for_evaluation:
+            model = load_forecaster(MODEL_EVAL_WITH_EVENTS if use_events else MODEL_EVAL_NO_EVENTS)
+        else:
+            model = load_forecaster(MODEL_WITH_EVENTS if use_events else MODEL_NO_EVENTS)
 
     hist = history[(history["household_id"] == household_id) & (history["week"] < week)]
     if hist["week"].max() != week - 1:
@@ -212,7 +323,7 @@ def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest
     return dict(zip(now["product_id"], pred.round(4)))
 
 
-def export(df: pd.DataFrame, eval_models: dict) -> None:
+def export(df: pd.DataFrame, best: dict) -> None:
     """data/forecast_weekly.csv: one row per household, product and week >= MIN_HISTORY.
     Predictions come from models trained on weeks < TRAIN_WEEKS, so only out_of_sample == 1 rows are honest."""
     out = df[df["week"] >= MIN_HISTORY][KEYS + ["week", "demand_units"]].copy()
@@ -225,12 +336,15 @@ def export(df: pd.DataFrame, eval_models: dict) -> None:
     out.to_csv("data/forecast_weekly.csv", index=False)
     print(f"\nWrote data/forecast_weekly.csv: {len(out)} rows (out_of_sample rows: {int(out['out_of_sample'].sum())})")
 
-    for label, features, path in (("with events", FEATURES_WITH_EVENTS, MODEL_WITH_EVENTS),
-                                  ("no events", FEATURES_NO_EVENTS, MODEL_NO_EVENTS)):
+    for label, variant, path, eval_path in (("with events", "with_events", MODEL_WITH_EVENTS, MODEL_EVAL_WITH_EVENTS),
+                                            ("no events", "no_guest_away", MODEL_NO_EVENTS, MODEL_EVAL_NO_EVENTS)):
         n_weeks = int(df["week"].max()) + 1
-        _, final = fit_forecaster(df, features, train_weeks=n_weeks)       # final model uses ALL weeks
+        _, final = fit_forecaster(df, VARIANTS[variant], train_weeks=n_weeks, params=best[variant])   # ALL weeks
         save_forecaster(final, path)
-        print(f"Saved final model ({label}, trained on target weeks {MIN_HISTORY}-{n_weeks - 1}): {path}")
+        print(f"Saved final model ({label}, settings {best[variant]}, trained on target weeks {MIN_HISTORY}-{n_weeks - 1}): {path}")
+        _, ev = fit_forecaster(df, VARIANTS[variant], train_weeks=TRAIN_WEEKS, params=best[variant])  # weeks before the test
+        save_forecaster(ev, eval_path)
+        print(f"Saved evaluation model ({label}, trained on target weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}): {eval_path}")
 
 
 def main(do_export: bool = False) -> None:
@@ -238,22 +352,21 @@ def main(do_export: bool = False) -> None:
     households = pd.read_csv("data/households.csv")
     products = pd.read_csv("data/products.csv")
     df = add_baselines(build_features(weekly, households, products))
-    n_test = int((df["week"] >= TRAIN_WEEKS).sum())
-    print(f"rows: {len(df)} | households: {df['household_id'].nunique()} | products: {df['product_id'].nunique()} "
-          f"| test rows (weeks {TRAIN_WEEKS}-{int(df['week'].max())}): {n_test}")
+    print(f"rows: {len(df)} | households: {df['household_id'].nunique()} | products: {df['product_id'].nunique()}")
+    print(f"split of target weeks: train {MIN_HISTORY}-{VAL_START - 1} | validation {VAL_START}-{TRAIN_WEEKS - 1} "
+          f"| test {TRAIN_WEEKS}-{int(df['week'].max())} ({int((df['week'] >= TRAIN_WEEKS).sum())} rows)")
 
-    model_name = None
-    for label, features in (("pred_xgb_no_guest_away", FEATURES_NO_EVENTS),
-                            ("pred_xgb_with_events", FEATURES_WITH_EVENTS)):
-        model_name, model = fit_forecaster(df, features)
-        df[label] = predict_units(df, model, features)
-    print(f"model: {model_name} | trained on target weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}")
+    df, val_table, best = compare_models(df)
+    print("\nVALIDATION weeks (models trained on train weeks only; * = chosen setting; lower is better):")
+    print(val_table.round({"MAE": 4, "WMAPE_%": 1}).to_string(index=False))
 
-    res = evaluate(df, ["pred_last_week", "pred_ma4", "pred_xgb_no_guest_away", "pred_xgb_with_events"])
-    print("\nResults on the test weeks (lower is better):")
-    print(res.round({"MAE": 4, "WMAPE_%": 1}).to_string(index=False))
+    test_models = ["pred_last_week", "pred_ma4", "pred_ridge_no_guest_away", "pred_xgb_no_guest_away",
+                   "pred_ridge_with_events", "pred_xgb_with_events"]
+    print(f"\nTEST weeks {TRAIN_WEEKS}-{int(df['week'].max())} (chosen settings, retrained on weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}; "
+          "columns after WMAPE_% = error by week type):")
+    print(summary_table(evaluate(df, test_models)).to_string())
     if do_export:
-        export(df, {})
+        export(df, best)
 
 
 if __name__ == "__main__":
