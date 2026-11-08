@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "household_id": "hh_student",
+  "region_id": "durham_nc",
+  "week": 70,
+  "priority": "balanced",
+  "weeks_remaining": 13,
+  "inventory": {
+    "milk": 1.0,
+    "rice": {"chilled": 0.5},
+    "chicken_breast": {"chilled": 0.4, "frozen": 1.0}
+  }
+}

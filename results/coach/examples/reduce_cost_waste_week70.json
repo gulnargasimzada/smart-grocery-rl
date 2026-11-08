@@ -1,0 +1,1010 @@
+{
+  "schema_version": "1.0",
+  "status": "ok",
+  "errors": [],
+  "warnings": [
+    {
+      "code": "partial_horizon",
+      "message": "PPO was trained on 13-week plans; the 'weeks left' input is set from weeks_remaining."
+    }
+  ],
+  "request": {
+    "household_id": "hh_student",
+    "region_id": "durham_nc",
+    "budget_scenario": "normal",
+    "week": 70,
+    "priority": "reduce_cost_waste",
+    "weeks_remaining": 7,
+    "forecast_variant": "no_events",
+    "storage_scenario": "default"
+  },
+  "strategy": {
+    "priority": "reduce_cost_waste",
+    "selected": "optimization",
+    "label": "Optimization (MILP)",
+    "rule": "Always the Optimization plan: it had the lowest simulated waste and cash spend among methods that serve demand, and the best reward, in the frozen validation and held-out test runs.",
+    "fallback": false,
+    "fallback_reason": null,
+    "comparison": null,
+    "candidates": {
+      "optimization": {
+        "cost": 48.495,
+        "n_items": 15,
+        "projected_fill_rate": 0.8893,
+        "projected_shortfall_units": 2.2472,
+        "projected_leftover_units": 13.9257
+      }
+    },
+    "model": {
+      "name": "Traditional Optimization (weekly MILP)",
+      "delta": 0.4,
+      "frozen_manifest": "cbb36102bebe"
+    }
+  },
+  "shopping_list": [
+    {
+      "product_id": "milk",
+      "name": "Milk",
+      "category": "dairy",
+      "unit": "1 L",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 2.0,
+      "line_cost": 2.0,
+      "default_storage": "fridge",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "chicken_breast",
+      "name": "Chicken breast",
+      "category": "protein",
+      "unit": "500 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 4.18,
+      "line_cost": 4.18,
+      "default_storage": "fridge",
+      "chilled_units": 0.3028,
+      "freezer_units": 0.6972
+    },
+    {
+      "product_id": "apples",
+      "name": "Apples",
+      "category": "fruit",
+      "unit": "1 kg",
+      "quantity": 0.5,
+      "packages": 1,
+      "package_size": 0.5,
+      "unit_price": 3.47,
+      "line_cost": 1.735,
+      "default_storage": "fridge",
+      "chilled_units": 0.5,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "tomatoes",
+      "name": "Tomatoes",
+      "category": "vegetables",
+      "unit": "500 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 1.38,
+      "line_cost": 1.38,
+      "default_storage": "pantry",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "yogurt",
+      "name": "Yogurt",
+      "category": "dairy",
+      "unit": "500 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 4.44,
+      "line_cost": 4.44,
+      "default_storage": "fridge",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "oats",
+      "name": "Oats",
+      "category": "grains",
+      "unit": "500 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 4.43,
+      "line_cost": 4.43,
+      "default_storage": "pantry",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "carrots",
+      "name": "Carrots",
+      "category": "vegetables",
+      "unit": "1 kg",
+      "quantity": 0.5,
+      "packages": 1,
+      "package_size": 0.5,
+      "unit_price": 2.17,
+      "line_cost": 1.085,
+      "default_storage": "fridge",
+      "chilled_units": 0.5,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "pasta",
+      "name": "Pasta",
+      "category": "grains",
+      "unit": "500 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 2.91,
+      "line_cost": 2.91,
+      "default_storage": "pantry",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "chickpeas_canned",
+      "name": "Canned chickpeas",
+      "category": "legumes",
+      "unit": "1 can 425 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 1.1,
+      "line_cost": 1.1,
+      "default_storage": "pantry",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "black_beans_canned",
+      "name": "Canned black beans",
+      "category": "legumes",
+      "unit": "1 can 425 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 1.1,
+      "line_cost": 1.1,
+      "default_storage": "pantry",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "plant_milk",
+      "name": "Plant milk",
+      "category": "beverages",
+      "unit": "1 L",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 3.74,
+      "line_cost": 3.74,
+      "default_storage": "fridge",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "oranges",
+      "name": "Oranges",
+      "category": "fruit",
+      "unit": "1 kg",
+      "quantity": 0.5,
+      "packages": 1,
+      "package_size": 0.5,
+      "unit_price": 2.27,
+      "line_cost": 1.135,
+      "default_storage": "fridge",
+      "chilled_units": 0.5,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "bell_peppers",
+      "name": "Bell peppers",
+      "category": "vegetables",
+      "unit": "3 count",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 1.9,
+      "line_cost": 1.9,
+      "default_storage": "fridge",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "breakfast_cereal",
+      "name": "Breakfast cereal",
+      "category": "grains",
+      "unit": "400 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 7.06,
+      "line_cost": 7.06,
+      "default_storage": "pantry",
+      "chilled_units": 1.0,
+      "freezer_units": 0.0
+    },
+    {
+      "product_id": "frozen_pizza",
+      "name": "Frozen pizza",
+      "category": "processed",
+      "unit": "1 pizza 400 g",
+      "quantity": 1.0,
+      "packages": 1,
+      "package_size": 1.0,
+      "unit_price": 10.3,
+      "line_cost": 10.3,
+      "default_storage": "freezer",
+      "chilled_units": 0.0,
+      "freezer_units": 1.0
+    }
+  ],
+  "totals": {
+    "total_cost": 48.495,
+    "weekly_budget": 75.0,
+    "budget_used_pct": 64.66,
+    "n_items": 15,
+    "n_packages": 15,
+    "currency": "USD",
+    "projected_fill_rate": 0.8893,
+    "projected_shortfall_units": 2.2472,
+    "projected_leftover_units": 13.9257
+  },
+  "inventory": {
+    "items": [
+      {
+        "product_id": "milk",
+        "name": "Milk",
+        "unit": "1 L",
+        "on_hand_units": 0.0,
+        "chilled_units": 0.0,
+        "frozen_units": 0.0,
+        "days_left_min": null,
+        "after_purchase_units": 1.0
+      },
+      {
+        "product_id": "chicken_breast",
+        "name": "Chicken breast",
+        "unit": "500 g",
+        "on_hand_units": 1.4055,
+        "chilled_units": 0.2642,
+        "frozen_units": 1.1413,
+        "days_left_min": 1,
+        "after_purchase_units": 2.4055
+      },
+      {
+        "product_id": "rice",
+        "name": "Rice",
+        "unit": "1 kg",
+        "on_hand_units": 0.5082,
+        "chilled_units": 0.5082,
+        "frozen_units": 0.0,
+        "days_left_min": 351,
+        "after_purchase_units": 0.5082
+      },
+      {
+        "product_id": "bread",
+        "name": "Bread",
+        "unit": "1 loaf",
+        "on_hand_units": 0.1857,
+        "chilled_units": 0.0335,
+        "frozen_units": 0.1522,
+        "days_left_min": 2,
+        "after_purchase_units": 0.1857
+      },
+      {
+        "product_id": "apples",
+        "name": "Apples",
+        "unit": "1 kg",
+        "on_hand_units": 0.6166,
+        "chilled_units": 0.6166,
+        "frozen_units": 0.0,
+        "days_left_min": 14,
+        "after_purchase_units": 1.1166
+      },
+      {
+        "product_id": "tomatoes",
+        "name": "Tomatoes",
+        "unit": "500 g",
+        "on_hand_units": 0.0,
+        "chilled_units": 0.0,
+        "frozen_units": 0.0,
+        "days_left_min": null,
+        "after_purchase_units": 1.0
+      },
+      {
+        "product_id": "lentils",
+        "name": "Lentils",
+        "unit": "500 g",
+        "on_hand_units": 0.6661,
+        "chilled_units": 0.6661,
+        "frozen_units": 0.0,
+        "days_left_min": 330,
+        "after_purchase_units": 0.6661
+      },
+      {
+        "product_id": "yogurt",
+        "name": "Yogurt",
+        "unit": "500 g",
+        "on_hand_units": 0.0313,
+        "chilled_units": 0.0313,
+        "frozen_units": 0.0,
+        "days_left_min": 7,
+        "after_purchase_units": 1.0313
+      },
+      {
+        "product_id": "oats",
+        "name": "Oats",
+        "unit": "500 g",
+        "on_hand_units": 0.2696,
+        "chilled_units": 0.2696,
+        "frozen_units": 0.0,
+        "days_left_min": 344,
+        "after_purchase_units": 1.2696
+      },
+      {
+        "product_id": "tofu",
+        "name": "Tofu",
+        "unit": "400 g",
+        "on_hand_units": 0.5702,
+        "chilled_units": 0.0408,
+        "frozen_units": 0.5294,
+        "days_left_min": 8,
+        "after_purchase_units": 0.5702
+      },
+      {
+        "product_id": "carrots",
+        "name": "Carrots",
+        "unit": "1 kg",
+        "on_hand_units": 0.1024,
+        "chilled_units": 0.1024,
+        "frozen_units": 0.0,
+        "days_left_min": 14,
+        "after_purchase_units": 0.6024
+      },
+      {
+        "product_id": "pasta",
+        "name": "Pasta",
+        "unit": "500 g",
+        "on_hand_units": 0.2896,
+        "chilled_units": 0.2896,
+        "frozen_units": 0.0,
+        "days_left_min": 351,
+        "after_purchase_units": 1.2896
+      },
+      {
+        "product_id": "cheddar_cheese",
+        "name": "Cheddar cheese",
+        "unit": "200 g",
+        "on_hand_units": 0.4608,
+        "chilled_units": 0.4608,
+        "frozen_units": 0.0,
+        "days_left_min": 16,
+        "after_purchase_units": 0.4608
+      },
+      {
+        "product_id": "peanut_butter",
+        "name": "Peanut butter",
+        "unit": "340 g",
+        "on_hand_units": 0.6035,
+        "chilled_units": 0.6035,
+        "frozen_units": 0.0,
+        "days_left_min": 152,
+        "after_purchase_units": 0.6035
+      },
+      {
+        "product_id": "salmon_fillet",
+        "name": "Salmon fillet",
+        "unit": "400 g",
+        "on_hand_units": 0.5687,
+        "chilled_units": 0.0403,
+        "frozen_units": 0.5284,
+        "days_left_min": 1,
+        "after_purchase_units": 0.5687
+      },
+      {
+        "product_id": "ground_beef",
+        "name": "Ground beef",
+        "unit": "500 g",
+        "on_hand_units": 1.0025,
+        "chilled_units": 0.0334,
+        "frozen_units": 0.9692,
+        "days_left_min": 1,
+        "after_purchase_units": 1.0025
+      },
+      {
+        "product_id": "canned_tuna",
+        "name": "Canned tuna",
+        "unit": "1 can 142 g",
+        "on_hand_units": 1.2384,
+        "chilled_units": 1.2384,
+        "frozen_units": 0.0,
+        "days_left_min": 716,
+        "after_purchase_units": 1.2384
+      },
+      {
+        "product_id": "chickpeas_canned",
+        "name": "Canned chickpeas",
+        "unit": "1 can 425 g",
+        "on_hand_units": 0.2047,
+        "chilled_units": 0.2047,
+        "frozen_units": 0.0,
+        "days_left_min": 709,
+        "after_purchase_units": 1.2047
+      },
+      {
+        "product_id": "black_beans_canned",
+        "name": "Canned black beans",
+        "unit": "1 can 425 g",
+        "on_hand_units": 1.557,
+        "chilled_units": 1.557,
+        "frozen_units": 0.0,
+        "days_left_min": 723,
+        "after_purchase_units": 2.557
+      },
+      {
+        "product_id": "tortillas",
+        "name": "Tortillas",
+        "unit": "10 count",
+        "on_hand_units": 0.9341,
+        "chilled_units": 0.1867,
+        "frozen_units": 0.7474,
+        "days_left_min": 7,
+        "after_purchase_units": 0.9341
+      },
+      {
+        "product_id": "butter",
+        "name": "Butter",
+        "unit": "225 g",
+        "on_hand_units": 0.6086,
+        "chilled_units": 0.6086,
+        "frozen_units": 0.0,
+        "days_left_min": 32,
+        "after_purchase_units": 0.6086
+      },
+      {
+        "product_id": "plant_milk",
+        "name": "Plant milk",
+        "unit": "1 L",
+        "on_hand_units": 0.0,
+        "chilled_units": 0.0,
+        "frozen_units": 0.0,
+        "days_left_min": null,
+        "after_purchase_units": 1.0
+      },
+      {
+        "product_id": "oranges",
+        "name": "Oranges",
+        "unit": "1 kg",
+        "on_hand_units": 0.3043,
+        "chilled_units": 0.3043,
+        "frozen_units": 0.0,
+        "days_left_min": 7,
+        "after_purchase_units": 0.8043
+      },
+      {
+        "product_id": "onions",
+        "name": "Onions",
+        "unit": "1 kg",
+        "on_hand_units": 0.257,
+        "chilled_units": 0.257,
+        "frozen_units": 0.0,
+        "days_left_min": 16,
+        "after_purchase_units": 0.257
+      },
+      {
+        "product_id": "bell_peppers",
+        "name": "Bell peppers",
+        "unit": "3 count",
+        "on_hand_units": 0.0,
+        "chilled_units": 0.0,
+        "frozen_units": 0.0,
+        "days_left_min": null,
+        "after_purchase_units": 1.0
+      },
+      {
+        "product_id": "frozen_vegetables",
+        "name": "Frozen vegetables",
+        "unit": "1 kg",
+        "on_hand_units": 0.5365,
+        "chilled_units": 0.0,
+        "frozen_units": 0.5365,
+        "days_left_min": 145,
+        "after_purchase_units": 0.5365
+      },
+      {
+        "product_id": "olive_oil",
+        "name": "Olive oil",
+        "unit": "500 ml",
+        "on_hand_units": 0.3056,
+        "chilled_units": 0.3056,
+        "frozen_units": 0.0,
+        "days_left_min": 505,
+        "after_purchase_units": 0.3056
+      },
+      {
+        "product_id": "orange_juice",
+        "name": "Orange juice",
+        "unit": "1 L",
+        "on_hand_units": 0.7735,
+        "chilled_units": 0.7735,
+        "frozen_units": 0.0,
+        "days_left_min": 3,
+        "after_purchase_units": 0.7735
+      },
+      {
+        "product_id": "breakfast_cereal",
+        "name": "Breakfast cereal",
+        "unit": "400 g",
+        "on_hand_units": 0.1076,
+        "chilled_units": 0.1076,
+        "frozen_units": 0.0,
+        "days_left_min": 159,
+        "after_purchase_units": 1.1076
+      },
+      {
+        "product_id": "frozen_pizza",
+        "name": "Frozen pizza",
+        "unit": "1 pizza 400 g",
+        "on_hand_units": 1.1778,
+        "chilled_units": 0.0,
+        "frozen_units": 1.1778,
+        "days_left_min": 166,
+        "after_purchase_units": 2.1778
+      }
+    ],
+    "storage": {
+      "pantry": {
+        "used_l": 3.9641,
+        "capacity_l": 175.0
+      },
+      "fridge": {
+        "used_l": 3.3191,
+        "capacity_l": 155.0
+      },
+      "freezer": {
+        "used_l": 6.1026,
+        "capacity_l": 40.0
+      }
+    }
+  },
+  "forecast": {
+    "variant": "no_events",
+    "week": 70,
+    "method": "ridge",
+    "units": "purchase units for the week",
+    "items": [
+      {
+        "product_id": "milk",
+        "forecast_units": 0.7995,
+        "reference_units": 0.7571
+      },
+      {
+        "product_id": "eggs",
+        "forecast_units": 0.199,
+        "reference_units": 0.1842
+      },
+      {
+        "product_id": "chicken_breast",
+        "forecast_units": 1.3417,
+        "reference_units": 1.323
+      },
+      {
+        "product_id": "rice",
+        "forecast_units": 0.2659,
+        "reference_units": 0.2502
+      },
+      {
+        "product_id": "bread",
+        "forecast_units": 0.1541,
+        "reference_units": 0.1585
+      },
+      {
+        "product_id": "bananas",
+        "forecast_units": 0.2758,
+        "reference_units": 0.2584
+      },
+      {
+        "product_id": "apples",
+        "forecast_units": 0.4536,
+        "reference_units": 0.4237
+      },
+      {
+        "product_id": "tomatoes",
+        "forecast_units": 1.0279,
+        "reference_units": 0.9181
+      },
+      {
+        "product_id": "spinach",
+        "forecast_units": 0.724,
+        "reference_units": 0.7022
+      },
+      {
+        "product_id": "lentils",
+        "forecast_units": 0.0717,
+        "reference_units": 0.068
+      },
+      {
+        "product_id": "yogurt",
+        "forecast_units": 1.029,
+        "reference_units": 0.938
+      },
+      {
+        "product_id": "oats",
+        "forecast_units": 0.3105,
+        "reference_units": 0.332
+      },
+      {
+        "product_id": "tofu",
+        "forecast_units": 0.2462,
+        "reference_units": 0.2326
+      },
+      {
+        "product_id": "carrots",
+        "forecast_units": 0.4168,
+        "reference_units": 0.3892
+      },
+      {
+        "product_id": "potatoes",
+        "forecast_units": 0.1256,
+        "reference_units": 0.1134
+      },
+      {
+        "product_id": "pasta",
+        "forecast_units": 0.3307,
+        "reference_units": 0.3058
+      },
+      {
+        "product_id": "cheddar_cheese",
+        "forecast_units": 0.4741,
+        "reference_units": 0.4513
+      },
+      {
+        "product_id": "peanut_butter",
+        "forecast_units": 0.1035,
+        "reference_units": 0.0991
+      },
+      {
+        "product_id": "salmon_fillet",
+        "forecast_units": 0.2484,
+        "reference_units": 0.2506
+      },
+      {
+        "product_id": "ground_beef",
+        "forecast_units": 0.1998,
+        "reference_units": 0.1867
+      },
+      {
+        "product_id": "canned_tuna",
+        "forecast_units": 0.8878,
+        "reference_units": 0.7865
+      },
+      {
+        "product_id": "chickpeas_canned",
+        "forecast_units": 0.3157,
+        "reference_units": 0.3016
+      },
+      {
+        "product_id": "black_beans_canned",
+        "forecast_units": 1.576,
+        "reference_units": 1.5323
+      },
+      {
+        "product_id": "tortillas",
+        "forecast_units": 0.1954,
+        "reference_units": 0.1688
+      },
+      {
+        "product_id": "butter",
+        "forecast_units": 0.1023,
+        "reference_units": 0.0978
+      },
+      {
+        "product_id": "plant_milk",
+        "forecast_units": 0.5091,
+        "reference_units": 0.4638
+      },
+      {
+        "product_id": "oranges",
+        "forecast_units": 0.5019,
+        "reference_units": 0.4756
+      },
+      {
+        "product_id": "avocados",
+        "forecast_units": 0.2073,
+        "reference_units": 0.1897
+      },
+      {
+        "product_id": "broccoli",
+        "forecast_units": 0.482,
+        "reference_units": 0.4753
+      },
+      {
+        "product_id": "onions",
+        "forecast_units": 0.2139,
+        "reference_units": 0.1857
+      },
+      {
+        "product_id": "bell_peppers",
+        "forecast_units": 1.1923,
+        "reference_units": 1.0957
+      },
+      {
+        "product_id": "frozen_vegetables",
+        "forecast_units": 0.0987,
+        "reference_units": 0.0929
+      },
+      {
+        "product_id": "olive_oil",
+        "forecast_units": 0.1369,
+        "reference_units": 0.1366
+      },
+      {
+        "product_id": "orange_juice",
+        "forecast_units": 0.635,
+        "reference_units": 0.5939
+      },
+      {
+        "product_id": "breakfast_cereal",
+        "forecast_units": 0.3438,
+        "reference_units": 0.3259
+      },
+      {
+        "product_id": "frozen_pizza",
+        "forecast_units": 0.9113,
+        "reference_units": 0.8265
+      }
+    ]
+  },
+  "prices": {
+    "week": 70,
+    "region_id": "durham_nc",
+    "currency": "USD",
+    "items": [
+      {
+        "product_id": "milk",
+        "unit_price": 2.0,
+        "avg_4_week_price": 2.0225,
+        "vs_avg_pct": -1.1125
+      },
+      {
+        "product_id": "eggs",
+        "unit_price": 8.42,
+        "avg_4_week_price": 7.75,
+        "vs_avg_pct": 8.6452
+      },
+      {
+        "product_id": "chicken_breast",
+        "unit_price": 4.18,
+        "avg_4_week_price": 4.18,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "rice",
+        "unit_price": 9.01,
+        "avg_4_week_price": 9.01,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "bread",
+        "unit_price": 6.25,
+        "avg_4_week_price": 6.25,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "bananas",
+        "unit_price": 1.93,
+        "avg_4_week_price": 1.93,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "apples",
+        "unit_price": 3.47,
+        "avg_4_week_price": 3.6225,
+        "vs_avg_pct": -4.2098
+      },
+      {
+        "product_id": "tomatoes",
+        "unit_price": 1.38,
+        "avg_4_week_price": 1.3725,
+        "vs_avg_pct": 0.5464
+      },
+      {
+        "product_id": "spinach",
+        "unit_price": 2.72,
+        "avg_4_week_price": 2.315,
+        "vs_avg_pct": 17.4946
+      },
+      {
+        "product_id": "lentils",
+        "unit_price": 1.85,
+        "avg_4_week_price": 1.85,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "yogurt",
+        "unit_price": 4.44,
+        "avg_4_week_price": 4.185,
+        "vs_avg_pct": 6.0932
+      },
+      {
+        "product_id": "oats",
+        "unit_price": 4.43,
+        "avg_4_week_price": 4.43,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "tofu",
+        "unit_price": 3.2,
+        "avg_4_week_price": 3.2,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "carrots",
+        "unit_price": 2.17,
+        "avg_4_week_price": 2.145,
+        "vs_avg_pct": 1.1655
+      },
+      {
+        "product_id": "potatoes",
+        "unit_price": 2.72,
+        "avg_4_week_price": 3.55,
+        "vs_avg_pct": -23.3803
+      },
+      {
+        "product_id": "pasta",
+        "unit_price": 2.91,
+        "avg_4_week_price": 2.91,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "cheddar_cheese",
+        "unit_price": 4.75,
+        "avg_4_week_price": 4.715,
+        "vs_avg_pct": 0.7423
+      },
+      {
+        "product_id": "peanut_butter",
+        "unit_price": 3.17,
+        "avg_4_week_price": 2.725,
+        "vs_avg_pct": 16.3303
+      },
+      {
+        "product_id": "salmon_fillet",
+        "unit_price": 9.24,
+        "avg_4_week_price": 9.24,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "ground_beef",
+        "unit_price": 9.08,
+        "avg_4_week_price": 9.08,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "canned_tuna",
+        "unit_price": 5.05,
+        "avg_4_week_price": 5.05,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "chickpeas_canned",
+        "unit_price": 1.1,
+        "avg_4_week_price": 1.1,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "black_beans_canned",
+        "unit_price": 1.1,
+        "avg_4_week_price": 1.1,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "tortillas",
+        "unit_price": 2.01,
+        "avg_4_week_price": 2.6425,
+        "vs_avg_pct": -23.9357
+      },
+      {
+        "product_id": "butter",
+        "unit_price": 6.18,
+        "avg_4_week_price": 6.18,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "plant_milk",
+        "unit_price": 3.74,
+        "avg_4_week_price": 3.74,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "oranges",
+        "unit_price": 2.27,
+        "avg_4_week_price": 2.235,
+        "vs_avg_pct": 1.566
+      },
+      {
+        "product_id": "avocados",
+        "unit_price": 5.29,
+        "avg_4_week_price": 4.65,
+        "vs_avg_pct": 13.7634
+      },
+      {
+        "product_id": "broccoli",
+        "unit_price": 2.4,
+        "avg_4_week_price": 2.22,
+        "vs_avg_pct": 8.1081
+      },
+      {
+        "product_id": "onions",
+        "unit_price": 1.88,
+        "avg_4_week_price": 1.91,
+        "vs_avg_pct": -1.5707
+      },
+      {
+        "product_id": "bell_peppers",
+        "unit_price": 1.9,
+        "avg_4_week_price": 2.55,
+        "vs_avg_pct": -25.4902
+      },
+      {
+        "product_id": "frozen_vegetables",
+        "unit_price": 6.75,
+        "avg_4_week_price": 6.74,
+        "vs_avg_pct": 0.1484
+      },
+      {
+        "product_id": "olive_oil",
+        "unit_price": 14.91,
+        "avg_4_week_price": 13.1775,
+        "vs_avg_pct": 13.1474
+      },
+      {
+        "product_id": "orange_juice",
+        "unit_price": 2.87,
+        "avg_4_week_price": 2.87,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "breakfast_cereal",
+        "unit_price": 7.06,
+        "avg_4_week_price": 7.06,
+        "vs_avg_pct": 0.0
+      },
+      {
+        "product_id": "frozen_pizza",
+        "unit_price": 10.3,
+        "avg_4_week_price": 10.3,
+        "vs_avg_pct": 0.0
+      }
+    ]
+  },
+  "constraints": {
+    "within_budget": true,
+    "whole_packages": true,
+    "diet_allergen_ok": true,
+    "stock_cap_ok": true,
+    "storage_ok": true,
+    "adjusted_by_environment_pipeline": false,
+    "pipeline_notes": []
+  },
+  "excluded_products": [],
+  "notes": [
+    "Simulated data: all demand, prices, budgets and storage values are synthetic.",
+    "Projected fill / shortfall / leftover use this week's forecast only and ignore shelf life and timing: they are indicators, not predictions."
+  ]
+}
