@@ -1,0 +1,12 @@
+{
+  "delta": 0.4,
+  "chosen_on": "train windows 4,17,30,43,51 (mean reward)",
+  "grid": [
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5
+  ]
+}
