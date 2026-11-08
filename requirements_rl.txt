@@ -1,0 +1,3 @@
+# Extra dependencies for the RL environment and its tests (requirements.txt is shared and unchanged)
+gymnasium==1.4.0
+pytest==8.4.2

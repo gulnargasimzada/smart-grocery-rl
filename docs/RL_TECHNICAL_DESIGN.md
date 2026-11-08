@@ -7,6 +7,14 @@ All storage numbers and budgets are synthetic assumptions. Results are simulated
 MVP principles: one order per week, deterministic storage handling, hard constraints enforced by code (not by reward),
 plain Python/NumPy dynamics.
 
+## Implementation status
+`src/env.py` (`GroceryEnv` v0) and `tests/test_env.py` implement sections 1, 2, 4, 6 (episode, observation, reward, terminal accounting, reset/step) and the
+MVP scope below for recorded-demand replay. Not implemented yet: the RL action wrapper, baseline policies, `EvalSpec` files, forecaster integration
+(a `forecast_fn` hook exists, default off), the `limited` storage scenario. Run the tests with `python -m pytest tests/test_env.py -q`
+(extra dependencies: `requirements_rl.txt`). The tests cover unit and cost-basis conservation, budget, package steps, storage capacity (also during
+daily thawing), direct-to-freezer purchase with a full fridge, thaw counters and no refreezing, FEFO consumption, quality vs. safety-cutoff
+waste split, and terminal accounting (a very large last-week purchase is charged; a long-life purchase within the two-week credit limit is not).
+
 ## MVP scope (first implementation)
 - Household `hh_student`, region `durham_nc`, `default` storage, `normal` budget (`normal_budget_usd` in `data/household_region_budgets.csv`).
 - 13-week episodes. Training windows start in weeks 4-51, validation uses weeks 64-76, test uses the two windows 78-90 and 91-103.
@@ -66,11 +74,16 @@ restriction is **no refreezing** (`thawed` lots never return to the freezer).
 ## 2. Deterministic freezing policy (MVP)
 
 The RL action contains no storage decisions. A fixed rule runs identically for RL and every baseline:
-1. **Freeze surplus after delivery.** For each freezing-capable product, `need = expected_daily_demand x remaining_chilled_days`.
-   Units above `need` (and at least one chilled day left) move to the freezer if there is room.
+1. **Freeze surplus after delivery.** For each freezing-capable product, `need = expected_daily_demand x remaining_chilled_days`
+   (the new lot's full shelf life), minus the chilled units of the product already on hand. Delivered units above `need` go to the freezer if there is room.
+   Freezing happens only to **newly delivered units**, on the delivery day; they are placed **directly** in the freezer
+   (`chilled_days = 0`, `frozen_days = 0`, `thawed = False`). Existing chilled lots are never frozen later, and thawed lots are never refrozen.
+   The split between chilled and frozen is in units, not whole packages (a storage simplification; purchases stay in whole packages).
    Expected daily demand = trailing 4-week mean / 7 (the forecast is not used here, so the rule is the same with or without a forecaster).
-2. **Thaw just in time.** Each day, if the chilled stock of the product covers less than `THAW_LEAD_DAYS = 2` days of expected demand,
-   thaw enough units to cover them, oldest `chilled_days` first.
+2. **Thaw just in time.** At the start of each day, if the chilled stock of the product covers less than `THAW_LEAD_DAYS = 2` days of expected
+   demand (and at least that day's demand), thaw enough units to cover it, highest `chilled_days` first. Thawing moves units to the default
+   storage, **only into free volume** (never over capacity, never by evicting other food). If there is no room, fewer units are thawed and
+   the shortfall is a stockout. A thawed lot gets `thawed = True` and keeps its counters (section 1); it can never be refrozen.
 3. Nothing else moves.
 
 `THAW_LEAD_DAYS` is the only constant of this rule (an assumption). Later extension, not in the MVP: freeze/thaw decisions in the action space,
@@ -98,7 +111,8 @@ Pipeline inside `step()`, in this order:
 1. **Filter:** zero the products excluded by the household's `allergen_exclusions` and by its diet (vegetarian, vegan, pescatarian rules
    by product category). Own filter, `apply_constraints` (Person 3) is not modified; if it is used, see step 5.
 2. **Round to packages:** `n_p = round(q_p / step_p)` (nearest, ties up). Tiny requests become 0.
-3. **Stock cap:** reduce `n_p` so that on-hand + order is at most 3 weeks of reference demand (but at least one step allowed).
+3. **Stock cap:** reduce `n_p` so that on-hand + order is at most `max(3 weeks of reference demand, one package + one week of reference demand)`,
+   so a household can always top up one package of a slow-moving item (for example 1 kg of rice).
 4. **Capacity-aware storage allocation, then reduction.** First try to *place* the whole order (see below). Only if no valid placement exists,
    remove **one step** from the product with the highest coverage ratio (on-hand + ordered, divided by weekly reference demand), i.e. the most
    overstocked item, and try again. Repeat until a valid placement exists.
@@ -110,9 +124,15 @@ Pipeline inside `step()`, in this order:
 a chilled part (default storage) and a frozen part (freezer):
 1. Freezable products (not sold frozen): chilled part = the units the freezing rule would keep chilled (`need`); the surplus goes to the freezer.
    Other products: everything goes to the default storage. Products sold frozen go to the freezer.
-2. If a default storage (pantry or fridge) overflows, move more units of its freezable products to the freezer, down to a floor of
-   `THAW_LEAD_DAYS` days of expected demand kept chilled, if the freezer has room.
+2. If a default storage (pantry or fridge) overflows, move more chilled units of its freezable products to the freezer (down to 0 chilled
+   units, see below), if the freezer has room.
 3. If a storage still overflows (or the freezer overflows), the placement is invalid and the reduction loop of step 4 removes a step.
+
+**Direct-to-freezer purchase and the thawing rules.** When the fridge (or pantry) is full, a freezable product can go **entirely** into the freezer
+(chilled part = 0). That is consistent with the thawing rules: the lot is a normal frozen lot with all counters at 0, it is not marked `thawed`,
+and it is brought out later by the same just-in-time thaw, which needs free default-storage volume on that day. The placement does not reserve
+thaw space, so a product frozen because the fridge was full can be short on a day when the fridge is still full; that appears as a stockout,
+not as a rule violation. No thaw ever exceeds capacity, and no lot is refrozen.
 
 So a full fridge does not block a freezable product (chicken, ground beef, salmon, bread, tortillas, butter, cheddar, tofu) as long as the
 freezer has room; non-freezable products (milk, yogurt, fresh produce, ...) are reduced when their default storage is full.
@@ -191,7 +211,7 @@ reward = - ( consumed_cost + waste_cost + 2.0 x stockout_value ) / budget
 leftover inventory is therefore charged at cost basis minus a usefulness credit:
 ```
 terminal_charge = sum over leftover lots of  basis x (1 - credit)
-credit = min(1, remaining_days / 14)        for units up to 2 weeks of reference demand of that product (per product, FEFO order)
+credit = min(1, remaining_days / 14)        for units up to 2 weeks of reference demand of that product (per product, highest-credit lots first)
 credit = 0                                   for units beyond that
 ```
 `remaining_days` is the remaining chilled life (frozen lots: remaining frozen life, capped at 14 days of credit). Consequences: carrying a normal
@@ -244,19 +264,21 @@ In the MVP: `hh_student`, `durham_nc`, `normal`, `default`.
 
 ## 8. ML/RL split and calibration limitations
 
-Checked in `src/forecast.py` on `origin/main` (commit `01bbee9`). We do not modify that file.
+Checked in `src/forecast.py` on `origin/main` (commit `db859ed`). We do not modify that file.
 
 | Item | ML forecast | RL design |
 |---|---|---|
 | Weeks | train 4-63, validation 64-77, test 78-103 | train 4-63, validation 64-77, test 78-103 |
-| Final scoring models | `models/eval/` trained on weeks 4-77 | n/a |
-| Default models | `models/` trained on **all** weeks, including 78-103 | must not be used on test weeks |
+| Saved forecast models | `models/forecaster_*.json`, trained on target weeks 4-77 (latest `main`, commit `db859ed`) | test weeks 78-103 are unseen by them |
+| `for_evaluation` / `models/eval/` | removed | no longer used |
 
 Issues to coordinate with the ML teammate:
-1. **Leakage:** `predict_next_week` defaults to the all-weeks model. RL evaluation must use `for_evaluation=True`.
-2. **In-sample forecasts:** forecasts for weeks 4-77 come from models trained on those weeks (`forecast_weekly.csv` flags only weeks >= 78 as
-   `out_of_sample`). An agent trained on them would over-trust the forecast. Request: an honest forecast file for weeks 4-103 with a
-   `forecast_source` column (4-63 out-of-fold or expanding-window; 64-77 from the model trained on 4-63; 78-103 from `models/eval/`).
+1. **Test leakage (resolved on `main`):** the saved models are trained on weeks 4-77 only, so `predict_next_week(...)` with the default models is
+   honest for the test weeks 78-103. The `for_evaluation` argument and `models/eval/` no longer exist; RL code must not use them.
+2. **In-sample forecasts for training and validation (still open):** the saved models were fitted on weeks 4-77, so their forecasts for the RL training
+   weeks (4-63) **and the RL validation weeks (64-77)** are in-sample; `forecast_weekly.csv` flags only weeks >= 78 as `out_of_sample`. An agent trained
+   or tuned on them would over-trust the forecast. Request: an honest forecast file for weeks 4-103 with a `forecast_source` column
+   (4-63 out-of-fold or expanding-window; 64-77 from a model trained on 4-63 only; 78-103 from the saved models).
 3. **Independent demand samples:** `demand_weekly.csv` is one recorded realisation. If evaluation later resamples demand, forecasts must be recomputed from the
    simulated history. To be decided with the ML teammate. Until then the MVP runs with `forecaster=None` and replayed demand (section 7).
 
