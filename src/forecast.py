@@ -6,14 +6,27 @@ Step 2: XGBoost model. It predicts the RATIO  demand / reference  (reference = m
         sample weights = reference, so the training loss equals the absolute error in purchase units (= our MAE).
         Prediction = ratio * reference. Products a household can never eat have reference 0 and get prediction 0.
 
+Step 3: export + API for the team.
+        python -m src.forecast            evaluation only (baselines vs XGBoost on weeks 80-103)
+        python -m src.forecast --export   also writes data/forecast_weekly.csv and trains + saves the final models
+                                          (models/forecaster_with_events.json, models/forecaster_no_events.json)
+        predict_next_week(history, household_id, week, guest=None, away=None)  -> {product_id: units}
+        guest/away=None means "unknown": the model WITHOUT guest/away flags is used.
+
 Run from the repo root:  python -m src.forecast
 Time-based split: weeks 0-79 are history/training, weeks 80-103 are the test period (never used for training).
 Every prediction for week t uses only information from weeks before t, plus the event flags of week t
 (holiday is always known; guest/away weeks are known only if the household tells us in advance, so we also
 train a model WITHOUT the guest/away flags to show the honest result when they are not known).
 """
+import argparse
+import pickle
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
+from src.demand import HOLIDAY_WEEKS
 
 TRAIN_WEEKS = 80
 KEYS = ["household_id", "product_id"]
@@ -144,7 +157,83 @@ def predict_units(df: pd.DataFrame, model, features: list) -> pd.Series:
     return pred
 
 
-def main() -> None:
+MODEL_WITH_EVENTS = "models/forecaster_with_events.json"
+MODEL_NO_EVENTS = "models/forecaster_no_events.json"
+
+
+def save_forecaster(model, path: str) -> None:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    if hasattr(model, "save_model"):                 # XGBoost native format
+        model.save_model(path)
+    else:                                            # scikit-learn fallback (testing only)
+        with open(path, "wb") as f:
+            pickle.dump(model, f)
+
+
+def load_forecaster(path: str):
+    try:
+        from xgboost import XGBRegressor
+        model = XGBRegressor()
+        model.load_model(path)
+        return model
+    except Exception:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+
+def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest=None, away=None,
+                      model=None, households: pd.DataFrame | None = None,
+                      products: pd.DataFrame | None = None) -> dict:
+    """Forecast of `week` for ONE household: {product_id: demand in purchase units}.
+
+    history: weekly demand rows (columns of data/demand_weekly.csv) that contain at least the weeks before `week`
+             for this household (weeks up to week-1; the more the better, the model uses up to 52 weeks back).
+    guest / away: True / False if the household knows about guests or a trip next week, None if unknown.
+                  None uses the model without these flags; True/False uses the model with them.
+    model: optional fitted model; by default the saved final model is loaded from models/.
+    """
+    households = pd.read_csv("data/households.csv") if households is None else households
+    products = pd.read_csv("data/products.csv") if products is None else products
+    use_events = guest is not None or away is not None
+    features = FEATURES_WITH_EVENTS if use_events else FEATURES_NO_EVENTS
+    if model is None:
+        model = load_forecaster(MODEL_WITH_EVENTS if use_events else MODEL_NO_EVENTS)
+
+    hist = history[(history["household_id"] == household_id) & (history["week"] < week)]
+    if hist["week"].max() != week - 1:
+        raise ValueError(f"history must end at week {week - 1} (it ends at {hist['week'].max()})")
+    target = pd.DataFrame({"household_id": household_id, "week": week, "product_id": products["product_id"],
+                           "guest_week": int(bool(guest)), "away_week": int(bool(away)),
+                           "holiday_week": int((week % 52) in HOLIDAY_WEEKS), "demand_units": np.nan})
+    rows = pd.concat([hist, target], ignore_index=True)
+    feats = build_features(rows, households, products)
+    now = feats[feats["week"] == week]
+    pred = predict_units(now, model, features)
+    return dict(zip(now["product_id"], pred.round(4)))
+
+
+def export(df: pd.DataFrame, eval_models: dict) -> None:
+    """data/forecast_weekly.csv: one row per household, product and week >= MIN_HISTORY.
+    Predictions come from models trained on weeks < TRAIN_WEEKS, so only out_of_sample == 1 rows are honest."""
+    out = df[df["week"] >= MIN_HISTORY][KEYS + ["week", "demand_units"]].copy()
+    out["forecast_units"] = df.loc[out.index, "pred_xgb_with_events"].round(4)
+    out["forecast_units_no_events"] = df.loc[out.index, "pred_xgb_no_guest_away"].round(4)
+    out["out_of_sample"] = (out["week"] >= TRAIN_WEEKS).astype(int)
+    out = out.rename(columns={"demand_units": "actual_units"})
+    out = out[["household_id", "week", "product_id", "actual_units", "forecast_units",
+               "forecast_units_no_events", "out_of_sample"]].sort_values(["household_id", "week", "product_id"])
+    out.to_csv("data/forecast_weekly.csv", index=False)
+    print(f"\nWrote data/forecast_weekly.csv: {len(out)} rows (out_of_sample rows: {int(out['out_of_sample'].sum())})")
+
+    for label, features, path in (("with events", FEATURES_WITH_EVENTS, MODEL_WITH_EVENTS),
+                                  ("no events", FEATURES_NO_EVENTS, MODEL_NO_EVENTS)):
+        n_weeks = int(df["week"].max()) + 1
+        _, final = fit_forecaster(df, features, train_weeks=n_weeks)       # final model uses ALL weeks
+        save_forecaster(final, path)
+        print(f"Saved final model ({label}, trained on target weeks {MIN_HISTORY}-{n_weeks - 1}): {path}")
+
+
+def main(do_export: bool = False) -> None:
     weekly = load_weekly()
     households = pd.read_csv("data/households.csv")
     products = pd.read_csv("data/products.csv")
@@ -163,7 +252,11 @@ def main() -> None:
     res = evaluate(df, ["pred_last_week", "pred_ma4", "pred_xgb_no_guest_away", "pred_xgb_with_events"])
     print("\nResults on the test weeks (lower is better):")
     print(res.round({"MAE": 4, "WMAPE_%": 1}).to_string(index=False))
+    if do_export:
+        export(df, {})
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--export", action="store_true", help="write data/forecast_weekly.csv and save the final models")
+    main(ap.parse_args().export)
