@@ -14,8 +14,10 @@ Step 3: Ridge regression (simple ML baseline) and a validation set to compare th
 
 Step 4: export + API for the team.
         python -m src.forecast            validation comparison, then test results
-        python -m src.forecast --export   also writes data/forecast_weekly.csv and trains + saves the final models
+        python -m src.forecast --export   also writes data/forecast_weekly.csv and saves the models
                                           (models/forecaster_with_events.json, models/forecaster_no_events.json)
+        The saved models are trained on weeks 4-77 only (train + validation). The test weeks 78-103 are NEVER used,
+        so they are safe for evaluating the forecast and the RL policies on unseen data.
         predict_next_week(history, household_id, week, guest=None, away=None)  -> {product_id: units}
         guest/away=None means "unknown": the model WITHOUT guest/away flags is used.
 
@@ -263,8 +265,6 @@ def compare_models(df: pd.DataFrame):
 
 MODEL_WITH_EVENTS = "models/forecaster_with_events.json"
 MODEL_NO_EVENTS = "models/forecaster_no_events.json"
-MODEL_EVAL_WITH_EVENTS = "models/eval/forecaster_with_events.json"   # trained on weeks before TRAIN_WEEKS only
-MODEL_EVAL_NO_EVENTS = "models/eval/forecaster_no_events.json"
 
 
 def save_forecaster(model, path: str) -> None:
@@ -289,26 +289,22 @@ def load_forecaster(path: str):
 
 def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest=None, away=None,
                       model=None, households: pd.DataFrame | None = None,
-                      products: pd.DataFrame | None = None, for_evaluation: bool = False) -> dict:
+                      products: pd.DataFrame | None = None) -> dict:
     """Forecast of `week` for ONE household: {product_id: demand in purchase units}.
 
     history: weekly demand rows (columns of data/demand_weekly.csv) that contain at least the weeks before `week`
              for this household (weeks up to week-1; the more the better, the model uses up to 52 weeks back).
     guest / away: True / False if the household knows about guests or a trip next week, None if unknown.
                   None uses the model without these flags; True/False uses the model with them.
-    model: optional fitted model; by default the saved final model is loaded from models/.
-    for_evaluation: True loads the models in models/eval/ (trained on weeks 4-77 only). Use them whenever you measure
-                    accuracy or evaluate a policy on the test weeks 78-103; the default models saw those weeks.
+    model: optional fitted model; by default the saved model is loaded from models/ (trained on weeks 4-77 only,
+           so the test weeks 78-103 are unseen).
     """
     households = pd.read_csv("data/households.csv") if households is None else households
     products = pd.read_csv("data/products.csv") if products is None else products
     use_events = guest is not None or away is not None
     features = FEATURES_WITH_EVENTS if use_events else FEATURES_NO_EVENTS
     if model is None:
-        if for_evaluation:
-            model = load_forecaster(MODEL_EVAL_WITH_EVENTS if use_events else MODEL_EVAL_NO_EVENTS)
-        else:
-            model = load_forecaster(MODEL_WITH_EVENTS if use_events else MODEL_NO_EVENTS)
+        model = load_forecaster(MODEL_WITH_EVENTS if use_events else MODEL_NO_EVENTS)
 
     hist = history[(history["household_id"] == household_id) & (history["week"] < week)]
     if hist["week"].max() != week - 1:
@@ -336,15 +332,11 @@ def export(df: pd.DataFrame, best: dict) -> None:
     out.to_csv("data/forecast_weekly.csv", index=False)
     print(f"\nWrote data/forecast_weekly.csv: {len(out)} rows (out_of_sample rows: {int(out['out_of_sample'].sum())})")
 
-    for label, variant, path, eval_path in (("with events", "with_events", MODEL_WITH_EVENTS, MODEL_EVAL_WITH_EVENTS),
-                                            ("no events", "no_guest_away", MODEL_NO_EVENTS, MODEL_EVAL_NO_EVENTS)):
-        n_weeks = int(df["week"].max()) + 1
-        _, final = fit_forecaster(df, VARIANTS[variant], train_weeks=n_weeks, params=best[variant])   # ALL weeks
-        save_forecaster(final, path)
-        print(f"Saved final model ({label}, settings {best[variant]}, trained on target weeks {MIN_HISTORY}-{n_weeks - 1}): {path}")
-        _, ev = fit_forecaster(df, VARIANTS[variant], train_weeks=TRAIN_WEEKS, params=best[variant])  # weeks before the test
-        save_forecaster(ev, eval_path)
-        print(f"Saved evaluation model ({label}, trained on target weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}): {eval_path}")
+    for label, variant, path in (("with events", "with_events", MODEL_WITH_EVENTS),
+                                 ("no events", "no_guest_away", MODEL_NO_EVENTS)):
+        _, model = fit_forecaster(df, VARIANTS[variant], train_weeks=TRAIN_WEEKS, params=best[variant])
+        save_forecaster(model, path)
+        print(f"Saved model ({label}, settings {best[variant]}, trained on target weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}): {path}")
 
 
 def main(do_export: bool = False) -> None:
