@@ -1,0 +1,5 @@
+# Everything needed to run the whole project: the forecasting/app packages, the RL environment and tests, and the optimization solver.
+-r requirements.txt
+-r requirements_rl.txt
+-r requirements_optimization.txt
+xgboost==3.2.0

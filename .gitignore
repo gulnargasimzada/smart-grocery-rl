@@ -16,3 +16,6 @@ data/open_prices_raw/
 .venv/
 dist/
 .netlify/
+# Local training checkpoints and test caches (the six selected checkpoints are tracked in results/rl_pilot/selected/)
+models_rl/
+.pytest_cache/

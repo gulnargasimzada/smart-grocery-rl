@@ -1,3 +1,7 @@
+> **Status note (final integration).** This is the original hackathon planning contract. Parts of it were implemented differently (for example the constraints
+> live inside `src/env.py`, evaluation outputs are in `results/final/`, and meal suggestions run in `ui/coach.html`). The interfaces that actually exist are described in
+> [`docs/README.md`](docs/README.md): `src/coach_api.py` (recommendation API), `src/env.py` (environment), `src/evaluate.py` (evaluation) and `docs/UI_INTEGRATION.md` (app).
+
 # Interface Contract
 
 Every teammate codes against this file. If you need to change it, tell the team first.

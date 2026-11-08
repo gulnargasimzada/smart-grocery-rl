@@ -12,17 +12,34 @@ app falls back to a clearly labelled in-browser preview.
 
 Week split comes from `src/forecast.py`: train 4-63, validation 64-77, test 78-103. The app only shows test weeks.
 
-## The three shopping priorities
-| Option in the app | Method (frozen, from `results/final/test`) |
-|---|---|
-| Save Money & Reduce Waste | Optimization (MILP) |
-| Balanced | PPO with Ridge forecast (seed with the best **validation** reward) |
-| Keep My Groceries Stocked | Forecast Rule (Ridge) |
+## Static demo vs. live Python inference
+The deployed site (Netlify) is a **static demo**. `build_static.py` embeds the data and `results/ui/plans.json` into one HTML page; nothing on that page calls the Python models.
+Each shopping priority shows a **precomputed replay** of the team's frozen models on the held-out test weeks (78-103) for the evaluated household (`hh_student`, Durham, normal budget).
+Other households use an in-browser preview (an order-up-to rule), clearly labelled as such. The only live calls are the AI features (`netlify/functions/explain.mjs`) and Open Food Facts barcode lookups.
 
+A real, tested Python API exists in this repository: `python -m src.coach_server` (adapter `src/coach_api.py`, contract in [GROCERY_COACH_INTEGRATION.md](GROCERY_COACH_INTEGRATION.md)).
+It is **not deployed** and the page does not call it: the PyTorch/SciPy stack plus the frozen checkpoints do not fit a static Netlify build. To connect it, host `coach_server` on a service that can run Python
+(container or small VM, behind HTTPS), have the page `POST` the household, week, priority and current inventory to `/recommend`, and render `shopping_list`, `strategy` and `constraints` from the response.
+Until then the demo must keep saying "precomputed".
+
+## The three shopping priorities
+The app's options use the same strategies as the backend's priorities (`src/coach_api.py`); a test (`tests/test_ui_integration.py`) keeps the two in sync.
+| Option in the app | Backend priority | Method shown (precomputed) |
+|---|---|---|
+| Save Money & Reduce Waste | `reduce_cost_waste` | Optimization (MILP) |
+| Balanced | `balanced` | Balanced rule: each week the Optimization plan, unless its projected fill rate is more than 0.03 below the RL agent's, then the RL agent (PPO + Ridge forecast, the seed with the best **validation** reward) |
+| Keep My Groceries Stocked | `availability` | RL agent (PPO + Ridge forecast) |
 To change the mapping, edit `PRIO` near the top of the "Shopping priority" section in `ui/coach.html`.
+The `balanced_rule` replay is a seventh entry that `export_ui_plans.py` adds **after** the frozen six-method comparison: the rule and its 0.03 tolerance were fixed beforehand, nothing was tuned on it, and
+it is not part of `results/final/test/`.
+
+## Meal suggestions and the shopping list
+Meals are ranked from the recipes the household's diet and allergens allow (`hh.ok`, from `src/diets.py`), preferring food that must be used soon. Ingredients that are missing at home are added **on top of the strategy's
+recommended purchases**, but only through `fitExtras()` in `ui/coach.html`: quantities are rounded up to whole packages (0.5 for loose produce, like the models), and an item is left off, with a note, if it would exceed the
+weekly budget or the household's storage capacity (`data_rl/`, litres). Storage is checked conservatively in the product's default storage. Manual additions go through the same function.
 
 ## `export_ui_plans.py`
-Replays the same six frozen methods as `src/final_eval.py` on the held-out test episodes and records, for every week:
+Replays the same six frozen methods as `src/final_eval.py` (plus the balanced-rule replay described above) on the held-out test episodes and records, for every week:
 the basket after the constraint pipeline, the pipeline notes, the week's prices, every lot at home (storage and days left),
 the Ridge forecast, and the simulated outcome (spend, waste, running out, protein). The replay is deterministic, so its
 totals match `results/final/test/runs.csv` (checked to the cent). Nothing is trained, tuned or re-selected, and the
