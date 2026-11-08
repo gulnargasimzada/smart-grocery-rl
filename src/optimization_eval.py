@@ -56,7 +56,8 @@ def pipeline_cuts(spec: EpisodeSpec, policy: OptimizationPolicy, table: Forecast
     tot = dict(rounding=0.0, stock_cap=0.0, storage=0.0, budget=0.0, max_budget_use=0.0)
     done = False
     while not done:
-        _, _, _, done, info = env.step(policy.act(info["obs_dict"]))
+        _, _, terminated, truncated, info = env.step(policy.act(info["obs_dict"]))
+        done = terminated or truncated
         a = info["adjust"]
         tot["rounding"] += float(np.abs(a["rounding_delta"]).sum())
         tot["stock_cap"] += float(a["cap_cut"].sum())

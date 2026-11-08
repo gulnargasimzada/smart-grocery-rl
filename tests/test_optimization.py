@@ -44,7 +44,8 @@ def run_checked(table, start=64, household_id="hh_student", budget_scenario="nor
         assert float((order * env.price_at(week)).sum()) <= d.weekly_budget + 1e-6      # budget
         assert np.all(order[~d.allowed] == 0)                                            # diet / allergens
         assert np.all(have + order <= np.maximum(STOCK_CAP_WEEKS * ref, d.step_size + ref) + 1e-6)   # stock cap
-        _, _, _, done, info = env.step(order)
+        _, _, terminated, truncated, info = env.step(order)
+        done = terminated or truncated
         a = info["adjust"]
         assert np.allclose(info["order"], order)                                         # the pipeline changed nothing
         assert a["cap_cut"].sum() == a["storage_cut"].sum() == a["budget_cut"].sum() == 0
