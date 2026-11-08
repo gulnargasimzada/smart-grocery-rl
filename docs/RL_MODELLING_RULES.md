@@ -27,9 +27,10 @@ Rules the RL environment, baselines and evaluation must follow. They do not chan
   Weeks 78-103 are used once, at the end, and never for training, tuning or model selection.
   Budgets were calibrated on weeks 0-77 (unchanged). Forecast leakage and in-sample forecasts are discussed in
   `docs/RL_TECHNICAL_DESIGN.md` section 8.
-- Use **independent random seeds** for evaluation, different from the training seeds and not reused for
-  hyperparameter selection. Report mean and std over seeds (see `INTERFACES.md` section 9).
-- Compare RL with the baselines (`fixed`, `average_rule`, `forecast_rule`) on the same weeks, seeds,
+- Evaluation replays the recorded demand of the held-out weeks, so it is **paired and deterministic**, not a set of independent demand
+  samples. Seeds in the MVP control training randomness only. Do not claim independent evaluation samples or confidence intervals until new
+  demand trajectories are implemented (see `docs/RL_TECHNICAL_DESIGN.md` section 7).
+- Compare RL with the baselines (`fixed`, `average_rule`, `forecast_rule`) on the same weeks,
   region and budget scenario.
 - Demand is synthetic: results are simulated, not real savings.
 See also: `docs/RL_TECHNICAL_DESIGN.md` (storage movement, freezing policy, disposal wording, evaluation split).
