@@ -57,7 +57,7 @@ def test_gymnasium_api_and_spaces():
     obs, info = env.reset(options={"start_week": 10})
     assert obs.shape == env.observation_space.shape == (190,)
     assert env.observation_space.contains(obs)
-    assert set(info["obs_dict"]) == {"inventory", "week", "forecast", "budget_left"}
+    assert set(info["obs_dict"]) == {"inventory", "week", "forecast", "budget_left", "ref_demand"}
     assert env.d.weekly_budget == 75  # normal budget of hh_student / durham_nc (synthetic)
 
 
@@ -259,7 +259,8 @@ def test_consumption_is_first_expiring_first_and_fractional():
     env.reset(options={"start_week": 25})
     milk = pid(env, "milk")
     env.lots = [Lot(milk, 1.0, 1.0, chilled_days=5), Lot(milk, 1.0, 2.0, chilled_days=0)]
-    acc = dict(consumed=np.zeros(env.d.n), consumed_cost=0.0, stockout_value=0.0, stockout_units=0.0, stockout_days=0)
+    acc = dict(consumed=np.zeros(env.d.n), consumed_cost=0.0, stockout_value=0.0, stockout_units=0.0, stockout_days=0,
+               stockout_p=np.zeros(env.d.n))
     demand = np.zeros(env.d.n)
     demand[milk] = 1.25
     env._serve(demand, env.price_at(25), acc)
@@ -363,3 +364,76 @@ def test_buying_nothing_scores_below_a_reference_rule():
     assert average > nothing
     assert nothing < -STOCKOUT_FLOOR
 
+
+
+# ---------------------------------------------------------------- terminal accounting: equal fulfilment, different leftovers
+def _average_rule_state_before_last_step(start=30):
+    """Env after 12 steps of the average_rule baseline (a training window), plus the policy's order for the last week."""
+    from src.policies import AverageRule
+    env = make_env()
+    _, info = env.reset(options={"start_week": start})
+    pol = AverageRule(env.d.product_ids, env.d.step_size, 1.0)
+    for _ in range(HORIZON - 1):
+        _, _, _, _, info = env.step(pol.act(info["obs_dict"]))
+    return env, pol.act(info["obs_dict"])
+
+
+def _extras_without_fulfilment_change(env, order_a, long_life: bool, n_items=6):
+    """Products that need nothing this week (no order, no stockout under policy A); one extra package each."""
+    probe = copy.deepcopy(env)
+    _, _, _, _, info_a = probe.step(order_a)
+    ok_products = [p for p in range(env.d.n)
+                   if order_a[p] == 0 and info_a["stockout_by_product"][p] == 0 and env.d.allowed[p]
+                   and (env.d.L_default[p] >= 180) == long_life and not env.d.sold_frozen[p]]
+    ok_products.sort(key=lambda p: env.price_at(env.week)[p])
+    extra = np.zeros(env.d.n)
+    for p in ok_products[:n_items]:
+        extra[p] = env.d.step_size[p]
+    return extra
+
+
+@pytest.mark.parametrize("long_life", [True, False])
+def test_policy_with_unnecessary_last_week_purchases_gets_lower_reward(long_life):
+    env, order_a = _average_rule_state_before_last_step()
+    env.d.weekly_budget = 500.0                       # slack budget and no stock cap in the final week,
+    env.stock_cap_weeks = 1e6                         # so the unnecessary extras are really bought
+    extra = _extras_without_fulfilment_change(env, order_a, long_life)
+    assert extra.sum() > 0
+    a_env, b_env = copy.deepcopy(env), copy.deepcopy(env)
+    _, r_a, _, _, i_a = a_env.step(order_a)
+    _, r_b, _, _, i_b = b_env.step(order_a + extra)
+    # equivalent demand fulfilment: same stockouts, same units eaten per product, same protein
+    assert i_b["stockout_units"] == pytest.approx(i_a["stockout_units"])
+    assert np.allclose(i_b["consumed_by_product"], i_a["consumed_by_product"])
+    assert i_b["protein_g"] == pytest.approx(i_a["protein_g"])
+    # B really bought more than A (cash spent), and its extras are left over or wasted
+    assert i_b["spend"] > i_a["spend"]
+    leftover_or_waste_b = i_b["terminal_inventory_basis"] + i_b["waste_cost"]
+    leftover_or_waste_a = i_a["terminal_inventory_basis"] + i_a["waste_cost"]
+    assert leftover_or_waste_b > leftover_or_waste_a
+    # the policy with excessive leftover stock receives the lower reward, by exactly the extra costs / budget
+    # (which lot is eaten can differ by a few cents of cost basis, so the consumed-cost difference is included)
+    assert r_b < r_a
+    extra_cost = ((i_b["terminal_charge"] - i_a["terminal_charge"]) + (i_b["waste_cost"] - i_a["waste_cost"])
+                  + (i_b["consumed_cost"] - i_a["consumed_cost"]))
+    assert extra_cost > 0
+    assert r_a - r_b == pytest.approx(extra_cost / env.d.weekly_budget)
+    assert (i_b["terminal_charge"] + i_b["waste_cost"]) > (i_a["terminal_charge"] + i_a["waste_cost"])
+    # cash spending is reported separately and is higher for B
+    assert i_b["episode_cash_spend"] > i_a["episode_cash_spend"]
+
+
+# ---------------------------------------------------------------- shared diet rules (src/diets.py)
+def test_diet_mask_comes_from_shared_diet_rules():
+    import pandas as pd
+    from src.diets import allowed_mask
+    hh = pd.read_csv("data/households.csv").set_index("household_id")
+    products = pd.read_csv("data/products.csv")
+    for hid in ("hh_student", "hh_23", "hh_11"):               # omnivore, vegan, pescatarian
+        env = make_env(household_id=hid)
+        assert np.array_equal(env.d.allowed, allowed_mask(hh.loc[hid].to_dict(), products))
+    vegan = make_env(household_id="hh_23")
+    assert not vegan.d.allowed[pid(vegan, "milk")] and not vegan.d.allowed[pid(vegan, "frozen_pizza")]   # frozen_pizza is dairy-tagged
+    vegan.reset(options={"start_week": 25})
+    n_steps, _ = vegan._adjust_order(np.full(vegan.d.n, 2.0), 25)
+    assert n_steps[~vegan.d.allowed].sum() == 0 and n_steps[vegan.d.allowed].sum() > 0

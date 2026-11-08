@@ -25,6 +25,8 @@ import numpy as np
 import pandas as pd
 from gymnasium import spaces
 
+from src.diets import allowed_mask      # shared diet and allergen rules (owned by the data team)
+
 ROOT = Path(__file__).resolve().parent.parent
 
 # ---- Initial assumptions to be tested (docs/RL_TECHNICAL_DESIGN.md) -------------------------------------------
@@ -46,19 +48,7 @@ EPS = 1e-9
 CAP_TOL = 1e-6
 
 BUDGET_COLUMNS = {"normal": "normal_budget_usd", "challenging": "challenging_budget_usd", "tight": "tight_budget_usd"}
-MEAT = {"chicken_breast", "ground_beef"}
-FISH = {"salmon_fillet", "canned_tuna"}
-ANIMAL = {"milk", "eggs", "yogurt", "cheddar_cheese", "butter"}
-DIET_EXCLUDES = {
-    "omnivore": set(), "pescatarian": MEAT, "vegetarian": MEAT | FISH, "vegan": MEAT | FISH | ANIMAL,
-}
 STORAGES = ("pantry", "fridge", "freezer")
-
-
-def _tokens(value) -> set[str]:
-    if value is None or (isinstance(value, float) and np.isnan(value)):
-        return set()
-    return {t.strip().lower() for t in str(value).replace(",", ";").split(";") if t.strip()}
 
 
 class GroceryData:
@@ -97,12 +87,7 @@ class GroceryData:
         self.capacity = {"fridge": float(cap["fridge_l"]), "freezer": float(cap["freezer_l"]), "pantry": float(cap["pantry_l"])}
 
         # diet and allergen exclusions -> products that may never be bought
-        blocked = DIET_EXCLUDES.get(str(hh["diet"]), set())
-        excl = _tokens(hh["allergen_exclusions"])
-        self.allowed = np.array([
-            pid not in blocked and not (excl & _tokens(a))
-            for pid, a in zip(self.product_ids, products["allergens"])
-        ])
+        self.allowed = allowed_mask(hh.to_dict(), products)
 
         self.weekly_budget = float(bud[BUDGET_COLUMNS[budget_scenario]])
         self.budget_scale = float(bud["calib_median_cost_usd"])
@@ -142,6 +127,7 @@ class GroceryEnv(gym.Env):
         self.d = GroceryData(household_id, region_id, budget_scenario, storage_scenario, root)
         self.horizon = horizon
         self.forecast_fn = forecast_fn
+        self.stock_cap_weeks = STOCK_CAP_WEEKS       # attribute so diagnostics can relax it
         n = self.d.n
         self.action_space = spaces.Box(0.0, 1e6, shape=(n,), dtype=np.float32)   # order quantities in purchase units
         self.observation_space = spaces.Box(-5.0, 5.0, shape=(5 * n + 10,), dtype=np.float32)
@@ -281,9 +267,6 @@ class GroceryEnv(gym.Env):
         overflow = [s for s in STORAGES if base[s] + added(s) > d.capacity[s] + CAP_TOL]
         return chilled, frozen, overflow
 
-    def _coverage(self, p: int, n_steps: np.ndarray, ref: np.ndarray, on_hand: np.ndarray) -> float:
-        return (on_hand[p] + n_steps[p] * self.d.step_size[p]) / max(ref[p], 1e-6)
-
     def _adjust_order(self, raw: np.ndarray, week: int):
         """Raw order (units) -> package counts after diet, rounding, stock cap, storage and budget. Returns (n_steps, notes)."""
         d = self.d
@@ -295,15 +278,19 @@ class GroceryEnv(gym.Env):
             notes.append("removed excluded products: " + ", ".join(d.product_ids[p] for p in np.where(blocked)[0]))
         q[~d.allowed] = 0.0
         n_steps = np.floor(q / d.step_size + 0.5)                       # 1. round to packages (nearest, ties up)
-        cap_units = np.maximum(STOCK_CAP_WEEKS * ref, d.step_size + ref)   # 2. stock cap (whole steps only)
+        log = {"requested": q.copy(), "rounding_delta": n_steps * d.step_size - q}
+        cap_units = np.maximum(self.stock_cap_weeks * ref, d.step_size + ref)   # 2. stock cap (whole steps only)
         max_steps = np.maximum(np.floor((cap_units - on_hand) / d.step_size + EPS), 0.0)
         capped = n_steps > max_steps
         if capped.any():
             notes.append("stock cap applied to: " + ", ".join(d.product_ids[p] for p in np.where(capped)[0]))
+        log["cap_cut"] = (n_steps - np.minimum(n_steps, max_steps)) * d.step_size
         n_steps = np.minimum(n_steps, max_steps)
+        log["storage_cut"] = np.zeros(d.n)
+        log["budget_cut"] = np.zeros(d.n)
 
-        def key(p: int):                                                 # most overstocked first, then costlier, then index
-            return (self._coverage(p, n_steps, ref, on_hand), d.step_size[p] * price[p], -p)
+        def key(p: int):    # cut first: most overstocked (stock after the order, in weeks of demand), then costlier, then index
+            return ((on_hand[p] + n_steps[p] * d.step_size[p]) / max(ref[p], 1e-6), d.step_size[p] * price[p], -p)
 
         removed_storage = removed_budget = 0
         while True:                                                      # 3. capacity-aware placement, then reduction
@@ -316,16 +303,21 @@ class GroceryEnv(gym.Env):
             cands = cands or [p for p in range(d.n) if n_steps[p] > 0]
             if not cands:
                 break
-            n_steps[max(cands, key=key)] -= 1
+            pick = max(cands, key=key)
+            n_steps[pick] -= 1
+            log["storage_cut"][pick] += d.step_size[pick]
             removed_storage += 1
         if removed_storage:
             notes.append(f"removed {removed_storage} package step(s) to fit storage")
         while float((n_steps * d.step_size * price).sum()) > d.weekly_budget + EPS:   # 4. budget
             cands = [p for p in range(d.n) if n_steps[p] > 0]
-            n_steps[max(cands, key=key)] -= 1
+            pick = max(cands, key=key)
+            n_steps[pick] -= 1
+            log["budget_cut"][pick] += d.step_size[pick]
             removed_budget += 1
         if removed_budget:
             notes.append(f"removed {removed_budget} package step(s) to fit the budget of ${d.weekly_budget:.0f}")
+        self.last_adjust = log
         return n_steps, notes
 
     # ------------------------------------------------------------------ daily dynamics
@@ -369,6 +361,7 @@ class GroceryEnv(gym.Env):
                 acc["consumed"][p] += take
                 acc["consumed_cost"] += take * lot.unit_cost
             if left > EPS:
+                acc["stockout_p"][p] += left
                 acc["stockout_units"] += left
                 acc["stockout_value"] += left * price[p]
                 acc["stockout_days"] += 1
@@ -437,7 +430,7 @@ class GroceryEnv(gym.Env):
         self._track_volumes()
 
         acc = dict(consumed=np.zeros(d.n), consumed_cost=0.0, waste_cost=0.0, stockout_value=0.0, stockout_units=0.0,
-                   stockout_days=0, wasted=np.zeros(d.n), waste_units_quality=0.0, waste_units_safety_cutoff=0.0)
+                   stockout_days=0, stockout_p=np.zeros(d.n), wasted=np.zeros(d.n), waste_units_quality=0.0, waste_units_safety_cutoff=0.0)
         demand_week = d.demand[week]
         demand_day = demand_week / DAYS
         for _ in range(DAYS):
@@ -466,7 +459,8 @@ class GroceryEnv(gym.Env):
             "protein_g": protein_g, "protein_target_met": met, "notes": notes, "order": final_units,
             "waste_units_quality": acc["waste_units_quality"], "waste_units_safety_cutoff": acc["waste_units_safety_cutoff"],
             "consumed_cost": acc["consumed_cost"], "stockout_value": acc["stockout_value"],
-            "episode_cash_spend": self.cash["spend"],
+            "episode_cash_spend": self.cash["spend"], "adjust": self.last_adjust,
+            "stockout_by_product": acc["stockout_p"], "consumed_by_product": acc["consumed"],
         }
         reward = -(acc["consumed_cost"] + acc["waste_cost"] + STOCKOUT_MULT * acc["stockout_value"]) / d.weekly_budget \
                  - PROTEIN_WEIGHT * shortfall
@@ -493,6 +487,7 @@ class GroceryEnv(gym.Env):
             "inventory": {pid: {"chilled": float(chilled[i]), "frozen": float(frozen[i])} for i, pid in enumerate(d.product_ids)},
             "week": week, "forecast": None if fc is None else dict(zip(d.product_ids, fc.tolist())),
             "budget_left": d.weekly_budget,
+            "ref_demand": self.ref(week).tolist(),       # trailing 4-week mean demand (known history)
         }
 
     def _obs(self) -> np.ndarray:

@@ -9,8 +9,10 @@ plain Python/NumPy dynamics.
 
 ## Implementation status
 `src/env.py` (`GroceryEnv` v0) and `tests/test_env.py` implement sections 1, 2, 4, 6 (episode, observation, reward, terminal accounting, reset/step) and the
-MVP scope below for recorded-demand replay. Not implemented yet: the RL action wrapper, baseline policies, `EvalSpec` files, forecaster integration
-(a `forecast_fn` hook exists, default off), the `limited` storage scenario. Run the tests with `python -m pytest tests/test_env.py -q`
+MVP scope below for recorded-demand replay. Diet and allergen filtering uses the shared `src/diets.py` (`allowed_mask`). Baselines `fixed` (standing order, package-aware) and `average_rule`
+live in `src/policies.py`; `python -m src.diagnose_env` compares them on training and validation windows only (see `results/env_diagnostics/findings.md`).
+Not implemented yet: the RL action wrapper, `forecast_rule`, `EvalSpec` files, forecaster integration
+(a `forecast_fn` hook exists, default off), the `limited` storage scenario. Run the tests with `python -m pytest tests -q`
 (extra dependencies: `requirements_rl.txt`). The tests cover unit and cost-basis conservation, budget, package steps, storage capacity (also during
 daily thawing), direct-to-freezer purchase with a full fridge, thaw counters and no refreezing, FEFO consumption, quality vs. safety-cutoff
 waste split, and terminal accounting (a very large last-week purchase is charged; a long-life purchase within the two-week credit limit is not).
@@ -108,8 +110,8 @@ Quantities are in purchase units. Each product has a **package step** (defined i
 Final orders must always be an integer number of steps.
 
 Pipeline inside `step()`, in this order:
-1. **Filter:** zero the products excluded by the household's `allergen_exclusions` and by its diet (vegetarian, vegan, pescatarian rules
-   by product category). Own filter, `apply_constraints` (Person 3) is not modified; if it is used, see step 5.
+1. **Filter:** zero the products excluded by the household's `allergen_exclusions` and by its diet, using the shared `src/diets.py` rules
+   (`allowed_mask`). `apply_constraints` (Person 3) is not modified; if it is used, see step 5.
 2. **Round to packages:** `n_p = round(q_p / step_p)` (nearest, ties up). Tiny requests become 0.
 3. **Stock cap:** reduce `n_p` so that on-hand + order is at most `max(3 weeks of reference demand, one package + one week of reference demand)`,
    so a household can always top up one package of a slow-moving item (for example 1 kg of rice).
