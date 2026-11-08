@@ -164,6 +164,10 @@ class GroceryEnv(gym.Env):
                 u[lot.p] += lot.units
         return u
 
+    def on_hand_units(self) -> np.ndarray:
+        """Units on hand per product (chilled + frozen)."""
+        return self._units(None)
+
     def _consumable(self, lot: Lot) -> bool:
         return (not lot.frozen) or bool(self.d.sold_frozen[lot.p])
 

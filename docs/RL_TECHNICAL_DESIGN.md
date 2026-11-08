@@ -11,7 +11,8 @@ plain Python/NumPy dynamics.
 `src/env.py` (`GroceryEnv` v0) and `tests/test_env.py` implement sections 1, 2, 4, 6 (episode, observation, reward, terminal accounting, reset/step) and the
 MVP scope below for recorded-demand replay. Diet and allergen filtering uses the shared `src/diets.py` (`allowed_mask`). Baselines `fixed` (standing order, package-aware) and `average_rule`
 live in `src/policies.py`; `python -m src.diagnose_env` compares them on training and validation windows only (see `results/env_diagnostics/findings.md`).
-Not implemented yet: the RL action wrapper, `forecast_rule`, `EvalSpec` files, forecaster integration
+Added after that: the action wrapper (`src/rl_wrapper.py`), the evaluation framework with fixed episode specs (`src/evaluate.py`), `ForecastRule` and the
+strict forecast table (`src/forecast_table.py`); see `docs/RL_EVALUATION.md`. Not implemented yet: forecast-based results (no verified forecasts yet), forecaster integration
 (a `forecast_fn` hook exists, default off), the `limited` storage scenario. Run the tests with `python -m pytest tests -q`
 (extra dependencies: `requirements_rl.txt`). The tests cover unit and cost-basis conservation, budget, package steps, storage capacity (also during
 daily thawing), direct-to-freezer purchase with a full fridge, thaw counters and no refreezing, FEFO consumption, quality vs. safety-cutoff
@@ -187,7 +188,7 @@ vector as the observation for training. `budget_left` is the weekly budget (it d
 ### Action
 - Contract with `INTERFACES.md`: `env.step(order)` takes **order quantities** in purchase units, shape `(36,)`, values >= 0. Baselines act in this space.
 - RL agent: a thin wrapper maps a normalized action `a in [0, 1]^36` to order-up-to targets
-  `target_p = 2 x a_p x ref_p`, and `order_p = max(0, target_p - on_hand_p)`. This keeps the learning problem well scaled.
+  `target_p = 2 x a_p x ref_p`, and `order_p = ceil(max(0, target_p - on_hand_p) / step_p) x step_p` (whole packages, rounded up so small items can be bought). This keeps the learning problem well scaled.
 - Everything then goes through the pipeline in section 4.
 
 ### Step behaviour
