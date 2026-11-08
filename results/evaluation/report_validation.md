@@ -10,6 +10,7 @@ Deterministic, paired replay of the recorded demand and prices: every policy see
 | buy_nothing | -29.76 | 0.00 | 28.56 | 0.21 | 0.05 | 227.80 | 870.08 | 3173.00 | 0.03 | 0.05 | 0.00 | 0.00 | 0.00 |
 | fixed | -16.08 | 732.57 | 730.20 | 46.52 | 17.56 | 61.42 | 230.61 | 1292.00 | 0.74 | 1.12 | 48.12 | 30.93 | 17.18 |
 | average_rule | -15.32 | 926.15 | 928.99 | 133.56 | 53.56 | 23.28 | 110.05 | 796.00 | 0.88 | 1.44 | 35.50 | 25.73 | 9.77 |
+| forecast_rule | -15.53 | 908.77 | 917.99 | 138.59 | 53.89 | 24.43 | 123.22 | 835.00 | 0.86 | 1.43 | 25.43 | 19.35 | 6.08 |
 
 ## Per episode
 | policy | start_week | end_week | reward | cash_spend | net_cost | waste_cost | waste_units | stockout_units | stockout_value | stockout_days | fill_rate_value | protein_coverage | terminal_basis | terminal_credit | terminal_charge |
@@ -17,5 +18,6 @@ Deterministic, paired replay of the recorded demand and prices: every policy see
 | buy_nothing | 64 | 76 | -29.76 | 0.00 | 28.56 | 0.21 | 0.05 | 227.80 | 870.08 | 3173.00 | 0.03 | 0.05 | 0.00 | 0.00 | 0.00 |
 | fixed | 64 | 76 | -16.08 | 732.57 | 730.20 | 46.52 | 17.56 | 61.42 | 230.61 | 1292.00 | 0.74 | 1.12 | 48.12 | 30.93 | 17.18 |
 | average_rule | 64 | 76 | -15.32 | 926.15 | 928.99 | 133.56 | 53.56 | 23.28 | 110.05 | 796.00 | 0.88 | 1.44 | 35.50 | 25.73 | 9.77 |
+| forecast_rule | 64 | 76 | -15.53 | 908.77 | 917.99 | 138.59 | 53.89 | 24.43 | 123.22 | 835.00 | 0.86 | 1.43 | 25.43 | 19.35 | 6.08 |
 
-- `forecast_rule` was NOT run (no_events forecasts): no forecast table supplied
+- forecast weeks 64-76: all Ridge predictions (walk-forward / trained before the week) (no_events)

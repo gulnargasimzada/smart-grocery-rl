@@ -10,6 +10,7 @@ Deterministic, paired replay of the recorded demand and prices: every policy see
 | buy_nothing | -28.12 | 0.00 | 25.62 | 0.23 | 0.04 | 213.34 | 808.60 | 3199.40 | 0.03 | 0.04 | 0.00 | 0.00 | 0.00 |
 | fixed | -15.41 | 698.76 | 693.27 | 57.80 | 22.49 | 53.77 | 214.33 | 1248.80 | 0.74 | 1.04 | 48.37 | 31.12 | 17.25 |
 | average_rule | -14.82 | 906.10 | 897.85 | 146.18 | 51.32 | 23.03 | 101.55 | 705.00 | 0.88 | 1.28 | 51.92 | 33.87 | 18.06 |
+| forecast_rule | -14.77 | 910.82 | 901.75 | 147.35 | 51.19 | 22.23 | 97.73 | 684.00 | 0.88 | 1.28 | 52.09 | 34.70 | 17.39 |
 
 ## Per episode
 | policy | start_week | end_week | reward | cash_spend | net_cost | waste_cost | waste_units | stockout_units | stockout_value | stockout_days | fill_rate_value | protein_coverage | terminal_basis | terminal_credit | terminal_charge |
@@ -29,5 +30,14 @@ Deterministic, paired replay of the recorded demand and prices: every policy see
 | average_rule | 30 | 42 | -15.84 | 929.42 | 922.83 | 136.42 | 51.34 | 28.37 | 132.50 | 937.00 | 0.85 | 1.29 | 52.25 | 30.92 | 21.33 |
 | average_rule | 43 | 55 | -14.98 | 915.58 | 901.80 | 145.35 | 49.60 | 22.76 | 102.50 | 627.00 | 0.88 | 1.27 | 56.04 | 40.10 | 15.94 |
 | average_rule | 51 | 63 | -16.03 | 894.77 | 898.78 | 147.40 | 52.00 | 28.99 | 132.98 | 799.00 | 0.85 | 1.33 | 32.88 | 20.73 | 12.15 |
+| forecast_rule | 4 | 16 | -13.64 | 886.87 | 873.28 | 152.46 | 54.26 | 17.70 | 74.78 | 645.00 | 0.90 | 1.27 | 57.74 | 40.04 | 17.70 |
+| forecast_rule | 17 | 29 | -13.65 | 899.17 | 888.59 | 147.53 | 49.16 | 17.09 | 67.71 | 528.00 | 0.91 | 1.26 | 61.92 | 36.86 | 25.06 |
+| forecast_rule | 30 | 42 | -15.64 | 932.72 | 921.92 | 132.53 | 49.05 | 28.20 | 125.35 | 896.00 | 0.86 | 1.29 | 51.67 | 35.12 | 16.56 |
+| forecast_rule | 43 | 55 | -14.92 | 925.22 | 913.53 | 150.74 | 50.64 | 20.87 | 95.01 | 609.00 | 0.89 | 1.27 | 53.32 | 38.02 | 15.30 |
+| forecast_rule | 51 | 63 | -15.98 | 910.14 | 911.41 | 153.46 | 52.83 | 27.28 | 125.79 | 742.00 | 0.86 | 1.33 | 35.79 | 23.47 | 12.32 |
 
-- `forecast_rule` was NOT run (no_events forecasts): no forecast table supplied
+- forecast weeks 4-16: weeks [4, 5, 6, 7, 8, 9, 10, 11] use the historical ma4_fallback (4-week moving average), not Ridge; the rest are Ridge (no_events)
+- forecast weeks 17-29: all Ridge predictions (walk-forward / trained before the week) (no_events)
+- forecast weeks 30-42: all Ridge predictions (walk-forward / trained before the week) (no_events)
+- forecast weeks 43-55: all Ridge predictions (walk-forward / trained before the week) (no_events)
+- forecast weeks 51-63: all Ridge predictions (walk-forward / trained before the week) (no_events)

@@ -37,7 +37,7 @@ order_p   = ceil(deficit_p / step_p) x step_p
   listed as "not run" with the reason, and the other policies still run.
 - Metrics per policy and episode: cumulative reward, cash spending, net cost, waste cost and units, stockout units and value, stockout days,
   price-weighted fill rate, protein coverage, terminal inventory basis, credit and charge.
-- Commands: `python -m src.evaluate --split validation` or `--split train`. The command line does not offer `test`, and
+- Commands: `python -m src.evaluate --split validation` or `--split train` (add `--forecast-variant with_events` for the other variant). The command line does not offer `test`, and
   `evaluate_policies("test", ...)` raises unless `confirm_final_test=True`. Test weeks were not run, and were not used for debugging or decisions.
 - Baseline results are preserved: the evaluation module reproduces `src.diagnose_env` exactly (regression tests), e.g. validation window 64:
   fixed -16.08, average_rule -15.32, buy_nothing -29.76.
@@ -67,14 +67,35 @@ Reads the forecast file produced by the ML side; never trains models, never touc
   `data/forecast_weekly.csv` with honest forecasts for all weeks: weeks 4-11 `ma4_fallback`, weeks 12-63 walk-forward (a new model per week, trained
   through week t-1), validation 64-77 from a model trained through week 63, test 78-103 through week 77. Columns: `household_id, week, product_id,
   actual_units, forecast_units, forecast_units_no_events, split, forecast_method, model_trained_through_week, out_of_sample`.
-- **Status on this machine:** the exported file is NOT present (git-ignored, and `main` is not merged). Tests built from a synthetic frame with exactly these
-  columns pass; the checks on the real file (`tests/test_real_forecasts.py`) are skipped and report this blocker. Run the export on the ML side (or copy
-  the file to `data/forecast_weekly.csv`) and re-run `python -m pytest tests -q -rs` and `python -m src.evaluate --split validation`.
+- **Status on this machine (verified):** `data/forecast_weekly.csv` was produced by running the teammate's unchanged `python -m src.forecast --export` from a
+  temporary `git archive` of `origin/main` (commit `0be89d0`, not merged into `RL`; the demand, household and product CSVs are byte-identical to ours) and
+  copied to `data/forecast_weekly.csv`. It stays untracked (excluded locally via `.git/info/exclude`; `RL`'s shared `.gitignore` is unchanged).
+  108,000 rows = 30 households x 36 products x weeks 4-103, SHA-256 `44f62eb8...48fa7d`.
+- **Checks on the real file** (`tests/test_real_forecasts.py`, run with the full suite: 98 passed, 0 skipped):
+  no NaN or negative forecasts; weeks 4-11 are `ma4_fallback` for every household and equal the 4-week mean of earlier recorded demand
+  (max difference 0.0001); weeks 12-63 are Ridge with `model_trained_through_week = week - 1`; weeks 64-77 use a model trained through week 63;
+  `out_of_sample` is 0 for every week below 78 and is correctly not used; all 30 households have both variants for weeks 4-77; the 36 forecasts reach the
+  observation (and the RL wrapper) in `products.csv` order; an episode requests only its own 13 weeks (training window 51-63 never asks for week 64,
+  validation 64-76 never asks for week 77). Plausibility on training and validation weeks only (hh_student, weeks 12-77, no_events):
+  Ridge MAE 0.0995 vs 4-week average 0.1047 units per product-week.
+- Validation window 64-76, `no_events` forecasts, all Ridge predictions (`results/evaluation/report_validation.md`; `with_events` in
+  `report_validation_with_events.md`):
+
+| Policy | Reward | Cash spend | Waste cost | Stockout units | Stockout value | Fill rate (value) |
+|---|---|---|---|---|---|---|
+| buy_nothing | -29.76 | 0.00 | 0.21 | 227.8 | 870.08 | 3% |
+| fixed | -16.08 | 732.57 | 46.52 | 61.4 | 230.61 | 74% |
+| average_rule | -15.32 | 926.15 | 133.56 | 23.3 | 110.05 | 88% |
+| forecast_rule | -15.53 | 908.77 | 138.59 | 24.4 | 123.22 | 86% |
+
+  Forecast Rule is clearly better than Fixed and close to, but not better than, the Average Rule (one recorded window: not evidence of a
+  difference). On the five training windows it is practically level with it (mean reward -14.77 vs -14.82, `report_train.md`; the first window includes the 8 fallback weeks). Ridge is
+  only about 5% more accurate than the moving average, and whole-package ordering absorbs that gain.
 
 ## 4. Limitations
 - One household and region, one recorded demand trajectory, one validation window and two test windows: results describe this simulated
   setting only. Seeds in later training control training randomness, not demand.
 - The $75 Normal budget binds for the Average Rule; waste is simulated disposal, not food-safety expiry.
 - The train evaluation windows overlap (51-63 and 43-55), and the agent trains on weeks 4-63, so train-split numbers are not generalisation evidence.
-- No forecast-based results on the real forecasts exist yet (the exported file is missing locally); `forecast_rule` and the forecast features are verified on synthetic frames of the exact export format only.
+- Forecast-based results exist for one validation window (and the training windows) only; the agent's use of the forecast block is untested.
 - `limited` storage, other budget scenarios and other households are not evaluated yet.

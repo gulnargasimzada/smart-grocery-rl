@@ -57,3 +57,20 @@ def test_forecasts_are_finite_nonnegative_and_ordered_in_the_observation(table):
     assert np.isfinite(f).all() and (f >= 0).all() and f.shape == (36,)
     assert list(info["obs_dict"]["forecast"]) == PRODUCTS
     assert np.allclose(obs[4 * 36:5 * 36], np.clip(f / np.maximum(env.ref(30), 1e-6), 0, 4), atol=1e-6)
+
+
+def test_real_forecasts_reach_the_wrapper_observation_and_no_out_of_episode_requests(table):
+    from src.rl_wrapper import OrderUpToWrapper
+    base = table.forecast_fn("hh_student")
+    for start in (4, 51, 64):                    # first training window (with MA4 fallback weeks), last training window, validation window
+        requested = []
+        env = OrderUpToWrapper(GroceryEnv(forecast_fn=lambda w: (requested.append(w), base(w))[1]))
+        obs, _ = env.reset(options={"start_week": start})
+        ref = env.unwrapped.ref(start)
+        assert obs.shape == (190,) and obs[-1] == 1.0
+        assert np.allclose(obs[4 * 36:5 * 36], np.clip(table.get("hh_student", start) / np.maximum(ref, 1e-6), 0, 4), atol=1e-6)
+        done = False
+        while not done:
+            obs, _, _, done, info = env.step(np.full(36, 0.5))
+        assert sorted(set(requested)) == list(range(start, start + 13))
+        assert obs[-1] == 0.0

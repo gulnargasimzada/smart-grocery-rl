@@ -215,8 +215,9 @@ def write_report(split: str, episodes: pd.DataFrame, summary: pd.DataFrame, unav
                  notes: list[str] | None = None) -> str:
     OUT.mkdir(parents=True, exist_ok=True)
     specs = episode_specs(split)
-    episodes.to_csv(OUT / f"{split}_episodes.csv", index=False)
-    summary.to_csv(OUT / f"{split}_summary.csv")
+    tag = split if variant == "no_events" else f"{split}_{variant}"        # default variant keeps the plain file names
+    episodes.to_csv(OUT / f"{tag}_episodes.csv", index=False)
+    summary.to_csv(OUT / f"{tag}_summary.csv")
     lines = [
         f"# Policy evaluation: {split} split",
         "",
@@ -238,7 +239,7 @@ def write_report(split: str, episodes: pd.DataFrame, summary: pd.DataFrame, unav
         lines.append(f"- `{name}` was NOT run ({variant} forecasts): {reason}")
     lines += [f"- {n} ({variant})" for n in notes or []]
     text = "\n".join(lines) + "\n"
-    (OUT / f"report_{split}.md").write_text(text)
+    (OUT / f"report_{tag}.md").write_text(text)
     return text
 
 
