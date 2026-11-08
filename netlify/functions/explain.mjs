@@ -4,10 +4,10 @@
 // The API key stays here on the server (Netlify → Site configuration → Environment variables):
 //   ANTHROPIC_API_KEY  (required)
 //   ANTHROPIC_MODEL    (optional, default claude-haiku-5-5: fast and low-cost for short answers)
-//   ANTHROPIC_VERSION  (optional, default 2023-06-01, the Messages API version header)
+//   ANTHROPIC_VERSION  (optional, default 2026-10-21)
 //   ALLOWED_ORIGINS    (optional, comma-separated, e.g. http://localhost:8501,https://your-site.netlify.app)
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
-const VERSION = process.env.ANTHROPIC_VERSION || "2023-06-01";
+const VERSION = process.env.ANTHROPIC_VERSION || "2026-10-21";
 
 const SYSTEM = `You explain packaged food to everyday shoppers in plain, friendly words.
 Rules:

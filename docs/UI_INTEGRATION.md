@@ -46,3 +46,7 @@ People don't log what they eat. The app tracks what's bought, estimates use from
 - **Feedback** → anything tossed in the last 4 weeks is bought 20% less per week tossed (at most 50% less); the shopping list shows it as "Your check-ins" in the item's trace.
 
 Reports are stored in the browser (localStorage) for the demo. Without the AI connection, receipt and fridge photos offer a clearly labelled sample.
+
+## AI provider
+
+`netlify/functions/explain.mjs` uses Google Gemini when `GEMINI_API_KEY` is set (free tier from aistudio.google.com/apikey; model `GEMINI_MODEL`, default `gemini-3.6-flash`), otherwise Claude with `ANTHROPIC_API_KEY`. The prompts and answers are the same either way.
