@@ -21,10 +21,14 @@ Rules the RL environment, baselines and evaluation must follow. They do not chan
 - Report results per scenario and per region. Do not mix scenarios in one headline number.
 
 ## 3. Evaluation must not reward memorising synthetic demand
-- Budgets were calibrated on weeks 0-77. **Training uses weeks 0-77 only; evaluation uses held-out weeks 78-103.**
-  Weeks 78-103 must never be used for training, tuning or model selection.
+- Split aligned with the ML forecast (`src/forecast.py`): **training weeks 4-63, validation weeks 64-77, test weeks 78-103**
+  (weeks 0-3 have no forecast history). Policy and hyperparameter selection uses the validation weeks only.
+  Weeks 78-103 are used once, at the end, and never for training, tuning or model selection.
+  Budgets were calibrated on weeks 0-77 (unchanged). Forecast leakage and in-sample forecasts are discussed in
+  `docs/RL_TECHNICAL_DESIGN.md` section 5.
 - Use **independent random seeds** for evaluation, different from the training seeds and not reused for
   hyperparameter selection. Report mean and std over seeds (see `INTERFACES.md` section 9).
 - Compare RL with the baselines (`fixed`, `average_rule`, `forecast_rule`) on the same weeks, seeds,
   region and budget scenario.
 - Demand is synthetic: results are simulated, not real savings.
+See also: `docs/RL_TECHNICAL_DESIGN.md` (storage movement, freezing policy, disposal wording, evaluation split).
