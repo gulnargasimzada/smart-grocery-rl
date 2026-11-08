@@ -68,7 +68,28 @@ nav.tabs button[aria-current="page"]{color:var(--ink);background:var(--surface);
 .pts svg{color:var(--gold)}
 .pts.pulse{animation:pulse .5s ease}
 @keyframes pulse{40%{transform:scale(1.12)}}
-@media (max-width:860px){.bar{height:auto;flex-wrap:wrap;padding-block:10px;row-gap:10px}nav.tabs{order:3;margin-left:0;width:100%;overflow-x:auto}.right{margin-left:auto}.hhsel{max-width:46vw}}
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:6px;padding:22px 14px 0 max(14px,env(safe-area-inset-left,0px));background:var(--sunk);border-right:1px solid var(--line);overflow:hidden}
+.side .brand{padding:0 8px 18px}
+nav.tabs{display:flex;flex-direction:column;gap:4px;margin:0}
+nav.tabs button,.navrw{display:flex;align-items:center;gap:12px;border:0;background:none;padding:10px 12px;border-radius:12px;font-weight:700;font-size:15px;color:var(--ink-2);text-align:left;width:100%}
+nav.tabs button svg,.navrw svg{flex:none;color:var(--muted)}
+nav.tabs button:hover,.navrw:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);color:var(--ink)}
+nav.tabs button[aria-current="page"]{background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow)}
+nav.tabs button[aria-current="page"] svg{color:var(--accent-ink)}
+.navrw{margin-top:10px;border-top:1px solid var(--line);border-radius:0 0 12px 12px;padding-top:16px}
+.navrw svg{color:var(--g-leaf-d)}.rdot{width:8px;height:8px;border-radius:50%;background:var(--gold);margin-left:-4px}
+.sidepip{margin:auto -14px 0 calc(-1 * max(14px,env(safe-area-inset-left,0px)));pointer-events:none}
+.mainc{min-width:0}
+.mainc header.top{position:sticky}
+.mainc .bar{max-width:1120px;margin:0 auto;padding-inline:max(16px,min(32px,3vw));height:68px}
+#app{max-width:1120px;margin:0 auto;padding-left:max(16px,min(32px,3vw));padding-right:max(16px,min(32px,3vw))}
+#wk:empty{display:none}#wk{margin:0}
+@media (max-width:900px){.shell{display:block}
+ .side{position:sticky;top:env(safe-area-inset-top,0px);z-index:7;height:auto;flex-direction:row;align-items:center;gap:8px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);overflow-x:auto}
+ .side .brand{padding:0 6px 0 0}.side .brand{font-size:0;gap:0}.sidepip,.navrw{display:none}
+ nav.tabs{flex-direction:row}nav.tabs button{padding:8px 10px;white-space:nowrap;width:auto;font-size:14px;gap:6px}
+ .mainc header.top{position:static}.mainc .bar{height:auto;flex-wrap:wrap;padding-block:10px;row-gap:10px}.hhsel{max-width:52vw}}
 
 main{padding-block:var(--s3) 72px}
 .page{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--s3)}
@@ -169,7 +190,8 @@ details.li[open] .chev{transform:rotate(90deg)}
 
 /* use first + inventory tiles */
 .uf{display:grid;gap:8px}
-.ufi{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);position:relative}
+.ufi{display:grid;grid-template-columns:32px minmax(0,1fr);gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);position:relative}
+.ufi>div:last-child{grid-column:2;flex-wrap:wrap}
 .ufi:last-child{border-bottom:0}
 .dl{font-size:13px;font-weight:700;white-space:nowrap}
 .dl.x{color:var(--bad)} .dl.w{color:var(--warn)} .dl.f{color:var(--good)} .dl.n{color:var(--muted)}
@@ -388,6 +410,32 @@ details.how .pipe{margin-top:10px;box-shadow:none}
 .dcard:hover{border-color:var(--accent)}.dh{display:flex;gap:12px;align-items:center}.dh>span:nth-child(2){display:flex;flex-direction:column;min-width:0;flex:1}.dh b{font-size:16px}
 .chevr{font-size:24px;color:var(--muted)}
 .foods{display:flex;gap:8px}.foods .ico{width:44px;height:44px}
+.phead{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.phi{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;flex:none;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.phead h1{font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0}.phead p{margin:4px 0 0;color:var(--muted)}
+.sumc{display:grid;gap:0}
+.srow{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.srow>span:nth-child(2){display:flex;flex-direction:column;min-width:0}.srow b{font-size:18px}
+.linkrow{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:center;width:100%;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink)}
+.linkrow:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.smode{display:grid;gap:8px;padding-top:12px}
+.mlist{display:grid;gap:var(--s2);align-content:start}
+.mcard{position:relative;display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:18px;align-items:center;padding:12px;border-radius:18px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.mcard.on{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.mthumb{height:110px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 14%,var(--surface)),color-mix(in srgb,var(--g-leaf) 16%,var(--surface)))}
+.mthumb .ico{width:52px;height:52px;margin-left:-10px;background:var(--surface);box-shadow:var(--shadow)}.mthumb .ico:first-child{margin-left:0}
+.mbody h3{font-family:var(--f-display);font-size:20px;margin:0 0 8px}
+.mmeta{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-bottom:10px}
+.mi{display:inline-flex;gap:6px;align-items:center}
+.uses{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:10px;font-size:13px;background:color-mix(in srgb,var(--good) 12%,var(--surface));color:var(--ink-2)}
+.uses svg{color:var(--good);flex:none}.uses.rescue{background:color-mix(in srgb,var(--gold) 16%,var(--surface))}.uses.rescue svg{color:var(--warn)}
+.mcheck{width:36px;height:36px;border-radius:10px;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--accent-ink);margin-right:6px}
+.mcheck[aria-pressed=true]{background:var(--accent);border-color:var(--accent)}
+.mcard .float{top:-10px;right:-8px}
+@media (max-width:640px){.mcard{grid-template-columns:minmax(0,1fr) auto}.mthumb{grid-column:1/-1;height:90px}}
+.nudge{display:flex;gap:12px;align-items:center;text-align:left;padding:12px 16px 12px 8px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--g-leaf) 12%,var(--surface));color:var(--ink);font:inherit;cursor:pointer}
+.nudgepip{width:72px;flex:none;display:block;overflow:hidden;border-radius:12px}
+@media (max-width:900px){.c8,.c4{grid-column:span 12}}
 .scrim{position:fixed;inset:0;background:rgba(10,20,16,.35);z-index:30}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:var(--surface);z-index:31;box-shadow:var(--shadow-up);display:flex;flex-direction:column;padding:calc(var(--s3) + env(safe-area-inset-top,0px)) max(var(--s3),env(safe-area-inset-right,0px)) calc(var(--s3) + env(safe-area-inset-bottom,0px)) var(--s3);overflow-y:auto;gap:var(--s3)}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .22s ease}@keyframes slide{from{transform:translateX(24px);opacity:.4}}}
@@ -420,15 +468,23 @@ footer.fine{grid-column:span 12;font-size:13px;color:var(--muted)}
 @media (prefers-reduced-motion:no-preference){.meter i,.bar2 i,.vt i{transition:width .4s ease}.btn,.seg button,nav.tabs button,.meal{transition:background .15s,border-color .15s,box-shadow .15s}}
 </style>
 
-<header class="top"><div class="wrap"><div class="bar">
+<div class="shell">
+<aside class="side" aria-label="Main">
   <div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent-ink)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>Grocery Coach</div>
-  <nav class="tabs" id="nav" aria-label="Sections">
-    <button data-go="home">Home</button><button data-go="plan">Plan</button><button data-go="inventory">Inventory</button><button data-go="results">Results</button><button data-go="scan">Scan</button>
-  </nav>
+  <nav class="tabs" id="nav" aria-label="Sections"><button data-go="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg><span>Home</span></button><button data-go="plan"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2 11h11l2-8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg><span>Shopping list</span></button><button data-go="meals"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 13.5a4 4 0 0 1 1.6-7.6 4.6 4.6 0 0 1 8.8 0A4 4 0 0 1 18 13.5V20H6zM6 16.5h12"/></svg><span>Meal ideas</span></button><button data-go="inventory"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg><span>Inventory</span></button><button data-go="results"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Results</span></button><button data-go="scan"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6l1.5-2h4l1.5 2"/></svg><span>Scan</span></button></nav>
+  <button class="navrw" data-rewards="1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-9M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 10c0-3 2.5-5 6-5 0 3-2.5 5-6 5z"/></svg><span>Rewards</span><i class="rdot" aria-hidden="true"></i></button>
+  <div class="sidepip"><svg viewBox="0 0 200 150" width="100%" aria-hidden="true"><ellipse cx="100" cy="150" rx="120" ry="34" fill="var(--g-soil)"/><path d="M0 132c30-30 60-28 80-14" fill="none" stroke="color-mix(in srgb,var(--g-leaf) 35%,transparent)" stroke-width="30" stroke-linecap="round"/>
+<g transform="translate(100 92)"><path d="M0-34q-2-12 0-18" stroke="var(--g-leaf-d)" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M0-52c-6-10-20-12-26-4 8 8 20 8 26 4z" fill="var(--g-leaf)"/><path d="M0-52c6-10 20-12 26-4-8 8-20 8-26 4z" fill="var(--g-leaf)"/>
+<path d="M0-36c24 0 30 20 27 36-3 17-15 25-27 25S-24 17-27 0c-3-16 3-36 27-36z" fill="var(--g-body)" stroke="var(--g-body-d)" stroke-width="2"/><circle cx="-9" cy="-4" r="3.4" fill="var(--g-ink)"/><circle cx="9" cy="-4" r="3.4" fill="var(--g-ink)"/><path d="M-7 6q7 7 14 0" stroke="var(--g-ink)" stroke-width="2.6" fill="none" stroke-linecap="round"/><ellipse cx="-16" cy="4" rx="4.5" ry="3" fill="var(--g-petal)" opacity=".5"/><ellipse cx="16" cy="4" rx="4.5" ry="3" fill="var(--g-petal)" opacity=".5"/></g></svg></div>
+</aside>
+<div class="mainc">
+<header class="top"><div class="bar">
+  <div class="wkctl" id="wk"></div>
   <div class="right"><label for="hhsel" class="sr">Household</label><select id="hhsel" class="hhsel"></select>
     <button class="pts" id="pts" data-rewards="1" aria-label="Points and rewards"></button></div>
-</div></div></header>
-<main class="wrap" id="app"></main>
+</div></header>
+<main id="app"></main>
+</div></div>
 <div id="drawer"></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
@@ -884,7 +940,7 @@ function resultsOff(hh){
   const chart=(key,label,fmt)=>{const series=L.map(([k,n,col,dash,focus])=>({name:n,color:col,dash,focus,values:roll(offWeeks(k).map(r=>+r[key]||0),3)}));
     return `<section class="c4 card"><div class="ch"><div><h2>${label}</h2><p>per week, 3-week average</p></div></div>${lineChart(series,{yfmt:fmt,label:label+" per week",W:340,H:200,L:44,Rr:20,T:10,B:26})}</section>`};
   return `<div class="page">
-   <section class="c12"><div class="ch" style="margin:0"><div><h1 style="font-size:28px">${esc(PRIO[ST.prio].title)}</h1><p class="small">${esc(methodLabel(sel))} · ${money(OFF.weekly_budget,0)}/week budget</p></div>${prioSwitch()}</div></section>
+   ${PH("bars","Results",`${esc(methodLabel(sel))} · ${money(OFF.weekly_budget,0)} a week`,prioSwitch())}
    <section class="c12 kgrid">
     <div class="stat"><span class="label">Spend / week</span><b class="num">${money(f.cash_spend/EPW)}</b>${d(f.cash_spend,a.cash_spend,true)}</div>
     <div class="stat"><span class="label">Food wasted / week</span><b class="num">${money(f.waste_cost/EPW)}</b>${d(f.waste_cost,a.waste_cost,true)}</div>
@@ -1326,20 +1382,11 @@ views.plan=()=>{
   const uf=P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.pre,i)>0.01).map(([p,i])=>[p,i,freshness(p,S.pre.inv[i])]).filter(x=>x[2].d<=3).sort((a,b)=>a[2].d-b[2].d);
   const adds=X.add.filter(a=>a>0.05).length;
   return `<div class="page">
-   <section class="c12" aria-label="This week's shop"><div class="summary">
-    <div><div class="wkctl"><button class="icon-btn" data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span class="label">Week ${weekNo(w)} of ${NTEST}</span><button class="icon-btn" data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button></div>
-     <div class="total num">${money(X.total)}<small>${lines.length} items this week</small></div>
-     <div class="prow">${prioSwitch()}<span class="xs muted">${esc(prioLine(hh))}</span></div></div>
-    <div class="kpis">
-     <div class="kpi"><span class="label">Budget</span><b class="${left<0?"bad":"good"} num">${money(Math.abs(left),0)} ${left<0?"over":"left"}</b><span class="xs muted">of ${money(X.budget,0)}</span></div>
-     <div class="kpi"><span class="label">Protein</span><b class="num">${pct(Math.min(X.pcov,9.99))}</b><span class="xs muted">of weekly goal</span></div>
-     <div class="kpi"><span class="label">Wasted</span><b class="num">${money(X.ef.waste_cost)}</b><span class="xs muted">${OW?"average rule":"fixed list"}: ${money(X.efx.waste_cost)}</span></div>
-    </div></div>
-    ${flags.map(f=>`<div class="note">${esc(f)}</div>`).join("")}
-   </section>
+   ${PH("cart","Shopping list",`${lines.length} items this week · planned by ${esc(ML)}`)}
+   ${flags.length?`<section class="c12">${flags.map(f=>`<div class="note" style="margin:0">${esc(f)}</div>`).join("")}</section>`:""}
 
 
-   <section class="c7 card" aria-label="Shopping list"><div class="ch"><div><h2>Shopping list</h2><p>Tap an item to see why.</p></div></div>
+   <section class="c8 card" aria-label="Shopping list"><p class="xs muted" style="margin:0 0 6px">Tap an item to see why.</p>
     <div class="list">${listHTML||`<div class="empty">Nothing to buy this week.</div>`}</div>
     ${lines.length>12?`<button class="more" data-showall="1">${ST.showAll?"Show fewer":`Show all ${lines.length} items`}</button>`:""}
     <div class="foot"><span>Total</span><span class="tot num">${money(X.total)}</span>
@@ -1354,18 +1401,39 @@ views.plan=()=>{
      ${S.notes.length?`<p class="xs muted" style="margin:10px 0 0">${S.notes.map(esc).join(" ")}</p>`:""}</details>
    </section>
 
-   <div class="c5" style="display:grid;gap:var(--s3);align-content:start">
-    <section class="card" aria-label="Meals this week"><div class="ch"><div><h2>Meals this week</h2><p>Picks update the list.</p></div></div>
-     <div class="meals">${X.opts.slice(0,4).map(o=>{const on=X.sel.has(o.r.id),mk=pkey(hh,w)+":"+o.r.id;
-       return `<div class="meal ${on?"on":""}"><button class="mealbtn" data-pick="${o.r.id}" aria-pressed="${on}"><span class="check" aria-hidden="true">${on?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>':""}</span>
-        <span style="min-width:0;display:block"><h3>${esc(o.r.name)}</h3><span class="m"><span>${Math.round(o.protein)} g protein</span><span>${money(o.cost)}/serving</span><span>${o.r.prep_time_min} min</span></span>
-        ${o.rescue.length?`<span class="r" style="display:block">Uses up ${esc(list(o.rescue.map(x=>x.p.name.toLowerCase())))}</span>`:""}</span></button>
-        ${o.rescue.length&&on&&!MEALP[mk]?`<button class="float" data-mealpts="${o.r.id}" aria-label="Claim 5 points for using up food">${STAR(11)}+5</button>`:""}</div>`}).join("")}</div>
+   <div class="c4" style="display:grid;gap:var(--s3);align-content:start">
+    <section class="card sumc" aria-label="This week">
+     <div class="srow">${HI(HICO.wallet,left<0?"--bad":"--good")}<span><span class="xs muted">Total</span><b class="num">${money(X.total)}</b></span><span class="${left<0?"c-bad":"c-good"} small" style="margin-left:auto;font-weight:700">${money(Math.abs(left),0)} ${left<0?"over":"left"}</span></div>
+     <div class="srow">${HI(HICO.bolt||'<path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z"/>',"--c-protein")}<span><span class="xs muted">Protein goal</span><b class="num">${pct(Math.min(X.pcov,9.99))}</b></span></div>
+     <div class="srow">${HI(HICO.leaf,"--warn")}<span><span class="xs muted">Expected waste</span><b class="num">${money(X.ef.waste_cost)}</b></span></div>
+     <div class="smode"><span class="label">Shopping mode</span>${prioSwitch()}</div>
     </section>
     <section class="card" aria-label="Use first"><div class="ch"><div><h2>Use first</h2><p>${uf.length?"Close to its date.":"Nothing is close to its date."}</p></div></div>
      ${uf.length?`<div class="uf">${uf.slice(0,6).map(([p,i,f])=>{const done=MISS[mkey(hh,w,p.id)];return `<div class="ufi">${ico(p)}<div style="min-width:0"><b>${esc(p.name)}</b><div class="xs muted mono">${friendly(stockOf(S.pre,i),p)}</div></div>
        <div style="display:flex;align-items:center;gap:8px"><span class="dl ${f.cls}">${f.txt}</span>${done?`<span class="done-tag">Rescued</span>`:tossedThisWeek(hh,w,p.id)?`<span class="done-tag tossed">Tossed</span>`:`<button class="float" data-rescue="${p.id}" aria-label="Mark ${esc(p.name)} as used up for 10 points">${STAR(11)}+10</button><button class="tossb" data-toss="${p.id}" data-qty="${stockOf(S.pre,i)}" aria-label="${esc(p.name)} was thrown away">Tossed</button>`}</div></div>`}).join("")}</div>`:""}
     </section>
+    <button class="dcard" data-go="meals"><span class="dh">${HI(HICO.chef,"--gold")}<span><b>${X.chosen.length} meal${X.chosen.length===1?"":"s"} planned</b><span class="xs muted">See meal ideas</span></span><span class="chevr" aria-hidden="true">›</span></span></button>
+   </div>
+  </div>`;
+};
+
+/* ===================== Meal ideas ===================== */
+views.meals=()=>{
+  const hh=HH(),w=curWeek(),X=planWeek(hh,w),lines=P.filter((_,i)=>X.fin[i]>0.01).length;
+  return `<div class="page">
+   ${PH("chef","Meal ideas","Simple meals for this week, using what you have and plan to buy.")}
+   <section class="c8 mlist" aria-label="Meals">${X.opts.slice(0,6).map(o=>{const on=X.sel.has(o.r.id),mk=pkey(hh,w)+":"+o.r.id,uses=(o.rescue.length?o.rescue:o.ing).slice(0,3);
+     return `<div class="mcard ${on?"on":""}">
+      <span class="mthumb" aria-hidden="true">${o.ing.slice(0,3).map(x=>ico(x.p)).join("")}</span>
+      <div class="mbody"><h3>${esc(o.r.name)}</h3><div class="mmeta">${MI("clock",o.r.prep_time_min+" min")}${MI("fork",Math.round(o.protein)+" g protein")}</div>
+       <span class="uses ${o.rescue.length?"rescue":""}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>${o.rescue.length?"Uses up":"Uses"}: ${esc(uses.map(x=>x.p.name.toLowerCase()).join(", "))}</span></div>
+      <button class="mcheck" data-pick="${o.r.id}" aria-pressed="${on}" aria-label="${on?"Remove":"Add"} ${esc(o.r.name)} ${on?"from":"to"} this week">${on?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>':""}</button>
+      ${o.rescue.length&&on&&!MEALP[mk]?`<button class="float" data-mealpts="${o.r.id}" aria-label="Claim 5 points for using up food">${STAR(11)}+5</button>`:""}</div>`}).join("")||`<div class="empty">No meals fit this household's diet yet.</div>`}</section>
+   <div class="c4" style="display:grid;gap:var(--s3);align-content:start">
+    <section class="card"><h2 style="font-size:20px;margin:0 0 12px">This week's plan</h2>
+     <button class="srow linkrow" data-go="plan">${HI(HICO.cart,"--accent")}<b>${lines} items</b><span class="chevr" aria-hidden="true" style="margin-left:auto">›</span></button>
+     <div class="srow" style="border:0">${HI(HICO.fridge,"--c-dairy")}<span><b class="small">Meals use your updated inventory</b><span class="xs muted">What's at home plus this week's shop. Picked meals add what's missing to the list.</span></span></div></section>
+    <button class="nudge" data-rewards="1"><span class="nudgepip" aria-hidden="true">${document.querySelector(".sidepip")?.innerHTML||""}</span><span class="small">Cook, eat and waste less to grow your garden!</span><span class="chevr" aria-hidden="true">→</span></button>
    </div>
   </div>`;
 };
@@ -1373,10 +1441,12 @@ views.plan=()=>{
 
 /* ===================== Home: the week at a glance, few numbers ===================== */
 const HI=(d,c)=>`<span class="hico" style="--c:var(${c})" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}</svg></span>`;
-const HICO={wallet:'<path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm0 0l11-3v3"/><circle cx="16" cy="13.5" r="1.2"/>',leaf:'<path d="M5 19C5 10 11 4 19 5c1 8-5 14-14 14z"/><path d="M5 19l8-8"/>',
+const HICO={chef:'<path d="M6 13.5a4 4 0 0 1 1.6-7.6 4.6 4.6 0 0 1 8.8 0A4 4 0 0 1 18 13.5V20H6zM6 16.5h12"/>',bars:'<path d="M5 20V11M12 20V5M19 20v-6"/>',camera:'<rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6l1.5-2h4l1.5 2"/>',clock:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',fridge:'<rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M6 10h12M9 6v2M9 13v3"/>',wallet:'<path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm0 0l11-3v3"/><circle cx="16" cy="13.5" r="1.2"/>',leaf:'<path d="M5 19C5 10 11 4 19 5c1 8-5 14-14 14z"/><path d="M5 19l8-8"/>',
   bowl:'<path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M9 8c0-1 1-1.5 1-2.5M12 8c0-1 1-1.5 1-2.5M15 8c0-1 1-1.5 1-2.5"/>',spark:'<path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6L12 4zM18.5 15l.7 1.8L21 17.5l-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"/>',
   cart:'<path d="M3 4h2l2 11h11l2-8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>',box:'<rect x="4" y="5" width="16" height="5" rx="1.5"/><path d="M5.5 10v8a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-8M10 14h4"/>',
   scan:'<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/>',bag:'<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8a3 3 0 0 1 6 0"/>',fork:'<path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v10M16 3c-2 1.5-2.5 4-2.5 7 0 1.5 1 2 2.5 2V21"/>'};
+const PH=(ic,t,sub,right="")=>`<section class="c12 phead"><span class="phi" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${HICO[ic]}</svg></span><div style="min-width:0;flex:1"><h1>${t}</h1><p>${sub}</p></div>${right}</section>`;
+const MI=(ic,txt)=>`<span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${HICO[ic]}</svg>${txt}</span>`;
 views.home=()=>{
   const hh=HH(),w=curWeek(),X=planWeek(hh,w),S=X.S,G=gardenState(hh,w),pt=points(hh,w),lvl=Math.min(5,1+Math.floor(pt.total/50));
   const left=X.budget-X.total;
@@ -1396,13 +1466,13 @@ views.home=()=>{
     ${tile("bowl","--accent","Meals planned",`${X.chosen.length} meal${X.chosen.length===1?"":"s"}`)}
     ${tile("spark","--c-bev","Strategy",PRIO[ST.prio].short)}</div></section>
    <section class="c12"><h2 class="hh2">This week's plan</h2><div class="acts">
-    ${act("cart","--accent","Shopping list",'data-go="plan"')}${act("bowl","--gold","Meal ideas",'data-go="plan" data-to="meals"')}
+    ${act("cart","--accent","Shopping list",'data-go="plan"')}${act("bowl","--gold","Meal ideas",'data-go="meals"')}
     ${act("box","--good","Inventory check",'data-go="inventory"')}${act("scan","--c-bev","Scan receipt",'data-receipt="1"')}</div></section>
    <section class="c12"><h2 class="hh2">Shopping mode</h2>${prioSwitch()}</section>
    <section class="c12 duo">
     <button class="dcard" data-go="plan"><span class="dh">${HI(HICO.bag,"--accent")}<span><b>Buy this week</b><span class="xs muted">${lines.length} items, ${left<0?"a little over":"within"} budget</span></span><span class="chevr" aria-hidden="true">›</span></span>
      <span class="foods">${lines.slice(0,4).map(([p])=>ico(p)).join("")}</span></button>
-    <button class="dcard" data-go="plan" data-to="meals"><span class="dh">${HI(HICO.fork,"--gold")}<span><b>Meal ideas</b><span class="xs muted">${meal?esc(meal.r.name):"Simple meals with what you have"}</span></span><span class="chevr" aria-hidden="true">›</span></span>
+    <button class="dcard" data-go="meals"><span class="dh">${HI(HICO.fork,"--gold")}<span><b>Meal ideas</b><span class="xs muted">${meal?esc(meal.r.name):"Simple meals with what you have"}</span></span><span class="chevr" aria-hidden="true">›</span></span>
      <span class="foods">${meal?meal.ing.slice(0,4).map(x=>ico(x.p)).join(""):""}</span></button>
    </section>
   </div>`;
@@ -1416,15 +1486,12 @@ views.inventory=()=>{
   const filt=ST.invFilter,cnt=k=>items.filter(x=>x[2].k===k).length;
   const value=items.reduce((a,[p,i])=>a+stockOf(st,i)*X.price[i],0);
   return `<div class="page">
-   <section class="c12"><div class="summary"><div><div class="wkctl"><button class="icon-btn" data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span class="label">Week ${weekNo(w)} of ${NTEST}</span><button class="icon-btn" data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button></div>
-     <div class="total num">${money(value,0)}<small>of food at home</small></div><div style="margin-top:8px">${prioSwitch()}</div></div>
-     <div class="kpis"><div class="kpi"><span class="label">Use first</span><b class="num" style="color:var(--warn)">${cnt("soon")}</b><span class="xs muted">within 3 days</span></div>
-      <div class="kpi"><span class="label">Fresh</span><b class="num">${cnt("fresh")}</b><span class="xs muted">items</span></div>
-      <div class="kpi"><span class="label">Out of stock</span><b class="num" style="color:var(--bad)">${cnt("out")}</b><span class="xs muted">items</span></div></div></div>${questionCard(hh,w,S)}</section>
+   ${PH("box","Inventory",`About ${money(value,0)} of food at home${cnt("soon")?` · ${cnt("soon")} to use first`:""}`)}
+   ${(()=>{const q=questionCard(hh,w,S);return q?`<section class="c12">${q.replace('class="qcard"','class="qcard" style="margin:0"')}</section>`:""})()}
    ${trackCard(hh,w)}
    <section class="c12" style="display:flex;gap:var(--s2);flex-wrap:wrap;justify-content:space-between">
     <div class="seg" role="group" aria-label="When"><button data-inv="0" aria-pressed="${!ST.invAfter}">Before shopping</button><button data-inv="1" aria-pressed="${ST.invAfter}">After shopping</button></div>
-    <div class="seg" role="group" aria-label="Show"><button data-filt="all" aria-pressed="${filt==="all"}">All</button><button data-filt="soon" aria-pressed="${filt==="soon"}">Use first</button><button data-filt="out" aria-pressed="${filt==="out"}">Out</button></div>
+    <div class="seg" role="group" aria-label="Show"><button data-filt="all" aria-pressed="${filt==="all"}">All</button><button data-filt="soon" aria-pressed="${filt==="soon"}">Use first · ${cnt("soon")}</button><button data-filt="out" aria-pressed="${filt==="out"}">Out · ${cnt("out")}</button></div>
    </section>
    <section class="c12">${G.filter(([k])=>filt==="all"||filt===k).map(([k,label,c])=>{const g=items.filter(x=>x[2].k===k).sort((a,b)=>(a[2].d??99)-(b[2].d??99));if(!g.length)return "";
      return `<h2 class="gh"><i class="dot" style="background:${c}"></i>${label} <span class="n">${g.length}</span></h2><div class="grid-tiles">${g.map(([p,i,f])=>{const done=MISS[mkey(hh,w,p.id)];
@@ -1463,7 +1530,7 @@ function resultsLocal(){
   const T=[["Spend / week",p=>p.weekly_cost,v=>money(v),true],["Food wasted / week",p=>p[wk],v=>wm?money(v):fx(v,2),true],["Empty-shelf days / week",p=>p.stockout_days,v=>fx(v,1),true],["Protein goal met",p=>p.protein_target_met,v=>pct(v),false]];
   const best=T.map(([,g,,lo])=>{const v=ORDER.map(k=>+g(pols[k]));return lo?Math.min(...v):Math.max(...v)});
   return `<div class="page">
-   <section class="c12"><div class="ch" style="margin:0"><div><h1 style="font-size:28px">${live?"RL agent":"Coach"} vs fixed shopping</h1><p class="small">${esc(hh.persona)} · ${pols.coach.weekly?.length||52} simulated weeks the policies never saw in training${save>0?` · saves ${money(save,0)} a year`:""}</p></div><span class="tag ${live?"t-live":"t-demo"}">${live?"results.json":"Demo simulation"}</span></div></section>
+   ${PH("bars","Results",`${live?"RL agent":"Coach"} vs a fixed shopping list · ${esc(hh.persona)}`)}
    <section class="c12 kgrid">
     <div class="stat"><span class="label">Spend / week</span><b class="num">${money(c.weekly_cost)}</b>${delta(c.weekly_cost,fx0.weekly_cost)}</div>
     <div class="stat"><span class="label">Food wasted / week</span><b class="num">${wm?money(c[wk]):fx(c[wk],2)}</b>${delta(c[wk],fx0[wk])}</div>
@@ -1533,6 +1600,7 @@ views.scan=()=>{
     </section>`;
   }
   return `<div class="page">
+   ${PH("camera","Scan","Check any product: nutrition, price and how it fits this household.")}
    <section class="c8 card"><div class="ch"><div><h2>Scan a product</h2><p>Use the camera, ${DATA.explain_url?"a photo of the barcode or label":"a photo of the barcode"}, or type the number.</p></div>
      <div class="seg" role="group" aria-label="Scan method"><button data-smode="camera" aria-pressed="${m==="camera"}">Camera</button><button data-smode="photo" aria-pressed="${m==="photo"}">Photo</button><button data-smode="type" aria-pressed="${m==="type"}">Type</button></div></div>
     ${m==="camera"?`<div class="vf" id="vf"><div id="viewfinder" aria-label="Camera view"></div><div class="vf-idle"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg><span>Camera is off</span></div></div>
@@ -1651,6 +1719,7 @@ function render(){
   if(SCAN.running)stopCam();
   const v=views[ST.view]?ST.view:"plan";
   document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.go===v?"page":"false"));
+  {const w=curWeek(),wk=document.getElementById("wk");wk.innerHTML=["home","plan","meals","inventory"].includes(v)?`<button class="icon-btn" data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span class="label">Week ${weekNo(w)} of ${NTEST}</span><button class="icon-btn" data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button>`:""}
   renderHH();renderPts();
   try{app.innerHTML=views[v]()}catch(e){console.error(e);app.innerHTML=`<div class="empty">Something went wrong: ${esc(e.message)}</div>`}
   document.getElementById("drawer").innerHTML=ST.rewards?drawer():ST.sheet?sheet():"";
@@ -1662,7 +1731,7 @@ function go(v){ST.view=v;render();window.scrollTo({top:0})}
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,[data-close]");if(!t||t.disabled)return;const d=t.dataset;
   if(d.receipt){go("inventory");setTimeout(()=>document.getElementById("rcptin")?.click(),50)}
-  else if(d.go){go(d.go);if(d.to==="meals")requestAnimationFrame(()=>document.querySelector('[aria-label="Meals this week"]')?.scrollIntoView({block:"start"}))}
+  else if(d.go)go(d.go);
   else if(d.wk){const r0=t.getBoundingClientRect(),w0=curWeek();ST.scrub=Math.max(TRAIN_END,Math.min(NW-1,w0+ +d.wk));if(ST.scrub===w0)return;const g0=points(HH(),w0).total,l0=gardenState(HH(),w0);render();const g1=points(HH(),curWeek()).total,l1=gardenState(HH(),curWeek());if(g1>g0)fly(r0,g1-g0);
     if(+d.wk>0){if(l1.stage>l0.stage)toast(`Your garden grew to stage ${l1.stage}!`);else if(l1.leaves>l0.leaves)toast("Low-waste week! A new leaf grew in your garden.");else if(l1.left!=null&&l1.left<0)toast("Over budget last week, so the garden soil dried out.")}}
   else if(d.showall){ST.showAll=!ST.showAll;render()}
