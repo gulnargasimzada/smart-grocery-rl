@@ -1,0 +1,11 @@
+,#1,#2,#3,#4,#5,#6
+cash_spend (lower better),Fixed Rule 732.57,Optimization 797.69,Forecast Rule 908.77,PPO without forecast 917.94,PPO with forecast 918.08,Average Rule 926.15
+net_cost (lower better),Fixed Rule 730.20,Optimization 782.92,PPO without forecast 911.08,PPO with forecast 913.35,Forecast Rule 917.99,Average Rule 928.99
+waste_units (lower better),Optimization 6.78,Fixed Rule 17.56,PPO without forecast 32.89,PPO with forecast 33.76,Average Rule 53.56,Forecast Rule 53.89
+waste_cost (lower better),Optimization 18.14,Fixed Rule 46.52,PPO without forecast 97.50,PPO with forecast 101.19,Average Rule 133.56,Forecast Rule 138.59
+stockout_units (lower better),Average Rule 23.28,Forecast Rule 24.43,PPO with forecast 24.60,PPO without forecast 24.90,Optimization 42.68,Fixed Rule 61.42
+stockout_value (lower better),PPO with forecast 93.79,PPO without forecast 94.66,Average Rule 110.05,Forecast Rule 123.22,Optimization 138.11,Fixed Rule 230.61
+fill_rate_value (higher better),PPO with forecast 0.90,PPO without forecast 0.89,Average Rule 0.88,Forecast Rule 0.86,Optimization 0.85,Fixed Rule 0.74
+reward (higher better),Optimization -14.12,PPO without forecast -14.67,PPO with forecast -14.68,Average Rule -15.32,Forecast Rule -15.53,Fixed Rule -16.08
+protein_coverage (higher better),PPO without forecast 1.49,PPO with forecast 1.48,Optimization 1.44,Average Rule 1.44,Forecast Rule 1.43,Fixed Rule 1.12
+terminal_charge (lower better),Forecast Rule 6.08,Optimization 9.39,Average Rule 9.77,PPO with forecast 10.97,PPO without forecast 12.98,Fixed Rule 17.18
