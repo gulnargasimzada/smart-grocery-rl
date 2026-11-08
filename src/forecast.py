@@ -6,16 +6,20 @@ Step 2: XGBoost model. It predicts the RATIO  demand / reference  (reference = m
         sample weights = reference, so the training loss equals the absolute error in purchase units (= our MAE).
         Prediction = ratio * reference. Products a household can never eat have reference 0 and get prediction 0.
 
+        Both models use exactly the same input features (see ridge_matrix), so the comparison is fair.
+
 Step 3: Ridge regression (simple ML baseline) and a validation set to compare the models fairly.
         Split of the weeks (set by the team captain):  TRAIN 0-63 | VALIDATION 64-77 | TEST 78-103.
         Weeks 0-3 cannot be predicted (a forecast needs 4 weeks of history), so the model is trained on target weeks 4-63.
         Models and parameters (Ridge alpha, XGBoost depth / trees) are chosen on the validation weeks only.
-        The chosen models are then retrained on weeks 4-77 and scored ONCE on the test weeks.
+        The validation step showed Ridge and XGBoost are practically equal (XGBoost only slightly better), so the team
+        captain chose RIDGE as the FINAL model: simpler and easier to interpret. It is retrained on weeks 4-77 and ONLY
+        this one model is scored on the test weeks (once). No other model is ever scored on the test weeks.
 
 Step 4: export + API for the team.
         python -m src.forecast            validation comparison, then test results
-        python -m src.forecast --export   also writes data/forecast_weekly.csv and saves the models
-                                          (models/forecaster_with_events.json, models/forecaster_no_events.json)
+        python -m src.forecast --export   also writes data/forecast_weekly.csv and saves the final Ridge models
+                                          (models/ridge_with_events.pkl, models/ridge_no_events.pkl)
         The saved models are trained on weeks 4-77 only (train + validation). The test weeks 78-103 are NEVER used,
         so they are safe for evaluating the forecast and the RL policies on unseen data.
         predict_next_week(history, household_id, week, guest=None, away=None)  -> {product_id: units}
@@ -102,16 +106,12 @@ def summary_table(res: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------------------------------------
 # Step 2: features + XGBoost
 # ---------------------------------------------------------------------------------------------------------
-LAG_FEATURES = ["lag1", "lag2", "lag3", "lag4", "lag52", "ma4", "ma8", "std4"]
 HISTORY_EVENT_FEATURES = ["away_last4", "guest_last4", "prev_away", "prev_guest"]
 SEASON_FEATURES = ["week_sin", "week_cos"]
-STATIC_FEATURES = ["n_adults", "n_children", "eats_out_share", "diet_code", "kcal_per_adult_day",
-                   "category_code", "product_code", "kcal_per_unit"]
 HOLIDAY_FEATURES = ["holiday_week"]
 EVENT_FEATURES = ["guest_week", "away_week"]
-FEATURES_WITH_EVENTS = (LAG_FEATURES + HISTORY_EVENT_FEATURES + SEASON_FEATURES + STATIC_FEATURES
-                        + HOLIDAY_FEATURES + EVENT_FEATURES)
-FEATURES_NO_EVENTS = [f for f in FEATURES_WITH_EVENTS if f not in EVENT_FEATURES]
+# Ridge and XGBoost are trained on the SAME feature matrix: ridge_matrix() below (lag1-4, ma4, std4 divided by the
+# reference level, season, history events, holiday, optional guest/away flags, category one-hot).
 
 
 def build_features(weekly: pd.DataFrame, households: pd.DataFrame, products: pd.DataFrame) -> pd.DataFrame:
@@ -149,7 +149,7 @@ def build_features(weekly: pd.DataFrame, households: pd.DataFrame, products: pd.
 
 XGB_GRID = [{"n_estimators": n, "max_depth": d} for n in (200, 400) for d in (4, 6)]
 RIDGE_ALPHAS = (0.1, 1.0, 10.0, 100.0)
-VARIANTS = {"no_guest_away": FEATURES_NO_EVENTS, "with_events": FEATURES_WITH_EVENTS}
+VARIANTS = ("no_guest_away", "with_events")
 
 
 def make_model(n_estimators: int = 400, max_depth: int = 6):
@@ -169,13 +169,14 @@ def training_rows(df: pd.DataFrame, first_week: int, end_week: int) -> pd.DataFr
     return df[(df["week"] >= first_week) & (df["week"] < end_week) & (df["reference"] > 0)]
 
 
-def fit_forecaster(df: pd.DataFrame, features: list, train_weeks: int = TRAIN_WEEKS, first_week: int = MIN_HISTORY,
-                   params: dict | None = None):
-    """Trains XGBoost on target weeks first_week .. train_weeks-1. Returns (model name, fitted model)."""
+def fit_forecaster(df: pd.DataFrame, include_events: bool, train_weeks: int = TRAIN_WEEKS,
+                   first_week: int = MIN_HISTORY, params: dict | None = None):
+    """Trains XGBoost on target weeks first_week .. train_weeks-1 using the SAME feature matrix as Ridge
+    (ridge_matrix), so the two models are compared on identical inputs. Returns (model name, fitted model)."""
     train = training_rows(df, first_week, train_weeks)
     name, model = make_model(**(params or {}))
-    ratio = train["demand_units"] / train["reference"]
-    model.fit(train[features], ratio, sample_weight=train["reference"])
+    model.fit(ridge_matrix(train, include_events), train["demand_units"] / train["reference"],
+              sample_weight=train["reference"])
     return name, model
 
 
@@ -187,9 +188,9 @@ def to_units(ratio: pd.Series, df: pd.DataFrame) -> pd.Series:
     return pred
 
 
-def predict_units(df: pd.DataFrame, model, features: list) -> pd.Series:
-    """XGBoost prediction in purchase units."""
-    return to_units(pd.Series(model.predict(df[features]), index=df.index), df)
+def predict_units(df: pd.DataFrame, model, include_events: bool) -> pd.Series:
+    """XGBoost prediction in purchase units (same feature matrix as Ridge)."""
+    return to_units(pd.Series(model.predict(ridge_matrix(df, include_events)), index=df.index), df)
 
 
 # --- Ridge regression: a simple linear baseline -------------------------------------------------------------
@@ -223,6 +224,11 @@ def ridge_units(df: pd.DataFrame, model, include_events: bool) -> pd.Series:
 
 
 # --- Model comparison with a validation set ------------------------------------------------------------------
+FINAL_FAMILY = "ridge"    # chosen by the team captain after the validation step (simpler, more interpretable)
+MODEL_WITH_EVENTS = "models/ridge_with_events.pkl"
+MODEL_NO_EVENTS = "models/ridge_no_events.pkl"
+
+
 def val_score(df: pd.DataFrame, pred: pd.Series) -> dict:
     rows = df[(df["week"] >= VAL_START) & (df["week"] < TRAIN_WEEKS)].copy()
     rows["pred"] = pred.loc[rows.index]
@@ -230,13 +236,14 @@ def val_score(df: pd.DataFrame, pred: pd.Series) -> dict:
 
 
 def compare_models(df: pd.DataFrame):
-    """Chooses the Ridge alpha and the XGBoost settings on the VALIDATION weeks (models trained on TRAIN weeks only),
-    then retrains the chosen models on train + validation and fills the pred_* columns used for the test results.
-    Returns (df, validation table, best settings)."""
-    val_rows, best = [], {}
+    """Chooses the Ridge alpha and the XGBoost settings on the VALIDATION weeks (models trained on TRAIN weeks only).
+    Ridge: the chosen alpha is retrained on train + validation (weeks 4-77) and stored in df[pred_ridge_*] and in
+    final_models. XGBoost is only tuned and compared on the validation weeks (it is not the final model).
+    Returns (df, validation table, final Ridge models)."""
+    val_rows, final_models = [], {}
     for base in ("pred_last_week", "pred_ma4"):
         val_rows.append({"model": base, "setting": "-", "chosen": "", **val_score(df, df[base])})
-    for variant, feats in VARIANTS.items():
+    for variant in VARIANTS:
         events = variant == "with_events"
 
         scored = []
@@ -247,44 +254,34 @@ def compare_models(df: pd.DataFrame):
         for sc, alpha in scored:
             val_rows.append({"model": f"ridge_{variant}", "setting": f"alpha={alpha}",
                              "chosen": "*" if alpha == best_alpha else "", **sc})
-        df[f"pred_ridge_{variant}"] = ridge_units(df, fit_ridge(df, best_alpha, events, end_week=TRAIN_WEEKS), events)
+        final_models[f"ridge_{variant}"] = fit_ridge(df, best_alpha, events, end_week=TRAIN_WEEKS)
+        df[f"pred_ridge_{variant}"] = ridge_units(df, final_models[f"ridge_{variant}"], events)
 
         scored = []
         for params in XGB_GRID:
-            _, model = fit_forecaster(df, feats, train_weeks=VAL_START, params=params)
-            scored.append((val_score(df, predict_units(df, model, feats)), params))
+            _, model = fit_forecaster(df, events, train_weeks=VAL_START, params=params)
+            scored.append((val_score(df, predict_units(df, model, events)), params))
         best_params = min(scored, key=lambda t: t[0]["MAE"])[1]
         for sc, params in scored:
             val_rows.append({"model": f"xgb_{variant}", "setting": f"trees={params['n_estimators']},depth={params['max_depth']}",
                              "chosen": "*" if params == best_params else "", **sc})
-        _, final = fit_forecaster(df, feats, train_weeks=TRAIN_WEEKS, params=best_params)
-        df[f"pred_xgb_{variant}"] = predict_units(df, final, feats)
-        best[variant] = best_params
-    return df, pd.DataFrame(val_rows), best
+    return df, pd.DataFrame(val_rows), final_models
 
 
-MODEL_WITH_EVENTS = "models/forecaster_with_events.json"
-MODEL_NO_EVENTS = "models/forecaster_no_events.json"
+def ridge_coefficients(model) -> pd.Series:
+    """Coefficients of the Ridge model (features are standardised, so they are comparable): ratio change per +1 std."""
+    return pd.Series(model[-1].coef_, index=model.feature_names_in_).sort_values(key=abs, ascending=False)
 
 
-def save_forecaster(model, path: str) -> None:
+def save_model(model, path: str) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    if hasattr(model, "save_model"):                 # XGBoost native format
-        model.save_model(path)
-    else:                                            # scikit-learn fallback (testing only)
-        with open(path, "wb") as f:
-            pickle.dump(model, f)
+    with open(path, "wb") as f:
+        pickle.dump(model, f)
 
 
-def load_forecaster(path: str):
-    try:
-        from xgboost import XGBRegressor
-        model = XGBRegressor()
-        model.load_model(path)
-        return model
-    except Exception:
-        with open(path, "rb") as f:
-            return pickle.load(f)
+def load_model(path: str):
+    with open(path, "rb") as f:
+        return pickle.load(f)
 
 
 def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest=None, away=None,
@@ -296,15 +293,14 @@ def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest
              for this household (weeks up to week-1; the more the better, the model uses up to 52 weeks back).
     guest / away: True / False if the household knows about guests or a trip next week, None if unknown.
                   None uses the model without these flags; True/False uses the model with them.
-    model: optional fitted model; by default the saved model is loaded from models/ (trained on weeks 4-77 only,
-           so the test weeks 78-103 are unseen).
+    model: optional fitted Ridge model; by default the saved model is loaded from models/ (trained on weeks 4-77
+           only, so the test weeks 78-103 are unseen).
     """
     households = pd.read_csv("data/households.csv") if households is None else households
     products = pd.read_csv("data/products.csv") if products is None else products
     use_events = guest is not None or away is not None
-    features = FEATURES_WITH_EVENTS if use_events else FEATURES_NO_EVENTS
     if model is None:
-        model = load_forecaster(MODEL_WITH_EVENTS if use_events else MODEL_NO_EVENTS)
+        model = load_model(MODEL_WITH_EVENTS if use_events else MODEL_NO_EVENTS)
 
     hist = history[(history["household_id"] == household_id) & (history["week"] < week)]
     if hist["week"].max() != week - 1:
@@ -315,16 +311,16 @@ def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest
     rows = pd.concat([hist, target], ignore_index=True)
     feats = build_features(rows, households, products)
     now = feats[feats["week"] == week]
-    pred = predict_units(now, model, features)
+    pred = ridge_units(now, model, use_events)
     return dict(zip(now["product_id"], pred.round(4)))
 
 
-def export(df: pd.DataFrame, best: dict) -> None:
-    """data/forecast_weekly.csv: one row per household, product and week >= MIN_HISTORY.
-    Predictions come from models trained on weeks < TRAIN_WEEKS, so only out_of_sample == 1 rows are honest."""
+def export(df: pd.DataFrame, final_models: dict) -> None:
+    """data/forecast_weekly.csv: one row per household, product and week >= MIN_HISTORY (Ridge forecasts).
+    Models are trained on weeks < TRAIN_WEEKS, so only out_of_sample == 1 rows are honest."""
     out = df[df["week"] >= MIN_HISTORY][KEYS + ["week", "demand_units"]].copy()
-    out["forecast_units"] = df.loc[out.index, "pred_xgb_with_events"].round(4)
-    out["forecast_units_no_events"] = df.loc[out.index, "pred_xgb_no_guest_away"].round(4)
+    out["forecast_units"] = df.loc[out.index, "pred_ridge_with_events"].round(4)
+    out["forecast_units_no_events"] = df.loc[out.index, "pred_ridge_no_guest_away"].round(4)
     out["out_of_sample"] = (out["week"] >= TRAIN_WEEKS).astype(int)
     out = out.rename(columns={"demand_units": "actual_units"})
     out = out[["household_id", "week", "product_id", "actual_units", "forecast_units",
@@ -332,11 +328,11 @@ def export(df: pd.DataFrame, best: dict) -> None:
     out.to_csv("data/forecast_weekly.csv", index=False)
     print(f"\nWrote data/forecast_weekly.csv: {len(out)} rows (out_of_sample rows: {int(out['out_of_sample'].sum())})")
 
-    for label, variant, path in (("with events", "with_events", MODEL_WITH_EVENTS),
-                                 ("no events", "no_guest_away", MODEL_NO_EVENTS)):
-        _, model = fit_forecaster(df, VARIANTS[variant], train_weeks=TRAIN_WEEKS, params=best[variant])
-        save_forecaster(model, path)
-        print(f"Saved model ({label}, settings {best[variant]}, trained on target weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}): {path}")
+    for label, key, path in (("with events", "ridge_with_events", MODEL_WITH_EVENTS),
+                             ("no events", "ridge_no_guest_away", MODEL_NO_EVENTS)):
+        save_model(final_models[key], path)
+        alpha = final_models[key][-1].alpha
+        print(f"Saved Ridge model ({label}, alpha={alpha}, trained on target weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}): {path}")
 
 
 def main(do_export: bool = False) -> None:
@@ -348,20 +344,29 @@ def main(do_export: bool = False) -> None:
     print(f"split of target weeks: train {MIN_HISTORY}-{VAL_START - 1} | validation {VAL_START}-{TRAIN_WEEKS - 1} "
           f"| test {TRAIN_WEEKS}-{int(df['week'].max())} ({int((df['week'] >= TRAIN_WEEKS).sum())} rows)")
 
-    df, val_table, best = compare_models(df)
+    df, val_table, final_models = compare_models(df)
     print("\nVALIDATION weeks (models trained on train weeks only; * = chosen setting; lower is better):")
     print(val_table.round({"MAE": 4, "WMAPE_%": 1}).to_string(index=False))
 
-    test_models = ["pred_last_week", "pred_ma4", "pred_ridge_no_guest_away", "pred_xgb_no_guest_away",
-                   "pred_ridge_with_events", "pred_xgb_with_events"]
-    print(f"\nTEST weeks {TRAIN_WEEKS}-{int(df['week'].max())} (chosen settings, retrained on weeks {MIN_HISTORY}-{TRAIN_WEEKS - 1}; "
-          "columns after WMAPE_% = error by week type):")
-    print(summary_table(evaluate(df, test_models)).to_string())
+    tuned = val_table[val_table["chosen"] == "*"]
+    best_overall = tuned.loc[tuned["MAE"].idxmin()]
+    ridge_rows = tuned[tuned["model"].str.startswith(FINAL_FAMILY)]
+    final = ridge_rows.loc[ridge_rows["MAE"].idxmin()]
+    print(f"\nBest on validation overall: {best_overall['model']} (MAE {best_overall['MAE']:.4f}). "
+          f"Final model, chosen by the team ({FINAL_FAMILY}): {final['model']} ({final['setting']}), "
+          f"validation MAE {final['MAE']:.4f}")
+    print("\nRidge coefficients of the final model (standardised features, largest effect first):")
+    print(ridge_coefficients(final_models[final["model"]]).head(12).round(4).to_string())
+
+    final_col = "pred_" + final["model"]
+    print(f"\nTEST weeks {TRAIN_WEEKS}-{int(df['week'].max())}: ONLY the final model is scored (retrained on weeks "
+          f"{MIN_HISTORY}-{TRAIN_WEEKS - 1}; columns after WMAPE_% = error by week type):")
+    print(summary_table(evaluate(df, [final_col])).to_string())
     if do_export:
-        export(df, best)
+        export(df, final_models)
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--export", action="store_true", help="write data/forecast_weekly.csv and save the final models")
+    ap.add_argument("--export", action="store_true", help="write data/forecast_weekly.csv and save the final Ridge models")
     main(ap.parse_args().export)
