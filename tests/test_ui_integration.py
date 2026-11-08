@@ -126,3 +126,17 @@ def test_payload_carries_package_and_storage_data_for_the_extras():
     assert all({"step", "vol", "store"} <= set(x) for x in p["products"])
     assert {x["id"]: x["step"] for x in p["products"]}["bananas"] == 0.5 and {x["id"]: x["step"] for x in p["products"]}["rice"] == 1.0
     assert all(h["cap"] and set(h["cap"]) == {"pantry", "fridge", "freezer"} for h in p["households"])
+
+
+@needs_node
+def test_projected_fridge_score_has_all_inputs_for_the_precomputed_plans():
+    """Week-1 'Projected fridge score' used to show NaN because the plan's `ef` had no spend / protein / stockout fields."""
+    assert "ef:{waste_cost:W.waste_cost,spend:W.spend,protein_target_met:W.protein_target_met,stockout_days:W.stockout_days}" in HTML
+    start = HTML.index("function fridgeScore(")
+    end = HTML.index("\n}", start) + 2
+    for method in ("optimization", "balanced_rule", "ppo_forecast"):
+        w = PLANS["methods"][method]["weeks"]["78"]
+        r = {k: w[k] for k in ("waste_cost", "spend", "protein_target_met", "stockout_days")}
+        js = f"const budgetOf=()=>75,nRel=()=>20;{HTML[start:end]}\nconsole.log(JSON.stringify(fridgeScore({json.dumps(r)},{{}})));"
+        out = json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=30, check=True).stdout)
+        assert isinstance(out["total"], int) and all(isinstance(p[1], (int, float)) and p[1] == p[1] for p in out["parts"]), (method, out)

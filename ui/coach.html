@@ -928,7 +928,7 @@ function planWeekOff(hh,w){
   const {fin,adj}=adjustFin(hh,w,co.map((q,i)=>q+fx.extra[i]));
   const total=fin.reduce((a,q,i)=>a+q*price[i],0);
   return {S,opts,sel,chosen,raw:co,need,add:add.map((a,i)=>a>0.05&&fx.extra[i]>0?a:0),fin,ex,adj,price,budget:OFF.weekly_budget,off:{W,A,mk},
-    ef:{waste_cost:W.waste_cost},efx:{waste_cost:A.waste_cost},total,fixedTot:A.spend,pcov:W.protein_target_met,
+    ef:{waste_cost:W.waste_cost,spend:W.spend,protein_target_met:W.protein_target_met,stockout_days:W.stockout_days},efx:{waste_cost:A.waste_cost},total,fixedTot:A.spend,pcov:W.protein_target_met,
     fcCost:fcv.reduce((a,q,i)=>a+q*price[i],0),rawCost:W.spend,rawN:co.filter(q=>q>0.01).length};
 }
 /* the option cards (Plan) and a compact switch (other pages) */

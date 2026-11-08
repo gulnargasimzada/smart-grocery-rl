@@ -67,3 +67,10 @@ Reports are stored in the browser (localStorage) for the demo. Without the AI co
 ## AI provider
 
 `netlify/functions/explain.mjs` uses Google Gemini when `GEMINI_API_KEY` is set (free tier from aistudio.google.com/apikey; model `GEMINI_MODEL`, default `gemini-3.6-flash`), otherwise Claude with `ANTHROPIC_API_KEY`. The prompts and answers are the same either way.
+
+## Browser check of the integrated build (final review)
+The static build (`python build_static.py`) was opened in headless Chrome at 1440x900 and 390x844 (mobile, touch). Home, Shopping list, Meal ideas, Inventory, Results and Scan render without JavaScript errors or horizontal overflow, and the three
+shopping priorities switch methods (Optimization, Balanced rule, RL agent). With every suggested meal selected, the shopping total stayed within the $75 budget in all 26 weeks for all three priorities (maximum $74.98), and in 8, 8 and 4 of the 26 weeks
+some meal ingredients were left off the list with a note because they would not fit the budget. The Rewards sheet (garden, points, fridge score) opens; a week-1 `NaN` in the projected fridge score (present on `main` before the integration) was fixed.
+**Needs manual testing** on real devices: the camera barcode scanner, receipt/email/fridge-photo reading and AI explanations (they need `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` on the server), Safari and Firefox, drag/swipe gestures on a phone, and the live Netlify deployment after the merge.
+

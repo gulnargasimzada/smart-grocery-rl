@@ -105,7 +105,7 @@ PPO with the Ridge forecast keeps availability at or above the average rule (fil
 the ranking by reward depends on the reward's weight on running out (2x the item price). That is why the app offers a choice of priorities instead of one answer. The Ridge forecast helps Optimization (which requires it) and slightly helps PPO, but the
 difference between PPO with and without forecasts is within the spread of the three seeds.
 
-## Quick start
+## Setup and quick start
 
 ```bash
 git clone https://github.com/gulnargasimzada/smart-grocery-rl && cd smart-grocery-rl
@@ -122,7 +122,7 @@ python -m src.final_eval --verify              # checks that the frozen evaluati
 
 AI features need `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` as server-side environment variables (see `.env.example`). Never put keys in the page.
 
-## Repository map
+## Repository structure
 
 | Path | Contents |
 |---|---|
@@ -154,7 +154,7 @@ The Python API in this repository does run the real models and is covered by tes
 - **Demo scope.** No accounts, sync or database; inventory lives in the browser. AI features can be wrong and need a server-side key. Receipt/fridge-photo reading and the garden are prototypes.
 - **Not a medical or nutrition-advice tool.**
 
-## Next steps
+## Roadmap
 
 1. Deploy the Python API and call it from the web app for live recommendations, with real inventory input.
 2. Train and evaluate PPO for more households, regions and budgets, for longer, with several demand trajectories to obtain proper uncertainty estimates.
@@ -162,7 +162,7 @@ The Python API in this repository does run the real models and is covered by tes
 4. Use guest/away information when a household provides it (the `with_events` forecast) and learn personal preferences.
 5. Add persistent accounts, household sharing and a supervised pilot.
 
-## Data, credits and licensing
+## Team, data and credits
 
 Contributors, from the commit history: Gulnar Gasimzada (data generation, demand forecasting), Farnoosh Memari (simulation environment, Optimization, PPO, evaluation, Python API) and Supriya ([@surpiya19](https://github.com/surpiya19), web app and deployment).
 Real shelf prices come from [Open Prices](https://prices.openfoodfacts.org/) by Open Food Facts (ODbL 1.0; credit required and derived databases stay under ODbL), nutrition from USDA FoodData Central, and barcode data from Open Food Facts. See [docs/PRICE_DATA.md](docs/PRICE_DATA.md).
