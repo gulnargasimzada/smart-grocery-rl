@@ -17,6 +17,8 @@ Step 3: Ridge regression (simple ML baseline) and a validation set to compare th
         this one model is scored on the test weeks (once). No other model is ever scored on the test weeks.
 
 Step 4: export + API for the team.
+        data/forecast_weekly.csv holds honest forecasts for ALL weeks (walk-forward for the RL training weeks 12-63,
+        a model trained through week 63 for validation 64-77, a model trained through week 77 for test 78-103).
         python -m src.forecast            validation comparison, then test results
         python -m src.forecast --export   also writes data/forecast_weekly.csv and saves the final Ridge models
                                           (models/ridge_with_events.pkl, models/ridge_no_events.pkl)
@@ -315,18 +317,66 @@ def predict_next_week(history: pd.DataFrame, household_id: str, week: int, guest
     return dict(zip(now["product_id"], pred.round(4)))
 
 
+WF_MIN_TRAIN = 8    # walk-forward: the first Ridge model is trained on target weeks 4-11, so it predicts week 12
+
+
+def walk_forward(df: pd.DataFrame, include_events: bool, alpha: float) -> pd.DataFrame:
+    """Honest (out-of-sample) Ridge forecasts for EVERY week, one model per week group:
+      weeks 4 .. 4+WF_MIN_TRAIN-1 : not enough history to train -> the 4-week-average baseline (method 'ma4_fallback')
+      weeks 12-63 (RL training)   : walk-forward, a new model for each week t trained on target weeks 4 .. t-1 only
+      weeks 64-77 (validation)    : ONE model trained on target weeks 4-63 (nothing from the validation weeks)
+      weeks 78-103 (test)         : ONE model trained on target weeks 4-77 (nothing from the test weeks)
+    Returns a frame (same index as df) with columns: pred, method, trained_through (last target week used)."""
+    out = pd.DataFrame({"pred": np.nan, "method": "", "trained_through": np.nan}, index=df.index)
+    first_wf = MIN_HISTORY + WF_MIN_TRAIN
+
+    early = df["week"] < first_wf
+    out.loc[early, "pred"] = df.loc[early, "pred_ma4"]
+    out.loc[early, "method"] = "ma4_fallback"
+
+    def run(mask, end_week):
+        model = fit_ridge(df, alpha, include_events, end_week=end_week)
+        out.loc[mask, "pred"] = ridge_units(df[mask], model, include_events)
+        out.loc[mask, "method"] = "ridge"
+        out.loc[mask, "trained_through"] = end_week - 1
+
+    for t in range(first_wf, VAL_START):
+        run(df["week"] == t, t)
+    run((df["week"] >= VAL_START) & (df["week"] < TRAIN_WEEKS), VAL_START)
+    run(df["week"] >= TRAIN_WEEKS, TRAIN_WEEKS)
+    return out
+
+
+def split_name(week: pd.Series) -> pd.Series:
+    return pd.Series(np.where(week < VAL_START, "train", np.where(week < TRAIN_WEEKS, "validation", "test")),
+                     index=week.index)
+
+
 def export(df: pd.DataFrame, final_models: dict) -> None:
-    """data/forecast_weekly.csv: one row per household, product and week >= MIN_HISTORY (Ridge forecasts).
-    Models are trained on weeks < TRAIN_WEEKS, so only out_of_sample == 1 rows are honest."""
+    """data/forecast_weekly.csv: one row per household, product and week >= MIN_HISTORY.
+    EVERY forecast is out of sample (the model never saw the week it predicts), see walk_forward():
+    train weeks 12-63 = walk-forward, validation 64-77 = model trained through week 63, test 78-103 = through week 77.
+    Weeks 4-11 use the 4-week-average fallback (forecast_method = ma4_fallback)."""
+    alpha = final_models["ridge_with_events"][-1].alpha
+    wf_events = walk_forward(df, True, alpha)
+    wf_plain = walk_forward(df, False, final_models["ridge_no_guest_away"][-1].alpha)
     out = df[df["week"] >= MIN_HISTORY][KEYS + ["week", "demand_units"]].copy()
-    out["forecast_units"] = df.loc[out.index, "pred_ridge_with_events"].round(4)
-    out["forecast_units_no_events"] = df.loc[out.index, "pred_ridge_no_guest_away"].round(4)
-    out["out_of_sample"] = (out["week"] >= TRAIN_WEEKS).astype(int)
+    out["split"] = split_name(out["week"])
+    out["forecast_units"] = wf_events.loc[out.index, "pred"].round(4)
+    out["forecast_units_no_events"] = wf_plain.loc[out.index, "pred"].round(4)
+    out["forecast_method"] = wf_events.loc[out.index, "method"]
+    out["model_trained_through_week"] = wf_events.loc[out.index, "trained_through"]
+    out["out_of_sample"] = (out["week"] >= TRAIN_WEEKS).astype(int)     # kept for compatibility: test weeks only
     out = out.rename(columns={"demand_units": "actual_units"})
-    out = out[["household_id", "week", "product_id", "actual_units", "forecast_units",
-               "forecast_units_no_events", "out_of_sample"]].sort_values(["household_id", "week", "product_id"])
+    out = out[["household_id", "week", "product_id", "actual_units", "forecast_units", "forecast_units_no_events",
+               "split", "forecast_method", "model_trained_through_week", "out_of_sample"]
+              ].sort_values(["household_id", "week", "product_id"])
     out.to_csv("data/forecast_weekly.csv", index=False)
-    print(f"\nWrote data/forecast_weekly.csv: {len(out)} rows (out_of_sample rows: {int(out['out_of_sample'].sum())})")
+    print(f"\nWrote data/forecast_weekly.csv: {len(out)} rows, all out of sample (walk-forward).")
+    print("Error of these honest forecasts by split (with guest/away flags; MAE in units, WMAPE in %):")
+    for name, g in out.dropna(subset=["forecast_units"]).groupby("split"):
+        sc = score(g.assign(pred=g["forecast_units"], demand_units=g["actual_units"]), "pred")
+        print(f"  {name:10s} weeks {int(g['week'].min())}-{int(g['week'].max())}: MAE {sc['MAE']:.4f}  WMAPE {sc['WMAPE_%']:.1f}")
 
     for label, key, path in (("with events", "ridge_with_events", MODEL_WITH_EVENTS),
                              ("no events", "ridge_no_guest_away", MODEL_NO_EVENTS)):
