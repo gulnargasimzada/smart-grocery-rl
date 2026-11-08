@@ -1,0 +1,1781 @@
+<meta charset="utf-8">
+<title>Smart Grocery Coach</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: 12-column grid, 8px spacing scale. Plan = summary → pipeline → list (7 cols) + meals & use-first (5 cols).
+   Gamification lives in a points pill and a Rewards panel; floating +10 bubbles sit on food that's about to expire. */
+:root{
+  --bg:#F5F7F6; --surface:#FFFFFF; --sunk:#EEF2F0; --ink:#13201B; --ink-2:#33423C; --muted:#56655F; --line:#DCE3DF;
+  --accent:#0B7480; --accent-ink:#FFFFFF; --accent-soft:#E0F1F2;
+  --good:#1F7A4A; --good-soft:#E1F2E8; --warn:#9A5B00; --warn-soft:#FBEBD0; --bad:#B4382A; --bad-soft:#FBE3DF;
+  --gold:#B7791F; --gold-soft:#FBF0DC;
+  --l-fixed:#A3AEB5; --l-fc:#4F6575;
+  --shadow:0 1px 1px rgba(16,32,26,.04),0 2px 6px -2px rgba(16,32,26,.08);
+  --shadow-up:0 1px 2px rgba(16,32,26,.06),0 12px 28px -12px rgba(16,32,26,.22);
+  --c-produce:#2F8A4E; --c-dairy:#2F74BC; --c-protein:#BC4A42; --c-grains:#A2711A; --c-legumes:#7E5C3D; --c-bev:#7356B8; --c-fat:#8C7C1A; --c-proc:#66757E;
+  --f-display:"Familjen Grotesk","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:14px; --s1:8px; --s2:16px; --s3:24px; --s4:32px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1513; --surface:#161F1C; --sunk:#111917; --ink:#E7EEEA; --ink-2:#C9D4CF; --muted:#9DAEA7; --line:#27332F;
+  --accent:#43C4CC; --accent-ink:#062629; --accent-soft:#133537;
+  --good:#5BC98F; --good-soft:#15342A; --warn:#F2B957; --warn-soft:#38291182; --bad:#F2806F; --bad-soft:#3D1E1A;
+  --gold:#F2B957; --gold-soft:#33280F;
+  --l-fixed:#5E6E77; --l-fc:#AFC0CB;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 2px 8px -2px rgba(0,0,0,.4); --shadow-up:0 12px 32px -10px rgba(0,0,0,.6);
+  --c-produce:#5BC27C; --c-dairy:#6AA8E8; --c-protein:#EE837A; --c-grains:#E0AE4F; --c-legumes:#C49A72; --c-bev:#A88EEB; --c-fat:#CDBB52; --c-proc:#97A6AE;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1513; --surface:#161F1C; --sunk:#111917; --ink:#E7EEEA; --ink-2:#C9D4CF; --muted:#9DAEA7; --line:#27332F;
+  --accent:#43C4CC; --accent-ink:#062629; --accent-soft:#133537;
+  --good:#5BC98F; --good-soft:#15342A; --warn:#F2B957; --warn-soft:#382911; --bad:#F2806F; --bad-soft:#3D1E1A;
+  --gold:#F2B957; --gold-soft:#33280F;
+  --l-fixed:#5E6E77; --l-fc:#AFC0CB;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 2px 8px -2px rgba(0,0,0,.4); --shadow-up:0 12px 32px -10px rgba(0,0,0,.6);
+  --c-produce:#5BC27C; --c-dairy:#6AA8E8; --c-protein:#EE837A; --c-grains:#E0AE4F; --c-legumes:#C49A72; --c-bev:#A88EEB; --c-fat:#CDBB52; --c-proc:#97A6AE;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;margin:0}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+@media (max-width:560px){.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:14px} .xs{font-size:13px}
+.label{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.01em}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar{display:flex;align-items:center;gap:var(--s2);height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:17px;white-space:nowrap}
+.mark{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center}
+nav.tabs{display:flex;gap:2px;margin-left:var(--s3)}
+nav.tabs button{border:0;background:none;padding:8px 12px;border-radius:9px;font-weight:700;font-size:15px;color:var(--muted)}
+nav.tabs button:hover{color:var(--ink);background:var(--sunk)}
+nav.tabs button[aria-current="page"]{color:var(--ink);background:var(--surface);box-shadow:var(--shadow)}
+.right{margin-left:auto;display:flex;align-items:center;gap:var(--s1)}
+.hhsel{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23788' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 10px center;border-radius:9px;padding:7px 30px 7px 12px;font-weight:700;font-size:14px;max-width:270px;box-shadow:var(--shadow)}
+.pts{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));background:var(--gold-soft);color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px;box-shadow:var(--shadow)}
+.pts svg{color:var(--gold)}
+.pts.pulse{animation:pulse .5s ease}
+@keyframes pulse{40%{transform:scale(1.12)}}
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:6px;padding:22px 14px 0 max(14px,env(safe-area-inset-left,0px));background:var(--sunk);border-right:1px solid var(--line);overflow:hidden}
+.side .brand{padding:0 8px 18px}
+nav.tabs{display:flex;flex-direction:column;gap:4px;margin:0}
+nav.tabs button,.navrw{display:flex;align-items:center;gap:12px;border:0;background:none;padding:10px 12px;border-radius:12px;font-weight:700;font-size:15px;color:var(--ink-2);text-align:left;width:100%}
+nav.tabs button svg,.navrw svg{flex:none;color:var(--muted)}
+nav.tabs button:hover,.navrw:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);color:var(--ink)}
+nav.tabs button[aria-current="page"]{background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow)}
+nav.tabs button[aria-current="page"] svg{color:var(--accent-ink)}
+.navrw{margin-top:10px;border-top:1px solid var(--line);border-radius:0 0 12px 12px;padding-top:16px}
+.navrw svg{color:var(--g-leaf-d)}.rdot{width:8px;height:8px;border-radius:50%;background:var(--gold);margin-left:-4px}
+.sidepip{margin:auto -14px 0 calc(-1 * max(14px,env(safe-area-inset-left,0px)));pointer-events:none}
+.mainc{min-width:0}
+.mainc header.top{position:sticky}
+.mainc .bar{max-width:1120px;margin:0 auto;padding-inline:max(16px,min(32px,3vw));height:68px}
+#app{max-width:1120px;margin:0 auto;padding-left:max(16px,min(32px,3vw));padding-right:max(16px,min(32px,3vw))}
+#wk:empty{display:none}#wk{margin:0}
+@media (max-width:900px){.shell{display:block}
+ .side{position:sticky;top:env(safe-area-inset-top,0px);z-index:7;height:auto;flex-direction:row;align-items:center;gap:8px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);overflow-x:auto}
+ .side .brand{padding:0 6px 0 0}.side .brand{font-size:0;gap:0}.sidepip,.navrw{display:none}
+ nav.tabs{flex-direction:row}nav.tabs button{padding:8px 10px;white-space:nowrap;width:auto;font-size:14px;gap:6px}
+ .mainc header.top{position:static}.mainc .bar{height:auto;flex-wrap:wrap;padding-block:10px;row-gap:10px}.hhsel{max-width:52vw}}
+
+main{padding-block:var(--s3) 72px}
+.page{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--s3)}
+.c12{grid-column:span 12}.c7{grid-column:span 7}.c5{grid-column:span 5}.c4{grid-column:span 4}.c8{grid-column:span 8}.c6{grid-column:span 6}.c3{grid-column:span 3}
+@media (max-width:900px){.c7,.c5,.c4,.c8,.c6{grid-column:span 12}.c3{grid-column:span 6}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s3);min-width:0}
+.card.tight{padding:var(--s2) var(--s3)}
+.ch{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2);flex-wrap:wrap}
+.ch h2{font-size:18px;font-weight:700}
+.ch p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:9px;font-weight:700;font-size:14px;box-shadow:var(--shadow)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.icon-btn{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);border-radius:9px;box-shadow:var(--shadow)}
+.icon-btn:disabled{opacity:.4;cursor:default}
+.link{border:0;background:none;padding:0;color:var(--accent);font-weight:700}
+.seg{display:inline-flex;background:var(--sunk);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.t-sale{background:var(--warn-soft);color:var(--warn)} .t-meal{background:var(--accent-soft);color:var(--accent)} .t-rule{background:var(--sunk);color:var(--ink-2)}
+.t-demo{background:var(--warn-soft);color:var(--warn)} .t-live{background:var(--good-soft);color:var(--good)}
+
+/* summary */
+.summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s3);align-items:end}
+.wkctl{display:flex;align-items:center;gap:var(--s1);margin-bottom:var(--s1)}
+.wkctl .label{min-width:9.5em;text-align:center}
+.total{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,6vw,56px);line-height:1;letter-spacing:-.02em}
+.total small{font-size:.38em;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:10px}
+.kpis{display:flex;gap:var(--s3);flex-wrap:wrap}
+.kpi{display:grid;gap:2px;min-width:7.5em}
+.kpi b{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.1}
+.kpi .good{color:var(--good)} .kpi .bad{color:var(--bad)}
+@media (max-width:760px){.summary{grid-template-columns:minmax(0,1fr)}}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:14px;margin-top:var(--s2)}
+
+/* priority options */
+.prio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}
+@media (max-width:820px){.prio{grid-template-columns:minmax(0,1fr)}}
+.pcard{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;align-content:start;padding:16px;border:1.5px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);transition:border-color .15s,box-shadow .15s}
+.pcard:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.pcard:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:2px}
+.pcard.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent-soft) 60%,var(--surface));box-shadow:var(--shadow-up)}
+.pic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--sunk);color:var(--ink-2);grid-row:span 2}
+.pcard.on .pic{background:var(--accent);color:var(--accent-ink)}
+.pt{display:grid;gap:2px}.pt b{font-family:var(--f-display);font-size:16px;line-height:1.25}.pt span{font-size:13px;color:var(--muted);line-height:1.4}
+.pstats{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--ink-2);margin-top:6px;padding-top:10px;border-top:1px solid var(--line)}
+.pstats b{color:var(--ink)}
+.pm{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--accent)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.step{padding:14px 16px;display:grid;gap:2px;position:relative;min-width:0}
+.step+.step{border-left:1px solid var(--line)}
+.step+.step::before{content:"";position:absolute;left:-7px;top:50%;width:12px;height:12px;background:var(--surface);border-top:1px solid var(--line);border-right:1px solid var(--line);transform:translateY(-50%) rotate(45deg)}
+.step .k{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.step b{font-family:var(--f-display);font-size:18px;line-height:1.2}
+.step span:last-child{font-size:13px;color:var(--muted)}
+.step.final{background:var(--accent-soft)}
+@media (max-width:900px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}.step+.step{border-left:0}.step{border-top:1px solid var(--line)}.step:nth-child(-n+2){border-top:0}.step:nth-child(even){border-left:1px solid var(--line)}.step::before{display:none}.step.final{grid-column:span 2}}
+
+/* list */
+.list{display:grid}
+.cat{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:14px 0 6px;border-bottom:1px solid var(--line)}
+.cat:first-child{padding-top:0}
+details.li{border-bottom:1px solid var(--line)}
+details.li summary{list-style:none;display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:9px 0;cursor:pointer}
+details.li summary::-webkit-details-marker{display:none}
+details.li summary:hover .nm{color:var(--accent)}
+.li .nm{font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
+.li .q{font-family:var(--f-mono);font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.li .p{font-family:var(--f-mono);font-size:14px;text-align:right;min-width:4.5em}
+.chev{transition:transform .15s;color:var(--muted)}
+details.li[open] .chev{transform:rotate(90deg)}
+.trace{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center;padding:2px 0 12px 40px;font-size:13px;color:var(--ink-2)}
+.trace .s{background:var(--sunk);border-radius:6px;padding:2px 8px}
+.trace .s b{font-family:var(--f-mono);font-weight:600}
+.trace .arr{color:var(--muted)}
+.trace .why{flex-basis:100%;color:var(--muted);margin-top:2px}
+.ico{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 11%,var(--surface));color:var(--c);flex:none}
+.foot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;padding-top:var(--s2);font-size:14px}
+.foot b{font-family:var(--f-mono)}
+.foot .tot{font-family:var(--f-display);font-size:20px;font-weight:700}
+.more{margin-top:var(--s1);width:100%;border:1px dashed var(--line);background:none;border-radius:9px;padding:8px;font-weight:700;font-size:14px;color:var(--ink-2)}
+.bar2{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.bar2 i{display:block;height:100%;border-radius:3px;background:var(--good)}
+
+/* meals */
+.meals{display:grid;gap:10px}
+.meal{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:12px;position:relative;background:var(--surface)}
+.meal.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent-soft) 55%,var(--surface))}
+.check{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;margin-top:2px;background:var(--surface)}
+.meal.on .check{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.meal h3{font-size:16px;font-weight:700;line-height:1.3}
+.meal .m{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:2px}
+.meal .m b{color:var(--ink);font-weight:700}
+.meal .r{font-size:13px;color:var(--good);font-weight:700;margin-top:4px}
+.mealbtn{all:unset;display:contents;cursor:pointer}
+
+/* use first + inventory tiles */
+.uf{display:grid;gap:8px}
+.ufi{display:grid;grid-template-columns:32px minmax(0,1fr);gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);position:relative}
+.ufi>div:last-child{grid-column:2;flex-wrap:wrap}
+.ufi:last-child{border-bottom:0}
+.dl{font-size:13px;font-weight:700;white-space:nowrap}
+.dl.x{color:var(--bad)} .dl.w{color:var(--warn)} .dl.f{color:var(--good)} .dl.n{color:var(--muted)}
+.grid-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:12px}
+.tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;box-shadow:var(--shadow)}
+.tile .hd{display:flex;gap:10px;align-items:center;min-width:0}
+.tile .nm{font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .amt{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.tile.out{box-shadow:none;background:transparent;border-style:dashed}
+.tile.out .nm,.tile.out .ico{opacity:.6}
+.meter{height:5px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:3px}
+.meter i.x{background:var(--bad)} .meter i.w{background:var(--warn)} .meter i.f{background:var(--good)} .meter i.n{background:var(--l-fixed)}
+.gh{display:flex;align-items:center;gap:8px;margin:var(--s3) 0 var(--s1);font-family:var(--f-display);font-weight:700;font-size:16px}
+.gh:first-child{margin-top:0}
+.gh .n{font-family:var(--f-mono);font-weight:500;font-size:13px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%}
+
+/* floating points bubble */
+.float{position:absolute;top:-10px;right:-8px;z-index:2;border:0;border-radius:999px;padding:4px 9px;font-weight:700;font-size:12px;color:#3A2600;background:linear-gradient(#FFD983,#F2B54A);box-shadow:0 1px 1px rgba(0,0,0,.1),0 6px 14px -6px rgba(183,121,31,.7);display:inline-flex;gap:4px;align-items:center}
+.ufi .float{position:static;margin-left:4px}
+.float:hover{filter:brightness(1.05)}
+@media (prefers-reduced-motion:no-preference){.float{animation:bob 2.4s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-3px)}}}
+.done-tag{display:inline-flex;gap:4px;align-items:center;color:var(--good);font-weight:700;font-size:13px}
+.flyer{position:fixed;z-index:50;pointer-events:none;font-weight:700;color:#3A2600;background:#FFD983;border-radius:999px;padding:3px 9px;font-size:12px;transition:transform .7s cubic-bezier(.3,.7,.3,1),opacity .7s}
+
+/* results */
+.kgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s2)}
+@media (max-width:760px){.kgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s2) 20px;display:grid;gap:4px}
+.stat b{font-family:var(--f-display);font-size:28px;font-weight:700;line-height:1.1}
+.delta{font-size:13px;font-weight:700}
+.delta.good{color:var(--good)} .delta.bad{color:var(--bad)} .delta.flat{color:var(--muted)}
+svg.chart text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.legend{display:flex;gap:var(--s2);flex-wrap:wrap;font-size:14px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:16px;height:3px;border-radius:2px;display:inline-block}
+.sw.dash{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)!important;height:2px}
+details.more-d{margin-top:var(--s2)} details.more-d summary{cursor:pointer;font-weight:700;color:var(--accent)}
+table.cmp{border-collapse:collapse;width:100%;min-width:560px;font-size:14px;margin-top:var(--s2)}
+table.cmp th,table.cmp td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left}
+table.cmp th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+table.cmp td{font-family:var(--f-mono)} table.cmp td:first-child{font-family:var(--f-body);font-weight:700}
+table.cmp tr.me td{background:var(--accent-soft)}
+.best{color:var(--good);font-weight:600}
+.scroll{overflow-x:auto}
+@media (max-width:760px){.fcgrid{grid-template-columns:minmax(0,1fr)!important}}
+
+/* scan */
+.search{display:flex;gap:var(--s1)}.search .btn{white-space:nowrap;flex:none}
+input[type=text]{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 12px;width:100%;min-width:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.04)}
+.nf{background:#fff;color:#000;border:1px solid #000;padding:6px 8px;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;width:100%;max-width:320px}
+.nf h5{font-size:26px;font-weight:900;margin:0;line-height:1}
+.nf .sv{border-bottom:10px solid #000;padding:3px 0 4px;font-size:13px;display:flex;justify-content:space-between;font-weight:700;gap:8px}
+.nf .cal{display:flex;justify-content:space-between;align-items:end;border-bottom:5px solid #000;padding:2px 0}
+.nf .cal b{font-size:26px;font-weight:900;line-height:1}
+.nf .dvh{text-align:right;font-size:11px;font-weight:700;border-bottom:1px solid #000;padding:2px 0}
+.nf .ln{display:flex;justify-content:space-between;border-bottom:1px solid #000;font-size:13px;padding:2px 0;gap:8px}
+.nf .ln.ind{padding-left:14px} .nf .ln.thick{border-bottom:8px solid #000}
+.nf .foot{font-size:10px;padding-top:4px;line-height:1.3;display:block}
+.verdict{display:flex;gap:var(--s2);align-items:center}
+.ring{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:18px;border:4px solid currentColor;flex:none}
+.c-good{color:var(--good)} .c-ok{color:var(--warn)} .c-bad{color:var(--bad)}
+.ins{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ins li{display:grid;grid-template-columns:10px minmax(0,1fr);gap:10px;font-size:15px}
+.ins li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:8px;background:var(--muted)}
+.ins li.g::before{background:var(--good)} .ins li.w::before{background:var(--warn)} .ins li.b::before{background:var(--bad)}
+.vlist{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.vlist li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center}
+.vt{height:5px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:4px}
+.vt i{display:block;height:100%;background:var(--accent)}
+
+@media (max-width:700px){.scanres{grid-template-columns:minmax(0,1fr)!important}}
+/* scanner */
+.vf{position:relative;aspect-ratio:16/10;max-width:100%;border-radius:12px;overflow:hidden;background:#0D1512;color:#9FB3AC;display:grid;place-items:center}
+#viewfinder{position:absolute;inset:0}
+#viewfinder video{width:100%!important;height:100%!important;object-fit:cover}
+#viewfinder img[alt="Info icon"],#viewfinder #qr-shaded-region{display:none!important}
+.vf-idle{display:grid;justify-items:center;gap:8px;font-size:14px;z-index:0}
+.vf.live .vf-idle{display:none}
+.vf::after{content:"";position:absolute;left:8%;right:8%;top:25%;bottom:25%;border:2px solid rgba(255,255,255,.85);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .2s}
+.vf.live::after{opacity:1}
+.vf::before{content:"";position:absolute;left:14%;right:14%;top:50%;height:2px;background:#5FE0C8;box-shadow:0 0 12px #5FE0C8;z-index:2;opacity:0}
+@media (prefers-reduced-motion:no-preference){.vf.live::before{opacity:.9;animation:scanline 1.6s ease-in-out infinite alternate}@keyframes scanline{from{transform:translateY(-34px)}to{transform:translateY(34px)}}}
+.row-actions{display:flex;gap:var(--s1);margin-top:var(--s2);flex-wrap:wrap}
+.drop{display:grid;justify-items:center;gap:6px;padding:40px 16px;border:2px dashed var(--line);border-radius:12px;text-align:center;cursor:pointer;color:var(--ink-2);background:var(--sunk)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop:focus-within{outline:3px solid color-mix(in srgb,var(--accent) 60%,transparent)}
+.sstatus{margin:var(--s2) 0 0;font-size:14px;color:var(--muted);min-height:1.5em}
+.sstatus.good{color:var(--good)} .sstatus.bad{color:var(--bad)} .sstatus.warn{color:var(--warn)}
+.hist{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.hist button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer}
+.hist button:hover,.hist button:focus-visible{background:var(--sunk)}
+.hist b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs{width:32px;height:32px;border-radius:50%;border:3px solid currentColor;display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;font-weight:600}
+.product{display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:var(--s3);align-items:start}
+.pimg{width:140px;aspect-ratio:1;max-width:100%;border-radius:12px;background:var(--sunk);display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
+.pimg img{width:100%;height:100%;object-fit:contain;background:#fff}
+.pph{font-family:var(--f-display);font-size:48px;font-weight:700;color:var(--muted)}
+.pmain{display:grid;gap:var(--s2);min-width:0}
+.ptitle{font-size:24px;line-height:1.2;margin-top:2px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;margin:0;font-size:14px}
+.kv dt{color:var(--muted);font-weight:700}
+.kv dd{margin:0;min-width:0}
+.ns{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;color:#fff;font-weight:700;font-family:var(--f-display)}
+.ns-a{background:#038141}.ns-b{background:#85BB2F;color:#13201B}.ns-c{background:#F5C400;color:#13201B}.ns-d{background:#E07B00}.ns-e{background:#D93A12}
+.actions{display:flex;gap:var(--s1);flex-wrap:wrap;align-items:center}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden;box-shadow:var(--shadow);background:var(--surface)}
+.stepper button{border:0;background:none;width:34px;height:36px;font-size:18px;font-weight:700}
+.stepper button:hover{background:var(--sunk)}
+.stepper span{padding:0 10px;font-size:13px;min-width:5.5em;text-align:center}
+.pside{display:grid;gap:var(--s2);justify-items:start}
+.seg button:disabled{opacity:.45;cursor:default}
+.pfoot{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--s3);border-top:1px solid var(--line);padding-top:var(--s3)}
+.sh{font-size:15px;margin-bottom:8px}
+.packnote{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;max-width:330px;background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}
+.pk-ico{width:40px;height:40px;border-radius:10px;background:var(--surface);color:var(--accent);display:grid;place-items:center;box-shadow:var(--shadow)}
+.pk-dots{display:flex;gap:4px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.pk-dots i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--accent);background:transparent}
+.pk-dots i.on{background:var(--accent)}
+.pk-dots span{font-weight:700;color:var(--accent);font-size:13px}
+.nhead{margin:0 0 8px;font-weight:700}
+.notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.notes li{display:grid;grid-template-columns:10px minmax(0,1fr);gap:10px;font-size:14px;line-height:1.45}
+.notes li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:7px;background:var(--muted)}
+.notes li.b::before{background:var(--bad)} .notes li.w::before{background:var(--warn)} .notes li.g::before{background:var(--good)}
+.moreing{margin-top:10px}.moreing summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--accent)}
+.aibtn{margin-top:14px;display:inline-flex;gap:8px;align-items:center}
+.aicard{margin-top:14px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));background:color-mix(in srgb,var(--accent-soft) 45%,var(--surface));border-radius:12px;padding:12px 14px;font-size:15px}
+.aicard ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+.pmain a,.pside a,.label a{color:var(--accent);font-weight:700}
+.stores{list-style:none;margin:0;padding:0;display:grid}
+.stores li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.t-scan{background:var(--sunk);color:var(--ink-2)}
+.vlist.cols{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));column-gap:var(--s3)}
+.skel{display:grid;gap:8px;margin-bottom:12px}.skel span{height:12px;border-radius:6px;background:var(--sunk)}.skel span:nth-child(1){width:40%;height:20px}.skel span:nth-child(3){width:70%}
+@media (max-width:900px){.product{grid-template-columns:96px minmax(0,1fr)}.pimg{width:96px}.pside{grid-column:1/-1}}
+@media (max-width:520px){.product{grid-template-columns:minmax(0,1fr)}.pimg{width:96px}}
+
+/* garden */
+:root{--g-sky:#E6F2EE;--g-sun:#F6C453;--g-soil:#8A6A4F;--g-soil-dry:#CDB393;--g-soil-d:#6B4F38;--g-grass:#7BB661;--g-leaf:#4FA36A;--g-leaf-d:#2F7A4A;--g-petal:#EE8AA3;--g-fruit:#E8743B;--g-water:#4E9FDF;--g-body:#F3D9A4;--g-body-d:#C99A4E;--g-ink:#2B2A26}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--g-sky:#15302A;--g-sun:#E9B949;--g-soil:#5E4633;--g-soil-dry:#8E7458;--g-soil-d:#3E2C1F;--g-grass:#4E8F4A;--g-leaf:#5DBB7B;--g-leaf-d:#3E8F5A;--g-petal:#F39AB0;--g-fruit:#F08A4E;--g-water:#6DB8F0;--g-body:#E8CC93;--g-body-d:#B88A44;--g-ink:#1E1C18}}
+:root[data-theme="dark"]{--g-sky:#15302A;--g-sun:#E9B949;--g-soil:#5E4633;--g-soil-dry:#8E7458;--g-soil-d:#3E2C1F;--g-grass:#4E8F4A;--g-leaf:#5DBB7B;--g-leaf-d:#3E8F5A;--g-petal:#F39AB0;--g-fruit:#F08A4E;--g-water:#6DB8F0;--g-body:#E8CC93;--g-body-d:#B88A44;--g-ink:#1E1C18}
+.gcard{display:grid;gap:12px}
+.garden{display:block;border-radius:16px;box-shadow:var(--shadow)}
+.gkey{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;font-size:12px;color:var(--muted)}
+.gkey i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+@media (prefers-reduced-motion:no-preference){
+ .plant{transform-origin:212px 168px;animation:sway 5s ease-in-out infinite}@keyframes sway{50%{transform:rotate(1.4deg)}}
+ .pip.happy{animation:hop 2.8s ease-in-out infinite}@keyframes hop{0%,78%,100%{transform:none}86%{transform:translateY(-6px)}}
+ .gnew{transform-box:fill-box;transform-origin:center bottom;animation:pop .7s cubic-bezier(.3,1.6,.5,1) both;animation-delay:var(--d)}@keyframes pop{from{transform:scale(0);opacity:0}}
+ .drop{animation:drip 1.6s ease-in infinite;animation-delay:var(--d)}@keyframes drip{from{transform:translateY(-10px);opacity:0}40%{opacity:1}to{transform:translateY(4px);opacity:0}}
+}
+/* rewards drawer */
+.tossb{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700}
+.tossb:hover{color:var(--bad);border-color:var(--bad)}
+.tile .tile-t{margin-top:6px;align-self:flex-start}
+.done-tag.tossed{background:var(--sunk);color:var(--muted)}
+.t-adj{background:var(--sunk);color:var(--ink-2)}
+.qcard{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:var(--s2);padding:12px 14px;border-radius:12px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.qcard .qi{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700}
+.qcard .qa{display:flex;gap:8px;flex-wrap:wrap}
+.tbtn{display:flex;align-items:center;gap:8px;padding:8px 14px 8px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer;color:var(--ink);font:inherit;min-width:0}
+.tbtn svg{color:var(--accent);width:18px;height:18px}.tbtn b{font-size:14px}
+.tbtn:hover,.tbtn:focus-within{border-color:var(--accent)}
+.tbtn.hot{border-color:var(--accent);background:color-mix(in srgb,var(--accent-soft) 55%,var(--surface))}
+.sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 48px);overflow-y:auto;background:var(--surface);z-index:31;border-radius:18px;box-shadow:var(--shadow-up);padding:var(--s3);display:flex;flex-direction:column;gap:var(--s2)}
+.sheet h2{font-size:20px}
+.sheet textarea{width:100%;font:14px/1.45 var(--f-mono,monospace);padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);resize:vertical}
+.ckdots{display:flex;gap:6px}.ckdots i{height:4px;flex:1;border-radius:2px;background:var(--line)}.ckdots i.on{background:var(--accent)}.ckdots i.cur{background:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.ckstage{display:grid;place-items:center;padding:8px 0}
+.ccard{width:100%;max-width:300px;min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px;border-radius:16px;border:1px solid var(--line);background:var(--bg);box-shadow:var(--shadow-up);touch-action:none;user-select:none;cursor:grab}
+.ccard .ico{width:56px;height:56px}.ckn{font-family:var(--f-display);font-size:22px}
+.ccard[data-lean=used]{border-color:var(--good)}.ccard[data-lean=tossed]{border-color:var(--bad)}.ccard[data-lean=still]{border-color:var(--accent)}
+.ckhint{color:var(--muted)}
+.ckbtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ckbtns .btn{padding:10px 8px}.ck-t:hover{border-color:var(--bad);color:var(--bad)}
+.rvlist{display:grid;gap:6px}
+.rvi{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;width:100%}
+.rvi[aria-pressed=false]{opacity:.5}.rvi .check{flex:none;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
+.rvi[aria-pressed=true] .check{background:var(--accent);border-color:var(--accent)}
+.busy{display:flex;gap:10px;align-items:center;padding:24px 0;color:var(--muted)}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.ccard{transition:transform .15s ease}.sheet{animation:pop .18s ease}@keyframes pop{from{opacity:.4;transform:translate(-50%,-48%)}}}
+.prow{display:flex;flex-direction:column;gap:6px;margin-top:10px;align-items:flex-start}
+details.how{margin-top:var(--s2);border-top:1px solid var(--line);padding-top:10px}
+details.how>summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--muted);list-style:none}
+details.how>summary::before{content:"+ ";color:var(--accent)}details.how[open]>summary::before{content:"− "}
+details.how .pipe{margin-top:10px;box-shadow:none}
+.trkh{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.trkb{display:flex;flex-wrap:wrap;gap:8px}
+.pill15{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;color:#3A2600;background:linear-gradient(#FFD983,#F2B54A)}
+.pph.pico .ico{width:84px;height:84px}
+.card.product{scroll-margin-top:84px}
+.home .hh2{font-size:18px;margin:0 0 10px}
+.hero{padding:0}
+.herobtn{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);gap:var(--s3);align-items:center;width:100%;padding:var(--s3);border-radius:20px;background:linear-gradient(160deg,color-mix(in srgb,var(--g-leaf) 22%,var(--surface)),var(--surface));border:1px solid var(--line);box-shadow:var(--shadow)}
+.herobtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.herobtn h1{font-size:30px;margin:10px 0 6px}.herobtn p{margin:0;color:var(--ink-2);max-width:42ch}
+.hlink{display:inline-block;margin-top:12px;color:var(--accent);font-weight:700}
+.lvlpill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:700;color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.hart .garden{display:block;border-radius:16px}
+@media (max-width:640px){.herobtn{grid-template-columns:minmax(0,1fr)}.herobtn h1{font-size:24px}}
+.hico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s2)}
+.gl{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);min-width:0}
+.gl>span:last-child{display:flex;flex-direction:column;min-width:0}.gl b{font-family:var(--f-display);font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl.good b{color:var(--good)}.gl.bad b{color:var(--bad)}.gl.warn b{color:var(--warn)}
+.acts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s2)}
+.act{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 10px;border-radius:16px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);color:var(--ink);font:inherit;cursor:pointer;text-align:center}
+.act .hico{width:48px;height:48px;border-radius:14px}.act:hover,.gl:hover{border-color:var(--accent)}
+@media (max-width:760px){.glance,.acts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+@media (max-width:640px){.duo{grid-template-columns:minmax(0,1fr)}}
+.dcard{display:flex;flex-direction:column;gap:14px;text-align:left;padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.dcard:hover{border-color:var(--accent)}.dh{display:flex;gap:12px;align-items:center}.dh>span:nth-child(2){display:flex;flex-direction:column;min-width:0;flex:1}.dh b{font-size:16px}
+.chevr{font-size:24px;color:var(--muted)}
+.foods{display:flex;gap:8px}.foods .ico{width:44px;height:44px}
+.phead{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.phi{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;flex:none;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.phead h1{font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0}.phead p{margin:4px 0 0;color:var(--muted)}
+.sumc{display:grid;gap:0}
+.srow{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.srow>span:nth-child(2){display:flex;flex-direction:column;min-width:0}.srow b{font-size:18px}
+.linkrow{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:center;width:100%;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink)}
+.linkrow:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.smode{display:grid;gap:8px;padding-top:12px}
+.mlist{display:grid;gap:var(--s2);align-content:start}
+.mcard{position:relative;display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:18px;align-items:center;padding:12px;border-radius:18px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.mcard.on{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.mthumb{height:110px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 14%,var(--surface)),color-mix(in srgb,var(--g-leaf) 16%,var(--surface)))}
+.mthumb .ico{width:52px;height:52px;margin-left:-10px;background:var(--surface);box-shadow:var(--shadow)}.mthumb .ico:first-child{margin-left:0}
+.mbody h3{font-family:var(--f-display);font-size:20px;margin:0 0 8px}
+.mmeta{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-bottom:10px}
+.mi{display:inline-flex;gap:6px;align-items:center}
+.uses{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:10px;font-size:13px;background:color-mix(in srgb,var(--good) 12%,var(--surface));color:var(--ink-2)}
+.uses svg{color:var(--good);flex:none}.uses.rescue{background:color-mix(in srgb,var(--gold) 16%,var(--surface))}.uses.rescue svg{color:var(--warn)}
+.mcheck{width:36px;height:36px;border-radius:10px;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--accent-ink);margin-right:6px}
+.mcheck[aria-pressed=true]{background:var(--accent);border-color:var(--accent)}
+.mcard .float{top:-10px;right:-8px}
+@media (max-width:640px){.mcard{grid-template-columns:minmax(0,1fr) auto}.mthumb{grid-column:1/-1;height:90px}}
+.nudge{display:flex;gap:12px;align-items:center;text-align:left;padding:12px 16px 12px 8px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--g-leaf) 12%,var(--surface));color:var(--ink);font:inherit;cursor:pointer}
+.nudgepip{width:72px;flex:none;display:block;overflow:hidden;border-radius:12px}
+@media (max-width:900px){.c8,.c4{grid-column:span 12}}
+.scrim{position:fixed;inset:0;background:rgba(10,20,16,.35);z-index:30}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:var(--surface);z-index:31;box-shadow:var(--shadow-up);display:flex;flex-direction:column;padding:calc(var(--s3) + env(safe-area-inset-top,0px)) max(var(--s3),env(safe-area-inset-right,0px)) calc(var(--s3) + env(safe-area-inset-bottom,0px)) var(--s3);overflow-y:auto;gap:var(--s3)}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .22s ease}@keyframes slide{from{transform:translateX(24px);opacity:.4}}}
+.dhead{display:flex;justify-content:space-between;align-items:center}
+.lvl{display:grid;gap:6px}
+.lvl b{font-family:var(--f-display);font-size:30px}
+.score{display:flex;gap:var(--s2);align-items:center}
+.sring text{fill:var(--ink)}
+.parts{display:grid;gap:8px;flex:1}
+.pl{display:flex;justify-content:space-between;font-size:13px}
+.streak{display:flex;gap:var(--s2);align-items:center}
+.flame{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--sunk);color:var(--muted)}
+.flame.on{background:var(--gold-soft);color:var(--gold)}
+.wkdots{display:flex;gap:4px;margin-left:auto}
+.wkdots i{width:12px;height:12px;border-radius:3px;background:var(--bad-soft)}
+.wkdots i.ok{background:var(--good)}
+.badges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bdg{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
+.bdg b{color:var(--ink);font-size:14px;display:block;line-height:1.25}
+.bdg .md{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--sunk)}
+.bdg.got{border-style:solid;border-color:color-mix(in srgb,var(--gold) 40%,var(--line));background:var(--gold-soft)}
+.bdg.got .md{background:var(--gold);color:var(--surface)}
+.earn{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}
+.earn li{display:flex;justify-content:space-between;gap:12px}
+.earn b{font-family:var(--f-mono);color:var(--gold)}
+
+.empty{padding:var(--s3);text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;z-index:40;box-shadow:var(--shadow-up)}
+footer.fine{grid-column:span 12;font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.meter i,.bar2 i,.vt i{transition:width .4s ease}.btn,.seg button,nav.tabs button,.meal{transition:background .15s,border-color .15s,box-shadow .15s}}
+</style>
+
+<div class="shell">
+<aside class="side" aria-label="Main">
+  <div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent-ink)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>Grocery Coach</div>
+  <nav class="tabs" id="nav" aria-label="Sections"><button data-go="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg><span>Home</span></button><button data-go="plan"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2 11h11l2-8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg><span>Shopping list</span></button><button data-go="meals"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 13.5a4 4 0 0 1 1.6-7.6 4.6 4.6 0 0 1 8.8 0A4 4 0 0 1 18 13.5V20H6zM6 16.5h12"/></svg><span>Meal ideas</span></button><button data-go="inventory"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg><span>Inventory</span></button><button data-go="results"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Results</span></button><button data-go="scan"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6l1.5-2h4l1.5 2"/></svg><span>Scan</span></button></nav>
+  <button class="navrw" data-rewards="1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-9M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 10c0-3 2.5-5 6-5 0 3-2.5 5-6 5z"/></svg><span>Rewards</span><i class="rdot" aria-hidden="true"></i></button>
+  <div class="sidepip"><svg viewBox="0 0 200 150" width="100%" aria-hidden="true"><ellipse cx="100" cy="150" rx="120" ry="34" fill="var(--g-soil)"/><path d="M0 132c30-30 60-28 80-14" fill="none" stroke="color-mix(in srgb,var(--g-leaf) 35%,transparent)" stroke-width="30" stroke-linecap="round"/>
+<g transform="translate(100 92)"><path d="M0-34q-2-12 0-18" stroke="var(--g-leaf-d)" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M0-52c-6-10-20-12-26-4 8 8 20 8 26 4z" fill="var(--g-leaf)"/><path d="M0-52c6-10 20-12 26-4-8 8-20 8-26 4z" fill="var(--g-leaf)"/>
+<path d="M0-36c24 0 30 20 27 36-3 17-15 25-27 25S-24 17-27 0c-3-16 3-36 27-36z" fill="var(--g-body)" stroke="var(--g-body-d)" stroke-width="2"/><circle cx="-9" cy="-4" r="3.4" fill="var(--g-ink)"/><circle cx="9" cy="-4" r="3.4" fill="var(--g-ink)"/><path d="M-7 6q7 7 14 0" stroke="var(--g-ink)" stroke-width="2.6" fill="none" stroke-linecap="round"/><ellipse cx="-16" cy="4" rx="4.5" ry="3" fill="var(--g-petal)" opacity=".5"/><ellipse cx="16" cy="4" rx="4.5" ry="3" fill="var(--g-petal)" opacity=".5"/></g></svg></div>
+</aside>
+<div class="mainc">
+<header class="top"><div class="bar">
+  <div class="wkctl" id="wk"></div>
+  <div class="right"><label for="hhsel" class="sr">Household</label><select id="hhsel" class="hhsel"></select>
+    <button class="pts" id="pts" data-rewards="1" aria-label="Points and rewards"></button></div>
+</div></header>
+<main id="app"></main>
+</div></div>
+<div id="drawer"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script id="coach-data" type="application/json">__COACH_DATA__</script>
+<script>
+/* ===================== Data ===================== */
+const DATA=(()=>{try{return JSON.parse(document.getElementById("coach-data").textContent)}catch(e){return null}})();
+const app=document.getElementById("app");
+if(!DATA){app.innerHTML='<div class="empty">No data was loaded. Start the app with <code>streamlit run app.py</code> from the repo root.</div>';throw new Error("no data")}
+const P=DATA.products, H=DATA.households, R=DATA.recipes, DEM=DATA.demand;
+const PID=P.map(p=>p.id), PIX=Object.fromEntries(PID.map((id,i)=>[id,i]));
+const NW=Math.min(...H.map(h=>(DEM[h.id]?.[PID[0]]||[]).length));
+/* Week split shared with the ML and RL work (src/forecast.py): train 4-63, validation 64-77, test 78-103 */
+const SPLIT=DATA.split||{train_start:4,val_start:64,test_start:78};
+const TRAIN_END=Math.min(NW-1,SPLIT.test_start), FIT_START=SPLIT.train_start, FIT_END=SPLIT.val_start;
+const HAS_ML=!!DATA.forecast, HAS_PLANS=!!DATA.plans;
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=(v,d=2)=>(v<0?"−$":"$")+Math.abs(v).toFixed(d);
+const pct=v=>Math.round(v*100)+"%";
+const fx=(v,d=1)=>(+v).toFixed(d);
+let ST={hh:H[0].id, scrub:null, metric:"cost", lookup:null};
+try{const s=JSON.parse(localStorage.getItem("grocery-coach")||"null");if(s&&H.some(h=>h.id===s.hh))ST={...ST,...s,lookup:null}}catch(e){}
+const save=()=>{try{localStorage.setItem("grocery-coach",JSON.stringify({hh:ST.hh,metric:ST.metric}))}catch(e){}};
+const HH=()=>H.find(h=>h.id===ST.hh);
+H.forEach(h=>{h.ok=new Set(h.allowed||PID)});
+const relevant=(hh,i)=>hh.ok.has(PID[i])&&model(hh).avg[i]>0.005;
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,2400)}
+
+/* Friendly quantities from purchase units ("500 g", "12 count", "1 loaf") */
+function parseUnit(u){const m=String(u).trim().match(/^([\d.]+)\s*(.*)$/);return m?{n:+m[1],l:m[2]}:{n:1,l:String(u)}}
+function friendly(q,p){
+  const {n,l}=parseUnit(p.unit),t=q*n;
+  if(l==="g")return t>=1000?fx(t/1000,1)+" kg":Math.round(t)+" g";
+  if(l==="kg")return t<1?Math.round(t*1000)+" g":fx(t,1)+" kg";
+  if(l==="L"||l==="l")return t<1?Math.round(t*1000)+" ml":fx(t,1)+" L";
+  if(l==="ml")return t>=1000?fx(t/1000,1)+" L":Math.round(t)+" ml";
+  if(l==="count"){const c=t<1?Math.round(t*10)/10:Math.round(t),nm=p.name.toLowerCase();return (c<0.1?"<0.1":c)+" "+(c===1?nm.replace(/s$/,""):nm)}
+  const pk=l.match(/^([a-z]+)\s+(.+)$/i);
+  if(pk){const r=Math.round(t*10)/10;return `${r<0.1?"<0.1":r} ${pk[1]}${r===1?"":"s"} (${pk[2]})`}
+  const r=Math.round(t*10)/10;return r+" "+(r===1?l:l.endsWith("f")?l.slice(0,-1)+"ves":l+"s");
+}
+
+/* ===================== Simulator (mirrors INTERFACES.md §5–6) ===================== */
+function dayF(b){const raw=[1,1,1,1,1,b,b];const m=raw.reduce((a,x)=>a+x)/7;return raw.map(x=>x/m)}
+const stockOf=(st,i)=>st.inv[i].reduce((a,b)=>a+b.q,0);
+const clone=st=>({inv:st.inv.map(bs=>bs.map(b=>({...b})))});
+function avgDemand(hh){return P.map((p,i)=>{const a=DEM[hh.id][p.id];let s=0;for(let w=FIT_START;w<FIT_END;w++)s+=a[w];return s/(FIT_END-FIT_START)})}
+function maxStock(hh,i,avg){const p=P[i];return avg[i]*(p.shelf>=60?6:p.shelf>=14?3:1.6)}
+function ma(hh,w,i,k=4){const a=DEM[hh.id][PID[i]];let s=0,n=0;for(let j=Math.max(0,w-k);j<w;j++){s+=a[j];n++}return n?s/n:a[0]}
+/* ML forecast from data/forecast_weekly.csv when present (XGBoost, no guest/away flags); else the 4-week average */
+function fc(hh,w,i){const v=DATA.forecast?.[hh.id]?.[PID[i]]?.[w];return v!=null&&v>=0?v:ma(hh,w,i)}
+const FC_NAME=HAS_ML?(DATA.forecast_model||"ML forecast"):"4-week average";
+function constrain(order,st,hh,avg){
+  const notes=[];let o=order.slice();
+  P.forEach((p,i)=>{if(o[i]>0.01&&!hh.ok.has(p.id)){const hit=p.allergens.filter(a=>hh.exclusions.includes(a));notes.push(`Skipped ${p.name}: ${hit.length?"contains "+hit.join(", "):"not part of a "+hh.diet+" diet"}.`)}if(!hh.ok.has(p.id))o[i]=0});
+  P.forEach((p,i)=>{const room=Math.max(0,maxStock(hh,i,avg)-stockOf(st,i));if(o[i]>room+1e-6){if(o[i]-room>0.05)notes.push(`Capped ${p.name} so stock at home stays under ${friendly(maxStock(hh,i,avg),p)}.`);o[i]=room}});
+  const cost=o.reduce((a,q,i)=>a+q*P[i].price,0);
+  if(cost>hh.budget){const f=hh.budget/cost;o=o.map(q=>q*f);notes.push(`Scaled the basket down ${Math.round((1-f)*100)}% to stay within the ${money(hh.budget,0)} weekly budget.`)}
+  return [o,notes];
+}
+function stepWeek(st,order,demand,hh,f,ids){
+  const r={spend:0,waste_units:0,waste_cost:0,waste_kg:0,stockout_units:0,stockout_days:0,kcal:0,protein_g:0};
+  for(const i of ids){const q=order[i];if(q>1e-9){st.inv[i].push({q,age:0});r.spend+=q*P[i].price}}
+  for(let d=0;d<7;d++){
+    for(const i of ids){const p=P[i];let need=demand[i]*f[d]/7;const want=need;const bs=st.inv[i].sort((a,b)=>b.age-a.age);
+      for(const b of bs){if(need<=0)break;const t=Math.min(b.q,need);b.q-=t;need-=t;r.kcal+=t*p.kcal;r.protein_g+=t*p.protein}
+      if(need>0.02*want&&need>1e-6){r.stockout_units+=need;r.stockout_days+=1}
+      st.inv[i]=bs.filter(b=>b.q>1e-9)}
+    for(const i of ids){const p=P[i];st.inv[i].forEach(b=>b.age++);for(const b of st.inv[i])if(b.age>=p.shelf){r.waste_units+=b.q;r.waste_cost+=b.q*p.price;r.waste_kg+=b.q*(p.grams||0)/1000}st.inv[i]=st.inv[i].filter(b=>b.age<p.shelf)}
+  }
+  r.protein_target_met=hh.protein_target?r.protein_g/hh.protein_target:0;
+  return r;
+}
+const POL={
+  fixed:(c,i)=>c.avg[i]*1.05,
+  average_rule:(c,i)=>ma(c.hh,c.w,i),
+  forecast_rule:(c,i)=>Math.max(0,fc(c.hh,c.w,i)*1.1-stockOf(c.st,i)),
+  coach:(c,i)=>{const pl=DATA.plans?.[c.hh.id]?.[c.w];if(pl)return +pl.order?.[PID[i]]||0;
+    const f=c.honest?ma(c.hh,c.w,i):fc(c.hh,c.w,i),h=stockOf(c.st,i),q=Math.max(0,f*c.k[i]-h);
+    return q<0.25&&h>=f*0.8?0:q},  /* skip tiny top-ups only when home stock already covers most of the week */
+};
+const ALL=P.map((_,i)=>i);
+function order(pol,hh,w,st,M){return P.map((_,i)=>POL[pol]({hh,w,st,avg:M.avg,k:M.k,honest:M.honest},i))}
+function run(pol,hh,M,from,to,recFrom,ids=ALL,constrained=true){
+  const st={inv:P.map(()=>[])},f=dayF(hh.weekend_boost),out=[];
+  for(let w=from;w<to;w++){
+    let o=order(pol,hh,w,st,M);if(constrained)o=constrain(o,st,hh,M.avg)[0];
+    const r=stepWeek(st,o,P.map(p=>DEM[hh.id][p.id][w]),hh,f,ids);
+    r.sale=o.filter((q,i)=>q>0.01&&((DATA.promos?.[PID[i]]||[])[w]||0)>0.01).length;if(w>=recFrom)out.push(r);
+  }
+  return {weekly:out,st};
+}
+/* The stand-in: per-product order-up-to factor tuned on the training weeks (replace with the RL agent).
+   Tuned on the 4-week average, not the ML forecast: forecast_weekly.csv is in-sample before week 78, so tuning on it
+   would make the stand-in over-trust the forecast (see docs/RL_TECHNICAL_DESIGN.md section 5). */
+function tune(hh,avg,pen=3){
+  const k=P.map(()=>1.1),grid=[0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.35,1.5];
+  P.forEach((p,i)=>{let best=Infinity,bk=1.1;
+    for(const g of grid){const kk=k.slice();kk[i]=g;const {weekly}=run("coach",hh,{avg,k:kk,honest:true},0,FIT_END,FIT_START,[i],false);
+      const cost=weekly.reduce((a,r)=>a+r.spend+r.waste_cost+pen*r.stockout_units*p.price,0);if(cost<best-1e-9){best=cost;bk=g}}
+    k[i]=bk});
+  return k;
+}
+const mean=(a,f)=>a.length?a.reduce((s,x)=>s+f(x),0)/a.length:0;
+const MODEL={};
+function model(hh){return modelFor(hh,ST.prio||"balanced")}
+function modelFor(hh,prio){
+  const key=hh.id+":"+prio,pen=({save:1.5,balanced:3,stocked:6})[prio]||3;
+  if(MODEL[key])return MODEL[key];
+  const avg=avgDemand(hh),k=tune(hh,avg,pen),M={avg,k},pols={};
+  for(const pol of ["fixed","average_rule","forecast_rule","coach"]){const {weekly}=run(pol,hh,M,TRAIN_END-8,NW,TRAIN_END);
+    pols[pol]={weekly,weekly_cost:mean(weekly,r=>r.spend),waste_units:mean(weekly,r=>r.waste_units),waste_cost:mean(weekly,r=>r.waste_cost),waste_kg:mean(weekly,r=>r.waste_kg),stockout_days:mean(weekly,r=>r.stockout_days),protein_target_met:mean(weekly,r=>r.protein_target_met)}}
+  return MODEL[key]={...M,pols};
+}
+
+/* ===================== Results source: results.json when present, else the demo simulation ===================== */
+function realResults(hh){
+  const r=DATA.results;if(!r)return null;
+  const list=Array.isArray(r)?r:(r.policies?[r]:Object.values(r));
+  const hit=list.find(x=>x&&x.household===hh.id);if(!hit||!hit.policies)return null;
+  const map={fixed:"fixed",average_rule:"average_rule",forecast_rule:"forecast_rule",coach:"rl"},out={};
+  for(const [k,src] of Object.entries(map)){const v=hit.policies[src];if(!v||v.weekly_cost==null)return null;
+    const wk=(v.weekly||[]).map(x=>typeof x==="object"?{spend:x.spend??x.weekly_cost,waste_units:x.waste_units,waste_cost:x.waste_cost,stockout_days:x.stockout_days,protein_target_met:x.protein_target_met}:null).filter(Boolean);
+    out[k]={weekly:wk,weekly_cost:v.weekly_cost,waste_units:v.waste_units,waste_cost:v.waste_cost,stockout_days:v.stockout_days,protein_target_met:v.protein_target_met,std:{cost:v.weekly_cost_std,waste:v.waste_units_std,so:v.stockout_days_std,pr:v.protein_target_met_std}}}
+  return {pols:out,n_seeds:hit.n_seeds};
+}
+const isLive=hh=>!!realResults(hh);
+const NAME=hh=>({fixed:"Fixed list",average_rule:"Average rule",forecast_rule:"Forecast rule",coach:isLive(hh)?"RL agent":"Coach (preview)"});
+const COLOR={fixed:"var(--s-fixed)",average_rule:"var(--s-avg)",forecast_rule:"var(--s-fc)",coach:"var(--accent)"};
+const ORDER=["coach","forecast_rule","average_rule","fixed"];
+
+/* ===================== Charts ===================== */
+function roll(a,k=4){return a.map((_,i)=>{const s=a.slice(Math.max(0,i-k+1),i+1);return s.reduce((x,y)=>x+y,0)/s.length})}
+function niceStep(v){if(v<=0)return 1;const e=Math.pow(10,Math.floor(Math.log10(v)));const m=v/e;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*e}
+function lineChart(series,{yfmt=v=>v,label,W=760,H=250,L=52,Rr=28,T=14,B=30}){
+  const n=Math.max(...series.map(s=>s.values.length));
+  if(n<2)return '<div class="empty">No weekly series in results.json yet.</div>';
+  const lo=0,top=Math.max(...series.flatMap(s=>s.values))*1.05||1,step=niceStep(top/4),hi=Math.ceil(top/step)*step;
+  const X=i=>L+i/(n-1)*(W-L-Rr),Y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+  const ticks=[];for(let t=0;t<=hi+1e-9;t+=step)ticks.push(t);
+  const xt=W<500?[0,Math.round((n-1)/2),n-1]:[0,Math.round((n-1)/4),Math.round((n-1)/2),Math.round(3*(n-1)/4),n-1];
+  const sorted=[...series].sort((a,b)=>(a.focus?1:0)-(b.focus?1:0));
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">
+    ${ticks.map(t=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${L-8}" y="${Y(t)+4}" text-anchor="end">${yfmt(t)}</text>`).join("")}
+    ${xt.map(i=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle">wk ${i+1}</text>`).join("")}
+    ${sorted.map(s=>`<polyline points="${s.values.map((v,i)=>X(i).toFixed(1)+","+Y(v).toFixed(1)).join(" ")}" fill="none" stroke="${s.color}" stroke-width="${s.focus?3:1.6}" ${s.dash?'stroke-dasharray="5 4"':""} stroke-linejoin="round" stroke-linecap="round"/>`).join("")}
+    ${sorted.filter(s=>s.focus).map(s=>`<circle cx="${X(s.values.length-1)}" cy="${Y(s.values.at(-1))}" r="4.5" fill="${s.color}"/>`).join("")}
+  </svg>`;
+}
+
+const pollsN=hh=>{const r=DATA.results;const l=Array.isArray(r)?r:(r?.policies?[r]:Object.values(r||{}));const x=l.find(y=>y&&y.household===hh.id);return x?.n_seeds?x.n_seeds+" seeds":"seeds"};
+const std=(s,k)=>({cost:s.cost,waste:s.waste,so:s.so,pr:s.pr}[k]??null);
+function pantryAt(hh,w){
+  const M=model(hh),pre=run("coach",hh,M,TRAIN_END-8,w,NW).st;
+  const fc0=P.map((_,i)=>fc(hh,w,i));
+  const [co,notes]=constrain(order("coach",hh,w,pre,M),pre,hh,M.avg);
+  const [ao]=constrain(order("average_rule",hh,w,pre,M),pre,hh,M.avg);
+  const f=dayF(hh.weekend_boost);
+  const exp=o=>{const s=clone(pre);return stepWeek(s,o,fc0,hh,f,ALL)};
+  const after=clone(pre);co.forEach((q,i)=>{if(q>1e-9)after.inv[i].push({q,age:0})});
+  const pl=DATA.plans?.[hh.id]?.[w];if(pl?.notes?.length)notes.unshift(...pl.notes.map(String));
+  return {pre,after,fc:fc0,co,ao,notes,ec:exp(co),ea:exp(ao)};
+}
+const daysLeft=(b,p)=>p.shelf-b.age;
+const fclass=(d,p)=>p.shelf>=60?"f":d<=1?"x":d<=3?"w":"f";
+function mealIdeas(hh,inv){
+  return R.map(r=>{
+    const ing=Object.entries(r.ingredients).map(([pid,q])=>{const i=PIX[pid],p=P[i];if(p==null)return null;
+      const bs=inv.inv[i].slice().sort((a,b)=>daysLeft(a,p)-daysLeft(b,p));const have=bs.reduce((a,b)=>a+b.q,0);
+      return {pid,p,q,have,ok:have>=q-1e-6,d:bs.length?daysLeft(bs[0],p):null}}).filter(Boolean);
+    if(ing.some(x=>!x.ok))return null;
+    if(ing.some(x=>!hh.ok.has(x.pid)))return null;
+    const urgent=ing.filter(x=>x.p.shelf<60&&x.d!=null&&x.d<=3).sort((a,b)=>a.d-b.d);
+    const score=urgent.reduce((a,x)=>a+3/Math.max(1,x.d),0)+(r.tags.includes("use_it_first")?1.5:0)+(r.tags.includes("high_protein")?0.6:0)+(r.tags.includes("budget")?0.3:0);
+    const per=k=>ing.reduce((a,x)=>a+x.q*x.p[k],0)/r.servings;
+    const cps=ing.reduce((a,x)=>a+x.q*x.p.price,0)/r.servings,pps=per("protein");
+    const reason=urgent.length?`Uses ${list(urgent.map(x=>x.p.name.toLowerCase()))} before ${urgent.length>1?"they spoil":"it spoils"} (${urgent[0].d<=1?"last day":urgent[0].d+" days left"}).`
+      :r.tags.includes("high_protein")?`${Math.round(pps)} g protein a serving, about ${pct(pps/(hh.protein_target/7/hh.n_people))} of one person's daily share.`
+      :r.tags.includes("budget")?`One of the cheapest options at ${money(cps)} a serving.`
+      :r.tags.includes("quick")?`Ready in ${r.prep_time_min} minutes with what's at home.`
+      :"Everything is already at home, nothing extra to buy.";
+    return {r,ing,urgent,score,reason,kcal:per("kcal"),protein:per("protein"),cost:ing.reduce((a,x)=>a+x.q*x.p.price,0)/r.servings};
+  }).filter(Boolean).sort((a,b)=>b.score-a.score);
+}
+const list=a=>a.length<=1?a.join(""):a.slice(0,-1).join(", ")+" and "+a.at(-1);
+function fitScore(n,hh,allergens){
+  const ins=[];let s=65;
+  const kcal=n.kcal||0,prot=n.protein||0,sugar=n.sugar,sod=n.sodium,fib=n.fiber;
+  const dens=kcal>0?prot/kcal*100:0;
+  if(dens>=8){s+=14;ins.push(["g",`Protein-dense: ${fx(dens,1)} g protein per 100 kcal.`])}else if(dens>=4){s+=5;ins.push(["g",`Moderate protein: ${fx(dens,1)} g per 100 kcal.`])}else if(kcal>0)ins.push(["w",`Low protein for its calories (${fx(dens,1)} g per 100 kcal).`]);
+  if(sugar!=null){if(sugar>=15){s-=16;ins.push(["b",`High sugar: ${fx(sugar,1)} g per 100 g.`])}else if(sugar>=7){s-=6;ins.push(["w",`Some sugar: ${fx(sugar,1)} g per 100 g.`])}}
+  if(sod!=null){if(sod>=600){s-=14;ins.push(["b",`High sodium: ${Math.round(sod)} mg per 100 g.`])}else if(sod>=300){s-=5;ins.push(["w",`Moderate sodium: ${Math.round(sod)} mg per 100 g.`])}}
+  if(fib!=null&&fib>=5){s+=7;ins.push(["g",`Good fiber: ${fx(fib,1)} g per 100 g.`])}
+  if(n.nova===4){s-=8;ins.push(["w","Ultra-processed (NOVA group 4)."])}
+  const hit=(allergens||[]).filter(a=>hh.exclusions.includes(a));
+  if(hit.length){s=Math.min(s,20);ins.unshift(["b",`Contains ${hit.join(", ")}, which this household avoids.`])}
+  if(n.missing)ins.push(["w","Some nutrition values are missing for this product."]);
+  s=Math.max(5,Math.min(98,Math.round(s)));
+  return {s,cls:s>=70?"c-good":s>=45?"c-ok":"c-bad",label:s>=70?"Good fit":s>=45?"Occasional":"Poor fit",ins};
+}
+function nfLabel(n,hh,basis){
+  const L=(name,v,u,share,cls="")=>`<div class="ln ${cls}"><span>${name} ${v==null?"—":fx(v,v<10?1:0)+u}</span><b>${share!=null&&v!=null?share:""}</b></div>`;
+  const pw=n.protein!=null?Math.round(n.protein/hh.protein_target*1000)/10+"%":null;
+  return `<div class="nf"><h5>Nutrition Facts</h5><div class="sv"><span>Amount</span><span>${esc(basis)}</span></div>
+    <div class="cal"><span style="font-weight:900">Calories</span><b>${n.kcal==null?"—":Math.round(n.kcal)}</b></div>
+    <div class="dvh">% of household's weekly target*</div>
+    ${L("<b>Total Fat</b>",n.fat,"g")}${L("<b>Sodium</b>",n.sodium,"mg")}${L("<b>Total Carbohydrate</b>",n.carbs,"g")}${L("Dietary Fiber",n.fiber,"g",null,"ind")}${L("Total Sugars",n.sugar,"g",null,"ind")}
+    ${L("<b>Protein</b>",n.protein,"g",pw,"thick")}
+    <div class="foot">* Share of ${esc(hh.persona)}'s ${hh.protein_target.toLocaleString()} g weekly protein target.</div></div>`;
+}
+async function lookup(code){
+  code=String(code).replace(/\D/g,"");if(code.length<6){toast("Enter a full barcode (8–14 digits).");return}
+  ST.lookup={busy:true,code};render();
+  try{
+    const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,quantity,nutriments,allergens_tags,ingredients_text_en,ingredients_text,nova_group`);
+    const j=await r.json();
+    if(j.status!==1||!j.product){ST.lookup={err:`No product found for ${code} in Open Food Facts.`,code}}
+    else{const p=j.product,nu=p.nutriments||{};const g=k=>nu[k+"_100g"]!=null?+nu[k+"_100g"]:null;
+      const n={kcal:g("energy-kcal"),fat:g("fat"),carbs:g("carbohydrates"),sugar:g("sugars"),fiber:g("fiber"),protein:g("proteins"),sodium:g("sodium")!=null?g("sodium")*1000:null,nova:p.nova_group};
+      n.missing=["kcal","protein","sugar","sodium"].some(k=>n[k]==null);
+      ST.lookup={code,name:p.product_name||"Unnamed product",brand:p.brands||"",qty:p.quantity||"",n,allergens:(p.allergens_tags||[]).map(a=>a.replace(/^\w+:/,"")),ingr:p.ingredients_text_en||p.ingredients_text||"",basis:"per 100 g",src:"Open Food Facts"}}
+  }catch(e){ST.lookup={err:"Couldn't reach Open Food Facts. Check your internet connection, or pick a product from the catalogue below.",code}}
+  render();
+}
+function staple(pid){
+  const p=P[PIX[pid]],g=p.grams||0,k=g?100/g:1;
+  const n={kcal:p.kcal*k,fat:p.fat*k,carbs:p.carbs*k,sugar:p.sugar*k,fiber:p.fiber*k,protein:p.protein*k,sodium:p.sodium*k};
+  ST.lookup={code:pid,name:p.name,brand:"Your catalogue",qty:p.unit,n,allergens:p.allergens,ingr:"",basis:g?"per 100 g":"per "+p.unit,src:"USDA",price:p.price,pid};
+  render();
+}
+function facts(hh){const ppl=[hh.n_adults+" adult"+(hh.n_adults>1?"s":""),hh.n_children?hh.n_children+" child"+(hh.n_children>1?"ren":""):""].filter(Boolean).join(", ");
+  return `<div class="facts"><span class="fact">${ppl}</span><span class="fact diet">${esc(hh.diet[0].toUpperCase()+hh.diet.slice(1))}</span>${hh.exclusions.map(a=>`<span class="fact alg">No ${esc(a)}</span>`).join("")}<span class="fact">Budget <b>${money(hh.budget,0)}</b>/wk</span><span class="fact">Protein <b>${hh.protein_target.toLocaleString()} g</b>/wk</span><span class="fact">Eats out <b>${pct(hh.eats_out)}</b> of meals</span><span class="fact muted">${esc(hh.id)}</span></div>`}
+
+const views={};
+let _wasteMoney=true;const DATA_W=()=>_wasteMoney;
+function polsFor(hh){const live=realResults(hh);if(live){_wasteMoney=Object.values(live.pols).every(p=>p.waste_cost!=null);return live.pols}_wasteMoney=true;return model(hh).pols}
+function renderHH(){const groups=[...new Set(H.map(h=>h.persona))];
+  document.getElementById("hhsel").innerHTML=groups.map(g=>`<optgroup label="${esc(g)}">${H.filter(h=>h.persona===g).map(h=>`<option value="${h.id}" ${h.id===ST.hh?"selected":""}>${esc(h.persona)} · ${money(budgetOf(h),0)}/wk${h.diet!=="omnivore"?" · "+h.diet:""}</option>`).join("")}</optgroup>`).join("")}
+
+
+
+/* ===================== Game layer: fridge score, rescue missions, streaks & badges =====================
+   The fridge score uses the same signals the agent is rewarded on (waste, spend vs budget, protein, empty shelves),
+   so people and the agent chase the same number. Progress is read from the coach's simulated weeks. */
+const DAYN=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const nRel=hh=>P.filter((_,i)=>relevant(hh,i)).length||1;
+function fridgeScore(r,hh){
+  const B=budgetOf(hh),waste=35*(1-Math.min(1,(r.waste_cost||0)/(0.2*B)));
+  const budget=r.spend<=B?25:25*Math.max(0,1-((r.spend-B)/B)/0.2);
+  const protein=25*Math.min(1,r.protein_target_met||0);
+  const shelves=15*(1-Math.min(1,(r.stockout_days||0)/(nRel(hh)*7*0.5)));
+  const total=Math.round(waste+budget+protein+shelves);
+  return {total,grade:total>=90?"Excellent":total>=75?"Great":total>=60?"Good":"Needs work",
+    parts:[["Little waste",waste,35],["On budget",budget,25],["Protein goal",protein,25],["Shelves stocked",shelves,15]]};
+}
+/* a "low-waste week": less than 5% of the weekly budget thrown away */
+const wasteFree=(r,hh)=>(r.waste_cost||0)<Math.max(0.5,0.05*budgetOf(hh));
+let MISS={};try{MISS=JSON.parse(localStorage.getItem("grocery-coach-missions")||"{}")||{}}catch(e){MISS={}}
+const saveMiss=()=>{try{localStorage.setItem("grocery-coach-missions",JSON.stringify(MISS))}catch(e){}};
+const mkey=(hh,w,pid)=>hh.id+":"+w+":"+pid;
+const rescuedCount=hh=>Object.keys(MISS).filter(k=>k.startsWith(hh.id+":")).length;
+function missions(hh,w,S){
+  const ideas=mealIdeas(hh,S.after);
+  return P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.after,i)>0.01)
+    .map(([p,i])=>{const f=freshness(p,S.after.inv[i]);return {p,i,f,meal:ideas.find(m=>m.ing.some(x=>x.pid===p.id)),done:!!MISS[mkey(hh,w,p.id)]}})
+    .filter(m=>m.f.d<=3).sort((a,b)=>a.f.d-b.f.d);
+}
+const BADGES=[
+  ["firstwf","First low-waste week","Under 5% of the budget thrown away","leaf"],
+  ["streak3","On a roll","3 low-waste weeks in a row","flame"],
+  ["month","Low-waste month","4 low-waste weeks in a row","cal"],
+  ["budget4","Budget keeper","Under budget 4 weeks running","coin"],
+  ["protein4","Protein pro","Protein goal met 4 weeks running","bolt"],
+  ["score90","Top of the class","A fridge score of 90 or more","star"],
+  ["sale","Sale hunter","3 or more sale items in one shop","tag"],
+  ["rescuer","Rescuer","Complete 3 rescue missions","buoy"],
+];
+const GLYPH={leaf:'<path d="M5 19c8 0 14-6 14-14C11 5 5 11 5 19zM5 19l7-7"/>',flame:'<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-6 2 1 3 2 3 4 0-3-1-5 0-8z"/>',
+  cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4M9 15l2 2 4-4"/>',coin:'<circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5v11"/>',
+  bolt:'<path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z"/>',star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/>',
+  tag:'<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="7.5" r="1.5"/>',buoy:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M6.3 6.3l3.2 3.2M14.5 14.5l3.2 3.2M17.7 6.3l-3.2 3.2M9.5 14.5l-3.2 3.2"/>'};
+const glyph=(k,sz=22)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[k]}</svg>`;
+function progress(hh,w){
+  const recs=(isOff(hh)?offWeeks(PRIO[ST.prio].method):model(hh).pols.coach.weekly).slice(0,Math.max(0,w-TRAIN_END));
+  const earned={};const mark=(k,i)=>{if(earned[k]==null)earned[k]=i};
+  let wf=0,bud=0,pro=0,best=0;
+  recs.forEach((r,i)=>{const s=fridgeScore(r,hh).total;
+    wf=wasteFree(r,hh)?wf+1:0;bud=r.spend<=hh.budget?bud+1:0;pro=(r.protein_target_met||0)>=1?pro+1:0;best=Math.max(best,wf);
+    if(wf>=1)mark("firstwf",i);if(wf>=3)mark("streak3",i);if(wf>=4)mark("month",i);if(bud>=4)mark("budget4",i);if(pro>=4)mark("protein4",i);if(s>=90)mark("score90",i);if((r.sale||0)>=3)mark("sale",i)});
+  const resc=rescuedCount(hh);if(resc>=3)earned.rescuer=-1;
+  const xp=Math.round(recs.reduce((a,r)=>a+fridgeScore(r,hh).total,0)+resc*10);
+  return {recs,streak:wf,best,earned,xp,level:1+Math.floor(xp/500),toNext:500-xp%500,resc};
+}
+
+
+/* ===================== Helpers ===================== */
+ST.view=ST.view||"home"; ST.invAfter=ST.invAfter??true; ST.invFilter=ST.invFilter||"all"; ST.picks=ST.picks||{}; ST.showAll=false;
+const CATC={fruit:"--c-produce",vegetables:"--c-produce",dairy:"--c-dairy",protein:"--c-protein",grains:"--c-grains",legumes:"--c-legumes",beverages:"--c-bev",fats_oils:"--c-fat",processed:"--c-proc"};
+
+const BOWL='<path d="M4 12h16a8 8 0 0 1-16 0z"/>',CAN='<rect x="6" y="5" width="12" height="15" rx="2.5"/><path d="M6 9h12M6 16h12"/>',CARTON='<path d="M8 8l2-4h4l2 4v12H8z"/><path d="M8 8h8"/>';
+const FOOD={
+ milk:CARTON+'<path d="M10.5 13h3"/>',plant_milk:CARTON+'<path d="M12 11c-1.5 1-1.5 3 0 4 1.5-1 1.5-3 0-4z"/>',orange_juice:CARTON+'<circle cx="12" cy="14" r="2"/>',
+ eggs:'<path d="M12 4c3.5 0 6 5 6 9a6 6 0 0 1-12 0c0-4 2.5-9 6-9z"/>',
+ chicken_breast:'<path d="M15 3.5a5.5 5.5 0 0 1 1.5 9.8L13 16.8 7.2 11l3.5-3.5A5.5 5.5 0 0 1 15 3.5z"/><path d="M9 15l-3 3M4.8 17.2a1.5 1.5 0 1 0 2 2"/>',
+ rice:BOWL+'<path d="M7 12c0-3 2.2-5 5-5s5 2 5 5"/>',lentils:BOWL+'<circle cx="9" cy="10" r="1.3"/><circle cx="12.3" cy="9" r="1.3"/><circle cx="15.3" cy="10.2" r="1.3"/>',
+ pasta:BOWL+'<path d="M8 12c0-3 1-5 2-5s1 5 2 5 1-5 2-5 2 2 2 5"/>',oats:BOWL+'<path d="M8 10.5h8M9.5 8.5h5"/>',
+ bread:'<path d="M5 11a3.5 3.5 0 0 1 1.5-6.5h11A3.5 3.5 0 0 1 19 11v8H5z"/><path d="M9 9l1 1.5M13 8.5l1 1.5"/>',
+ bananas:'<path d="M5 7c.5 7 6 11.5 14 9.5-1.5 2.5-5 3.5-8 2.5C6.5 17.5 3.8 12.5 5 7z"/><path d="M5 7l-.8-2"/>',
+ apples:'<path d="M12 8c-2-1.5-7-1-7 4.5S9 21 12 19.5C15 21 19 18 19 12.5S14 6.5 12 8z"/><path d="M12 8c0-2 1-3.5 3-4"/>',
+ tomatoes:'<circle cx="12" cy="13.5" r="7"/><path d="M9 7l3 1.5L15 7M12 8.5V5"/>',
+ oranges:'<circle cx="12" cy="13.5" r="7"/><path d="M12 6.5c0-1.6 1.2-2.8 3-3"/><path d="M10 12.5l.01 0M14 15l.01 0"/>',
+ spinach:'<path d="M5 19C5 10 11 4 19 5c1 8-5 14-14 14z"/><path d="M5 19l8-8"/>',
+ yogurt:'<path d="M6.5 9h11l-1.5 11h-8z"/><path d="M5 6h14v3H5z"/>',
+ tofu:'<path d="M4 9l8-4 8 4v7l-8 4-8-4z"/><path d="M4 9l8 4 8-4M12 13v7"/>',
+ carrots:'<path d="M15.5 8.5L5 19l3.2-9.2c1-2.8 5-3.6 7.3-1.3z"/><path d="M15.5 8.5L19 5M15.5 8.5l.8-4.5M15.5 8.5l4.5-.8"/>',
+ potatoes:'<path d="M6 9c2-4 9-5 12-1s1 10-4 11S4 14 6 9z"/><path d="M10 11l.01 0M14 14l.01 0M12.5 9.5l.01 0"/>',
+ cheddar_cheese:'<path d="M3 15l13-8 5 3v8H3z"/><circle cx="9" cy="15.5" r="1.1"/><circle cx="15" cy="13.5" r="1.1"/>',
+ peanut_butter:'<rect x="6" y="8.5" width="12" height="11.5" rx="2.5"/><rect x="7" y="4.5" width="10" height="4" rx="1"/><path d="M10 14h4"/>',
+ salmon_fillet:'<path d="M3 12c3-4 8-5 12-3l5-3v12l-5-3c-4 2-9 1-12-3z"/><path d="M7.5 11l.01 0"/>',
+ canned_tuna:'<ellipse cx="12" cy="9" rx="8" ry="3"/><path d="M4 9v6c0 1.7 3.6 3 8 3s8-1.3 8-3V9"/><path d="M9 9.5c1.5-1 4.5-1 6 0"/>',
+ ground_beef:'<path d="M5 9c2-4 10-5 13-1s0 11-6 11S3 13 5 9z"/><circle cx="14" cy="11" r="2"/>',
+ chickpeas_canned:CAN+'<circle cx="12" cy="12.5" r="1.6"/>',black_beans_canned:CAN+'<path d="M10.5 12.5c0-1 3-1 3 0s-3 1-3 0z"/>',
+ tortillas:'<ellipse cx="12" cy="14" rx="8.5" ry="4"/><path d="M3.5 12c0-2.2 3.8-4.5 8.5-4.5s8.5 2.3 8.5 4.5"/>',
+ butter:'<path d="M3 13l5-4h13l-5 4z"/><path d="M3 13v4h13v-4M16 17l5-4V9"/>',
+ avocados:'<path d="M12 3c3 0 5 5 6 9a6 6 0 0 1-12 0c1-4 3-9 6-9z"/><circle cx="12" cy="14" r="2.4"/>',
+ broccoli:'<path d="M6.5 12a3 3 0 0 1 1.3-5.6 3.6 3.6 0 0 1 6.6-1.2A3 3 0 0 1 17.5 12z"/><path d="M10 12l-.8 8h5.6L14 12"/>',
+ onions:'<path d="M12 4c-1 3-7 5-7 10a7 7 0 0 0 14 0c0-5-6-7-7-10z"/><path d="M12 9.5v10"/>',
+ bell_peppers:'<path d="M7 9.5c-2 2-1 9.5 2 10.5 1.5.5 2-1 3-1s1.5 1.5 3 1c3-1 4-8.5 2-10.5-1.5-1.5-3.5 0-5 0s-3.5-1.5-5 0z"/><path d="M12 9.5V7c0-1.2.8-2.5 2.2-2.5"/>',
+ frozen_vegetables:'<path d="M12 3.5v17M4.6 7.75l14.8 8.5M4.6 16.25l14.8-8.5M10 5l2 2 2-2M10 19l2-2 2 2"/>',
+ olive_oil:'<path d="M10 3h4v3l2 3v11.5H8V9l2-3z"/><path d="M12 12.5c-1.3.9-1.3 2.6 0 3.5 1.3-.9 1.3-2.6 0-3.5z"/>',
+ breakfast_cereal:'<rect x="6" y="3.5" width="12" height="17" rx="1.5"/><circle cx="12" cy="12" r="3"/>',
+ frozen_pizza:'<path d="M4 6.5c5-3 11-3 16 0L12 21z"/><circle cx="10" cy="9.5" r="1"/><circle cx="14" cy="11" r="1"/><circle cx="12" cy="14.8" r="1"/>',
+};
+const CATI={fruit:FOOD.apples,vegetables:FOOD.spinach,dairy:FOOD.milk,protein:FOOD.eggs,grains:FOOD.bread,legumes:FOOD.lentils,beverages:FOOD.orange_juice,fats_oils:FOOD.olive_oil,processed:FOOD.breakfast_cereal};
+const ico=p=>`<span class="ico" style="--c:var(${CATC[p.category]||"--c-proc"})" aria-hidden="true"><svg viewBox="0 0 24 24" width="66%" height="66%" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FOOD[p.id]||CATI[p.category]||FOOD.breakfast_cereal}</svg></span>`;
+const curWeek=()=>ST.scrub??TRAIN_END, weekNo=w=>w-TRAIN_END+1, NTEST=NW-TRAIN_END;
+const catName=c=>({fats_oils:"Oils & fats"}[c]||c[0].toUpperCase()+c.slice(1));
+const CHEV='<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const STAR=(s=16)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/></svg>`;
+function freshness(p,bs){const tot=bs.reduce((a,b)=>a+b.q,0);if(tot<0.01)return {k:"out",cls:"x",txt:"Out",frac:0};
+  if(p.shelf>=60)return {k:"long",cls:"n",txt:"Keeps for months",frac:1};
+  const d=Math.min(...bs.map(b=>daysLeft(b,p)));return {k:d<=3?"soon":"fresh",cls:d<=1?"x":d<=3?"w":"f",txt:d<=1?"Use today":`${d} days left`,frac:Math.max(.06,d/p.shelf),d}}
+const pkey=(hh,w)=>hh.id+":"+w;
+
+/* ===================== Meals → grocery needs (roadmap step 3) ===================== */
+function mealOptions(hh,S){
+  return R.filter(r=>Object.keys(r.ingredients).every(pid=>PIX[pid]!=null&&hh.ok.has(pid))).map(r=>{
+    const mult=hh.n_people/r.servings;
+    const ing=Object.entries(r.ingredients).map(([pid,q])=>{const i=PIX[pid],p=P[i],bs=S.pre.inv[i];return {pid,i,p,q:q*mult,home:stockOf(S.pre,i),d:bs.length?Math.min(...bs.map(b=>daysLeft(b,p))):null}});
+    const rescue=ing.filter(x=>x.p.shelf<60&&x.home>0.01&&x.d!=null&&x.d<=4);
+    const per=k=>Object.entries(r.ingredients).reduce((a,[pid,q])=>a+q*P[PIX[pid]][k],0)/r.servings;
+    const score=rescue.length*3+(r.tags.includes("high_protein")?1:0)+(r.tags.includes("budget")?.6:0)+per("protein")/25;
+    return {r,ing,rescue,kcal:per("kcal"),protein:per("protein"),cost:per("price"),score};
+  }).sort((a,b)=>b.score-a.score);
+}
+function picks(hh,w,opts){const k=pkey(hh,w);if(!ST.picks[k])ST.picks[k]=opts.slice(0,3).map(o=>o.r.id);return ST.picks[k]}
+function planWeek(hh,w){
+  if(isOff(hh)&&OFF.methods[PRIO[ST.prio].method]?.weeks?.[w])return planWeekOff(hh,w);
+  const M=model(hh),S=pantryAt(hh,w),opts=mealOptions(hh,S),sel=new Set(picks(hh,w,opts)),chosen=opts.filter(o=>sel.has(o.r.id));
+  const raw=order("coach",hh,w,S.pre,M);
+  const need=P.map(()=>0);chosen.forEach(o=>o.ing.forEach(x=>need[x.i]+=x.q));
+  const add=P.map((_,i)=>Math.max(0,need[i]-stockOf(S.pre,i)-S.co[i]));
+  const ex=ST.extra?.[pkey(hh,w)]||{};
+  const {fin,adj}=adjustFin(hh,w,S.co.map((q,i)=>q+(add[i]>0.05?add[i]:0)+(ex[PID[i]]||0)));
+  const f=dayF(hh.weekend_boost),exp=o=>{const s=clone(S.pre);return stepWeek(s,o,S.fc,hh,f,ALL)};
+  const ef=exp(fin),fixedO=constrain(order("fixed",hh,w,S.pre,M),S.pre,hh,M.avg)[0],efx=exp(fixedO);
+  const total=fin.reduce((a,q,i)=>a+q*P[i].price,0),fixedTot=fixedO.reduce((a,q,i)=>a+q*P[i].price,0);
+  const prot=P.reduce((a,p,i)=>a+Math.min(stockOf(S.pre,i)+fin[i],Math.max(S.fc[i],need[i]))*p.protein,0);
+  return {S,opts,sel,chosen,raw,need,add,fin,ex,adj,ef,efx,total,fixedTot,pcov:prot/hh.protein_target,price:P.map(p=>p.price),budget:hh.budget,
+    fcCost:S.fc.reduce((a,q,i)=>a+q*P[i].price,0),rawCost:raw.reduce((a,q,i)=>a+q*P[i].price,0),rawN:raw.filter(q=>q>0.01).length};
+}
+
+/* ===================== Shopping priority → the team's models =====================
+   Each option runs one of the frozen methods from the team's held-out evaluation (results/final/test):
+     Save Money & Reduce Waste → Optimization (MILP): least spend among methods that serve demand, -75% waste
+     Keep My Groceries Stocked → Forecast rule (Ridge): buys up to the full forecast, fewest units run out
+     Balanced                  → RL agent (PPO + Ridge forecast): best fill rate, second-best reward, -27% waste
+   Households outside that evaluation use the in-browser preview, tuned with a matching weight on running out. */
+const OFF=DATA.official||null;
+const isOff=hh=>!!OFF&&OFF.household===hh.id&&!!OFF.methods;
+const PRIO={
+  save:{title:"Save Money & Reduce Waste",short:"Save money",method:"optimization",pen:1.5,
+    blurb:"Buys lean: fewer extras, less thrown away. Some items may run out late in the week.",
+    icon:'<path d="M12 3v18M16.5 7.5c-.8-1.3-2.3-2-4.3-2-2.6 0-4.2 1.3-4.2 3.2 0 4.6 8.8 2.5 8.8 7 0 2-1.7 3.3-4.5 3.3-2.2 0-3.8-.9-4.6-2.4"/>'},
+  balanced:{title:"Balanced",short:"Balanced",method:"ppo_forecast",pen:3,
+    blurb:"Weighs cost, waste and running out together. Learned by the RL agent.",
+    icon:'<path d="M12 4v16M5 20h14M5 8l-3 6a3 3 0 0 0 6 0L5 8zm14 0l-3 6a3 3 0 0 0 6 0l-3-6zM5 8h14"/>'},
+  stocked:{title:"Keep My Groceries Stocked",short:"Stay stocked",method:"forecast_rule",pen:6,
+    blurb:"Buys the full forecast so you rarely run out. Costs more and wastes more.",
+    icon:'<path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/><path d="M3 7l9 4 9-4M12 11v10"/>'},
+};
+const PRIO_ORDER=["save","balanced","stocked"];
+try{const p=localStorage.getItem("grocery-coach-prio");if(PRIO[p])ST.prio=p}catch(e){}
+ST.prio=ST.prio||"balanced";
+const savePrio=()=>{try{localStorage.setItem("grocery-coach-prio",ST.prio)}catch(e){}};
+const budgetOf=hh=>isOff(hh)?OFF.weekly_budget:hh.budget;
+const methodLabel=k=>OFF?.methods?.[k]?.label||({optimization:"Optimization (MILP)",ppo_forecast:"RL agent (PPO + forecast)",forecast_rule:"Forecast rule",average_rule:"Average rule",fixed:"Fixed list"}[k]||k);
+const offWeeks=(k)=>{const W=OFF.methods[k].weeks;return Object.keys(W).map(Number).sort((a,b)=>a-b).map(w=>({week:w,...W[w]}))};
+const offFinal=k=>{const key=k.startsWith("ppo_")?k+"_mean":k;return OFF.final_test?.[key]||OFF.final_test?.[k]||null};
+const EPW=13; /* weeks per test episode: final_test totals are per episode */
+
+function offState(W){const st={inv:P.map(()=>[])};(W.home||[]).forEach(l=>{const i=PIX[l.p];if(i!=null)st.inv[i].push({q:l.u,age:P[i].shelf-l.days,where:l.where})});return st}
+function planWeekOff(hh,w){
+  const mk=PRIO[ST.prio].method,W=OFF.methods[mk].weeks[w],A=OFF.methods.average_rule.weeks[w],FW=OFF.methods.forecast_rule.weeks[w];
+  const price=P.map(p=>W.price?.[p.id]??p.price);
+  const pre=offState(W),co=P.map(p=>+W.order?.[p.id]||0);
+  const fcv=P.map(p=>FW?.forecast?.[p.id]??W.ref?.[p.id]??0);
+  const notes=(W.notes||[]).map(n=>{n=String(n);return n[0].toUpperCase()+n.slice(1)+(/[.!]$/.test(n)?"":".")});
+  const after=clone(pre);co.forEach((q,i)=>{if(q>1e-9)after.inv[i].push({q,age:0})});
+  const S={pre,after,fc:fcv,co,ao:P.map(p=>+A.order?.[p.id]||0),notes,ec:{waste_cost:W.waste_cost,stockout_days:W.stockout_days},ea:{waste_cost:A.waste_cost,stockout_days:A.stockout_days}};
+  const opts=mealOptions(hh,S),sel=new Set(picks(hh,w,opts)),chosen=opts.filter(o=>sel.has(o.r.id));
+  const need=P.map(()=>0);chosen.forEach(o=>o.ing.forEach(x=>need[x.i]+=x.q));
+  const add=P.map((_,i)=>Math.max(0,need[i]-stockOf(pre,i)-co[i]));
+  const ex=ST.extra?.[pkey(hh,w)]||{};
+  const {fin,adj}=adjustFin(hh,w,co.map((q,i)=>q+(add[i]>0.05?add[i]:0)+(ex[PID[i]]||0)));
+  const total=fin.reduce((a,q,i)=>a+q*price[i],0);
+  return {S,opts,sel,chosen,raw:co,need,add,fin,ex,adj,price,budget:OFF.weekly_budget,off:{W,A,mk},
+    ef:{waste_cost:W.waste_cost},efx:{waste_cost:A.waste_cost},total,fixedTot:A.spend,pcov:W.protein_target_met,
+    fcCost:fcv.reduce((a,q,i)=>a+q*price[i],0),rawCost:W.spend,rawN:co.filter(q=>q>0.01).length};
+}
+/* the option cards (Plan) and a compact switch (other pages) */
+function prioStats(hh,k){
+  if(isOff(hh)){const f=offFinal(PRIO[k].method),a=offFinal("average_rule");if(!f||!a)return null;
+    return {spend:f.cash_spend/EPW,waste:f.waste_cost/EPW,fill:f.fill_rate_value,dS:f.cash_spend/a.cash_spend-1,dW:f.waste_cost/a.waste_cost-1,dF:f.fill_rate_value-a.fill_rate_value}}
+  const M=modelFor(hh,k).pols,c=M.coach,a=M.average_rule;const fillOf=p=>1-p.stockout_days/(nRel(hh)*7);
+  return {spend:c.weekly_cost,waste:c.waste_cost,fill:fillOf(c),dS:c.weekly_cost/a.weekly_cost-1,dW:a.waste_cost?c.waste_cost/a.waste_cost-1:0,dF:fillOf(c)-fillOf(a)};
+}
+const sgn=(v,good)=>Math.abs(v)<0.005?`<span class="muted">same</span>`:`<span class="${good?"c-good":"c-bad"}">${v>=0?"+":"−"}${Math.abs(Math.round(v*100))}%</span>`;
+function prioCards(hh){
+  const off=isOff(hh);
+  return `<section class="c12" aria-label="Shopping priority"><div class="prio" role="radiogroup" aria-label="What matters most this week?">
+   ${PRIO_ORDER.map(k=>{const p=PRIO[k],s=prioStats(hh,k),on=ST.prio===k;
+     return `<button class="pcard ${on?"on":""}" role="radio" aria-checked="${on}" data-prio="${k}">
+      <span class="pic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p.icon}</svg></span>
+      <span class="pt"><b>${p.title}</b><span>${p.blurb}</span></span>
+      ${s?`<span class="pstats"><span><b class="num">${money(s.spend)}</b>/wk ${sgn(s.dS,s.dS<=0)}</span><span>waste ${sgn(s.dW,s.dW<=0)}</span><span>stocked <b class="num">${pct(Math.max(0,s.fill))}</b></span></span>`:""}
+      <span class="pm">${off?esc(methodLabel(p.method)):"In-browser preview"}</span></button>`}).join("")}
+  </div><p class="xs muted" style="margin:8px 0 0">${off?`Changes are compared with the average rule on the held-out test weeks 78–103 (your teammates' final evaluation).`:`Your teammates' models were evaluated on the student household. For this household the options use the in-browser preview.`}</p></section>`;
+}
+function prioLine(hh){const s=prioStats(hh,ST.prio),m=isOff(hh)?methodLabel(PRIO[ST.prio].method):"In-browser preview";if(!s)return m;
+  const w=Math.round(-s.dW*100);return `${m} · ${Math.round(s.fill*100)}% stocked · ${Math.abs(w)<1?"same waste as":w>0?w+"% less waste than":-w+"% more waste than"} the average rule`}
+function prioSwitch(){return `<div class="seg" role="group" aria-label="Shopping priority">${PRIO_ORDER.map(k=>`<button data-prio="${k}" aria-pressed="${ST.prio===k}" title="${esc(PRIO[k].blurb)}">${PRIO[k].short}</button>`).join("")}</div>`}
+
+/* Results for the evaluated household: the six frozen methods */
+function resultsOff(hh){
+  const sel=PRIO[ST.prio].method,f=offFinal(sel),a=offFinal("average_rule");
+  const rows=[["fixed","Fixed list"],["average_rule","Average rule"],["forecast_rule","Forecast rule (Ridge)"],["optimization","Optimization (MILP)"],["ppo_forecast","RL agent (PPO + forecast)"],["ppo_no_forecast","RL agent (PPO, no forecast)"]];
+  const T=[["Spend / wk",x=>x.cash_spend/EPW,v=>money(v),true],["Wasted / wk",x=>x.waste_cost/EPW,v=>money(v),true],["Ran out (value) / wk",x=>x.stockout_value/EPW,v=>money(v),true],["Stocked (fill rate)",x=>x.fill_rate_value,v=>pct(v),false],["Protein met",x=>x.protein_coverage,v=>pct(v),false],["Reward",x=>x.reward,v=>fx(v,2),false]];
+  const best=T.map(([,g,,lo])=>{const v=rows.map(([k])=>offFinal(k)).filter(Boolean).map(g);return lo?Math.min(...v):Math.max(...v)});
+  const d=(x,y,lo,isP)=>{const r=isP?x-y:(y?x/y-1:0),good=lo?r<0:r>0,flat=Math.abs(r)<0.01;if(flat)return `<span class="delta flat">same as average rule</span>`;return `<span class="delta ${flat?"flat":good?"good":"bad"}">${isP?(r>=0?"+":"−")+Math.abs(Math.round(r*100))+" pts":(r>=0?"+":"−")+Math.abs(Math.round(r*100))+"%"} vs average rule</span>`};
+  const MC={optimization:"var(--c-dairy)",ppo_forecast:"var(--accent)",forecast_rule:"var(--c-grains)"};
+  const L=PRIO_ORDER.map(k=>[PRIO[k].method,PRIO[k].short+": "+methodLabel(PRIO[k].method),MC[PRIO[k].method],false,PRIO[k].method===sel]).concat([["average_rule","Average rule","var(--l-fixed)",true,false]]);
+  const chart=(key,label,fmt)=>{const series=L.map(([k,n,col,dash,focus])=>({name:n,color:col,dash,focus,values:roll(offWeeks(k).map(r=>+r[key]||0),3)}));
+    return `<section class="c4 card"><div class="ch"><div><h2>${label}</h2><p>per week, 3-week average</p></div></div>${lineChart(series,{yfmt:fmt,label:label+" per week",W:340,H:200,L:44,Rr:20,T:10,B:26})}</section>`};
+  return `<div class="page">
+   ${PH("bars","Results",`${esc(methodLabel(sel))} · ${money(OFF.weekly_budget,0)} a week`,prioSwitch())}
+   <section class="c12 kgrid">
+    <div class="stat"><span class="label">Spend / week</span><b class="num">${money(f.cash_spend/EPW)}</b>${d(f.cash_spend,a.cash_spend,true)}</div>
+    <div class="stat"><span class="label">Food wasted / week</span><b class="num">${money(f.waste_cost/EPW)}</b>${d(f.waste_cost,a.waste_cost,true)}</div>
+    <div class="stat"><span class="label">Stocked (fill rate)</span><b class="num">${pct(f.fill_rate_value)}</b>${d(f.fill_rate_value,a.fill_rate_value,false,true)}</div>
+    <div class="stat"><span class="label">Protein goal met</span><b class="num">${pct(f.protein_coverage)}</b>${d(f.protein_coverage,a.protein_coverage,false,true)}</div>
+   </section>
+   <section class="c12 legend" aria-label="Legend">${L.map(([,n,col,dash])=>`<span style="color:${col}"><i class="sw ${dash?"dash":""}" style="background:${col}"></i><span style="color:var(--ink)">${esc(n)}</span></span>`).join("")}</section>
+   ${chart("spend","Spending",v=>"$"+Math.round(v))}${chart("waste_cost","Food waste",v=>"$"+fx(v,v<10?1:0))}${chart("stockout_value","Ran out (value)",v=>"$"+Math.round(v))}
+   ${forecastCard(hh)}
+   <section class="c12 card"><div class="ch"><div><h2>All six methods</h2><p>Green is best.</p></div></div>
+    <div class="scroll"><table class="cmp"><thead><tr><th>Method</th>${T.map(([n])=>`<th>${n}</th>`).join("")}</tr></thead><tbody>
+    ${rows.filter(([k])=>offFinal(k)).map(([k,n])=>`<tr class="${k===sel?"me":""}"><td>${esc(n)}${PRIO_ORDER.filter(p=>PRIO[p].method===k).map(p=>` <span class="tag t-meal">${PRIO[p].short}</span>`).join("")}</td>${T.map(([,g,fm],j)=>{const v=g(offFinal(k));return `<td class="${Math.abs(v-best[j])<1e-9?"best":""}">${fm(v)}</td>`}).join("")}</tr>`).join("")}
+    </tbody></table></div>
+    </section>
+  </div>`;
+}
+
+/* ===================== Points (gamification lives here, not on the pages) ===================== */
+let MEALP={};try{MEALP=JSON.parse(localStorage.getItem("grocery-coach-mealpts")||"{}")||{}}catch(e){MEALP={}}
+const saveMealP=()=>{try{localStorage.setItem("grocery-coach-mealpts",JSON.stringify(MEALP))}catch(e){}};
+function points(hh,w){const g=progress(hh,w),mp=Object.keys(MEALP).filter(k=>k.startsWith(hh.id+":")).length*5,ck=checkinsDone(hh)*15;
+  const wk=Math.round(g.recs.reduce((a,r)=>a+fridgeScore(r,hh).total,0)/10);return {g,total:wk+g.resc*10+mp+ck,wk,mp,ck}}
+function renderPts(){const hh=HH(),pt=points(hh,curWeek());document.getElementById("pts").innerHTML=`${SPROUT(Math.min(5,1+Math.floor(pt.total/50)))}<span class="num">${pt.total.toLocaleString()}</span><span class="sr"> points, open rewards</span>`}
+function fly(from,amount){
+  const pill=document.getElementById("pts");if(!from||!pill)return;
+  const a=from instanceof Element?from.getBoundingClientRect():from,b=pill.getBoundingClientRect();if(!a||(!a.left&&!a.top))return;
+  if(!matchMedia("(prefers-reduced-motion: reduce)").matches){const f=document.createElement("span");f.className="flyer";f.textContent="+"+amount;f.style.left=a.left+"px";f.style.top=a.top+"px";document.body.appendChild(f);
+    requestAnimationFrame(()=>{f.style.transform=`translate(${b.left-a.left}px,${b.top-a.top}px) scale(.7)`;f.style.opacity="0.2"});setTimeout(()=>f.remove(),750)}
+  setTimeout(()=>{pill.classList.remove("pulse");void pill.offsetWidth;pill.classList.add("pulse")},600);
+}
+function rescueItem(pid,el){const hh=HH(),w=curWeek(),k=mkey(hh,w,pid);if(MISS[k])return;MISS[k]=1;saveMiss();fly(el,10);
+  const n=rescuedCount(hh);toast(`Rescued the ${P[PIX[pid]].name.toLowerCase()}. +10 points`+(n===3?" · Rescuer badge earned":""));setTimeout(render,250)}
+
+/* ===================== Barcode scanner =====================
+   Input: live camera, a photo of a barcode, or typing the number (with check-digit validation).
+   Lookup chain: Open Food Facts → USDA FoodData Central (Branded) → pick from your catalogue. */
+const SCAN={mode:ST.scanMode||"camera",lib:null,cam:null,running:false,cams:[],camId:null,status:"",per:"100g",qty:1};
+let HIST=[];try{HIST=JSON.parse(localStorage.getItem("grocery-coach-scans")||"[]")||[]}catch(e){HIST=[]}
+const saveHist=()=>{try{localStorage.setItem("grocery-coach-scans",JSON.stringify(HIST.slice(0,8)))}catch(e){}};
+ST.extra=ST.extra||{};
+function loadLib(){
+  if(window.Html5Qrcode)return Promise.resolve(window.Html5Qrcode);
+  if(SCAN.lib)return SCAN.lib;
+  SCAN.lib=new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";s.onload=()=>window.Html5Qrcode?ok(window.Html5Qrcode):no(new Error("lib"));s.onerror=()=>{SCAN.lib=null;no(new Error("lib"))};document.head.appendChild(s)});
+  return SCAN.lib;
+}
+const FORMATS=()=>{const F=window.Html5QrcodeSupportedFormats||{};return [F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128].filter(x=>x!=null)};
+function setStatus(t,kind=""){SCAN.status=t;const el=document.getElementById("scanstatus");if(el){el.textContent=t;el.className="sstatus "+kind}}
+/* GTIN check digit (EAN-8, UPC-A, EAN-13, GTIN-14) */
+function gtinOk(code){if(!/^\d{8}$|^\d{12,14}$/.test(code))return false;const d=code.split("").map(Number),c=d.pop();
+  const sum=d.reverse().reduce((a,x,i)=>a+x*(i%2===0?3:1),0);return (10-sum%10)%10===c}
+async function startCam(){
+  if(SCAN.running)return;
+  if(!navigator.mediaDevices?.getUserMedia){setStatus("This browser can't open a camera here. Use a photo or type the number.","bad");return}
+  setStatus("Starting the camera…");
+  try{
+    const H=await loadLib();
+    if(!SCAN.cams.length){try{SCAN.cams=await H.getCameras()}catch(e){SCAN.cams=[]}}
+    SCAN.cam=new H("viewfinder",{formatsToSupport:FORMATS(),verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+    const src=SCAN.camId?{deviceId:{exact:SCAN.camId}}:{facingMode:"environment"};
+    await SCAN.cam.start(src,{fps:12,qrbox:(w,h)=>({width:Math.max(220,Math.floor(w*.84)),height:Math.max(120,Math.floor(h*.5))}),aspectRatio:1.6},code=>{onCode(code,"camera")},()=>{});
+    SCAN.running=true;document.getElementById("vf")?.classList.add("live");setStatus("Point the camera at a barcode and hold still.");
+    const b=document.getElementById("camtoggle");if(b)b.textContent="Stop camera";
+  }catch(e){SCAN.running=false;
+    const m=String(e?.message||e);
+    setStatus(/lib/.test(m)?"Couldn't load the scanner. Check your internet connection, or type the number.":/Permission|NotAllowed|denied/i.test(m)?"Camera access was blocked. Allow the camera in your browser, or use a photo instead.":/NotFound|Requested device/i.test(m)?"No camera found. Use a photo of the barcode or type the number.":"The camera isn't available here. Use a photo of the barcode or type the number.","bad")}
+}
+async function stopCam(){if(!SCAN.cam)return;const c=SCAN.cam;SCAN.cam=null;SCAN.running=false;try{await c.stop()}catch(e){}try{c.clear()}catch(e){}
+  document.getElementById("vf")?.classList.remove("live");const b=document.getElementById("camtoggle");if(b)b.textContent="Start camera"}
+async function decodeFile(file){
+  if(!file)return;setStatus("Reading the barcode in your photo…");
+  try{const H=await loadLib();const r=new H("filedecode",{formatsToSupport:FORMATS(),verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+    const code=await r.scanFile(file,false);try{r.clear()}catch(e){}onCode(code,"photo")}
+  catch(e){if(/lib/.test(String(e?.message))&&!DATA.explain_url){setStatus("Couldn't load the scanner. Check your internet connection, or type the number.","bad");return}readLabelPhoto(file)}
+}
+/* No barcode in the photo: let the AI read the ingredients / nutrition panel instead */
+function shrink(file,max){return new Promise((ok,no)=>{const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);ok(c.toDataURL("image/jpeg",max>500?0.82:0.7))};
+  img.onerror=()=>{URL.revokeObjectURL(url);no(new Error("img"))};img.src=url})}
+const mapN=o=>{if(!o||typeof o!=="object")return null;const g=k=>o[k]!=null&&o[k]!==""&&!isNaN(+o[k])?+o[k]:null;
+  const n={kcal:g("kcal"),fat:g("fat"),sat:g("sat"),carbs:g("carbs"),sugar:g("sugar"),fiber:g("fiber"),protein:g("protein"),sodium:g("sodium_mg")};return Object.values(n).some(v=>v!=null)?n:null};
+async function readLabelPhoto(file){
+  if(!DATA.explain_url){setStatus("No barcode found in that photo. Reading labels from photos isn't available here.","warn");return}
+  const hh=HH();setStatus("No barcode in this photo, so the AI is reading the label…");
+  let big,thumb;try{big=await shrink(file,1400);thumb=await shrink(file,160)}catch(e){setStatus("That file doesn't look like a photo. Try a JPEG or PNG.","bad");return}
+  ST.lookup={busy:true,code:"your photo"};render();
+  try{
+    const r=await fetch(DATA.explain_url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({image:{media_type:"image/jpeg",data:big.split(",")[1]},household:{diet:hh.diet,avoids:hh.exclusions}})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.error){ST.lookup=null;setStatus(j.error||"The AI couldn't read that photo. Try again.","bad");render();return}
+    let n=mapN(j.per_100g),nServ=mapN(j.per_serving),sg=+j.serving_g||null,basis="per 100 g";
+    if(!n&&nServ&&sg){n={};for(const [k,v] of Object.entries(nServ))n[k]=v==null?null:v*100/sg}
+    if(!n&&nServ){n=nServ;nServ=null;basis="per serving (as printed)"}
+    n=n||{};n.missing=["kcal","protein","sugar","sodium"].some(k=>n[k]==null);
+    const code="photo-"+Date.now();
+    const L={code,photo:true,src:"Your photo · read by AI",name:j.name||"Product from your photo",brand:"",qty:j.pack||"",n,nServ,serving:j.serving||"",servingG:sg,
+      packG:packGrams(null,null,j.pack),allergens:normAllergens(j.allergens),ingr:j.ingredients||"",img:thumb,pid:null,
+      match:matchCatalogue((j.name||"")+" "+(j.ingredients||"")),basis,url:"",nutri:"",additives:[]};
+    AIX[code+":"+hh.id]={summary:j.summary||"",points:j.points||[]};
+    ST.lookup=L;SCAN.per=hasServing(L)?"serving":"100g";SCAN.qty=1;
+    HIST=[L,...HIST].slice(0,8);saveHist();
+    setStatus("Read your photo. Numbers are copied by AI, so check anything that looks off against the package.","good");render();
+  }catch(e){ST.lookup=null;setStatus("Couldn't reach the AI. Check your connection and try again.","bad");render()}
+}
+function onCode(raw,how){
+  const code=String(raw).replace(/\D/g,"");if(!code)return;
+  if(SCAN.running){stopCam();try{navigator.vibrate?.(60)}catch(e){}}
+  lookupCode(code,how);
+}
+/* map a found product to the closest catalogue item (so it can join the shopping list) */
+const MATCH=[["plant_milk",/plant|soy.?milk|oat.?milk|almond.?milk|plant-based-(milk|beverage)|soy-beverage|oat-beverage|almond-beverage/],["peanut_butter",/peanut.?butter/],["orange_juice",/orange.?juice/],["olive_oil",/olive.?oil/],["frozen_pizza",/pizza/],["breakfast_cereal",/cereal|granola|muesli|corn.?flakes/],["canned_tuna",/tuna/],["salmon_fillet",/salmon/],["ground_beef",/ground.?beef|minced.?beef|beef/],["chicken_breast",/chicken/],["chickpeas_canned",/chickpea|garbanzo/],["black_beans_canned",/black.?bean/],["cheddar_cheese",/cheddar|cheese/],["frozen_vegetables",/frozen.?veg|mixed.?vegetables/],["bell_peppers",/bell.?pepper|sweet.?pepper/],["tortillas",/tortilla|wrap/],["breakfast_cereal",/oat.?ring/],["oats",/rolled.?oat|oat.?flake|oatmeal|porridge|\boats\b/],["yogurt",/yogh?urt|skyr/],["butter",/\bbutter/],["milk",/\bmilks?\b/],["eggs",/\beggs?\b/],["tofu",/tofu/],["lentils",/lentil/],["pasta",/pasta|spaghetti|penne|macaroni|fusilli|noodle/],["rice",/\brice\b/],["bread",/bread|loaf|bagel|bun/],["bananas",/banana/],["apples",/apple/],["oranges",/orange/],["avocados",/avocado/],["tomatoes",/tomato/],["spinach",/spinach/],["carrots",/carrot/],["potatoes",/potato/],["broccoli",/broccoli/],["onions",/onion/]];
+const ALG={peanuts:"peanut",soybeans:"soy",soya:"soy",eggs:"egg",nuts:"tree_nut",fishes:"fish",crustaceans:"shellfish",molluscs:"shellfish",sesame_seeds:"sesame","sesame-seeds":"sesame"};
+function normAllergens(tags){return [...new Set((tags||[]).map(a=>{const t=String(a).replace(/^\w+:/,"").toLowerCase();return ALG[t]||t}))]}
+function matchCatalogue(text){const t=String(text||"").toLowerCase();for(const [pid,re] of MATCH)if(PIX[pid]!=null&&re.test(t))return pid;return null}
+async function fromOFF(code){
+  const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,quantity,serving_size,serving_quantity,nutriments,allergens_tags,ingredients_text_en,ingredients_text,nova_group,nutriscore_grade,categories_tags,image_front_small_url,additives_tags,ingredients_analysis_tags,product_quantity,product_quantity_unit`);
+  const j=await r.json();if(j.status!==1||!j.product)return null;const p=j.product,nu=p.nutriments||{};
+  const read=suf=>{const g=k=>nu[k+suf]!=null&&nu[k+suf]!==""&&!isNaN(+nu[k+suf])?+nu[k+suf]:null;
+    let kcal=g("energy-kcal");const kj=g("energy-kj")??(nu["energy_unit"+suf]==="kcal"?null:g("energy"));
+    const n={kcal,fat:g("fat"),sat:g("saturated-fat"),carbs:g("carbohydrates"),sugar:g("sugars"),fiber:g("fiber"),protein:g("proteins"),sodium:g("sodium")!=null?g("sodium")*1000:(g("salt")!=null?g("salt")*400:null)};
+    if(n.kcal==null&&kj!=null){n.kcal=kj/4.184;n.kcalFrom="kJ"}
+    return Object.values(n).some(v=>typeof v==="number")?n:null};
+  const n=read("_100g")||{};n.nova=p.nova_group;n.missing=["kcal","protein","sugar","sodium"].some(k=>n[k]==null);
+  const nServ=read("_serving");
+  const chk=calCheck(n);if(chk?.kind==="kj"){n.kcalRaw=n.kcal;n.kcal=chk.fixed;n.kcalFixed=true;if(nServ?.kcal!=null)nServ.kcal=nServ.kcal/4.184}
+  return {code,src:"Open Food Facts",name:p.product_name||"Unnamed product",brand:(p.brands||"").split(",")[0],qty:p.quantity||"",n,
+    allergens:normAllergens(p.allergens_tags),ingr:p.ingredients_text_en||p.ingredients_text||"",
+    packG:packGrams(p.product_quantity,p.product_quantity_unit,p.quantity),additives:(p.additives_tags||[]).map(a=>a.replace(/^\w+:/,"")),analysis:(p.ingredients_analysis_tags||[]).map(a=>a.replace(/^\w+:/,"")),
+    serving:p.serving_size||"",servingG:+p.serving_quantity||null,nServ,url:`https://world.openfoodfacts.org/product/${code}`,nutri:(p.nutriscore_grade||"").toLowerCase(),img:p.image_front_small_url||"",
+    pid:null,match:matchCatalogue([(p.categories_tags||[]).join(" "),p.product_name].join(" ")),basis:"per 100 g"};
+}
+async function fromFDC(code){
+  const key=DATA.fdc_key;if(!key)return null;
+  const r=await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${encodeURIComponent(key)}&query=${code}&dataType=Branded&pageSize=10`);
+  if(!r.ok)return null;const j=await r.json();const strip=s=>String(s||"").replace(/^0+/,"");
+  const f=(j.foods||[]).find(x=>strip(x.gtinUpc)===strip(code));if(!f)return null;
+  const nv=num=>{const x=(f.foodNutrients||[]).find(n=>String(n.nutrientNumber)===num);return x?+x.value:null};
+  const n={kcal:nv("208"),fat:nv("204"),sat:nv("606"),carbs:nv("205"),sugar:nv("269"),fiber:nv("291"),protein:nv("203"),sodium:nv("307")};
+  n.missing=["kcal","protein","sugar","sodium"].some(k=>n[k]==null);
+  const sg=String(f.servingSizeUnit||"").toLowerCase().startsWith("g")?+f.servingSize:null;
+  return {code,url:f.fdcId?`https://fdc.nal.usda.gov/food-details/${f.fdcId}/nutrients`:"",src:"USDA FoodData Central",name:(f.description||"").replace(/\b\w/g,c=>c.toUpperCase()).replace(/\B\w+/g,w=>w.toLowerCase()),brand:f.brandName||f.brandOwner||"",qty:f.packageWeight||"",n,
+    allergens:[],ingr:f.ingredients||"",packG:packGrams(null,null,f.packageWeight),serving:f.servingSize?`${f.servingSize} ${f.servingSizeUnit||""}`.trim():"",servingG:sg,nutri:"",img:"",pid:null,
+    match:matchCatalogue([f.foodCategory,f.description].join(" ")),basis:"per 100 g"};
+}
+async function lookupCode(code,how="typed"){
+  ST.lookup={busy:true,code};SCAN.per="100g";SCAN.qty=1;render();
+  if(!gtinOk(code))setStatus(`${code} doesn't look like a valid barcode, but we'll try it anyway.`,"warn");else setStatus(`Found ${code}. Looking it up…`);
+  let L=null,netFail=false;
+  try{L=await fromOFF(code)}catch(e){netFail=true}
+  if(!L){try{L=await fromFDC(code)}catch(e){netFail=true}}
+  if(!L){try{L=await fromBL(code)}catch(e){netFail=true}}
+  if(L){ST.lookup=L;SCAN.per=hasServing(L)?"serving":"100g";setStatus(`Found ${code} in ${L.src}.`,"good");HIST=[L,...HIST.filter(h=>h.code!==code)].slice(0,8);saveHist();if(!L.stores)storePrices(L)}
+  else{ST.lookup={err:netFail?"offline":"notfound",code};setStatus(netFail?`Couldn't reach the product databases. Pick the product from your catalogue instead.`:`${code} isn't in Open Food Facts${DATA.fdc_key?", USDA FoodData Central":""}${DATA.bl_key?" or Barcode Lookup":""} yet. Pick the closest product from your catalogue.`,"warn")}
+  render();
+}
+function useCatalogue(pid,code){staple(pid);if(code&&ST.lookup){ST.lookup.code=code;ST.lookup.fromCode=code}}
+const hasServing=L=>!!(L.nServ||L.servingG);
+/* pack size in grams (or ml) from "340 g", "12 oz (340g)", "1 L", "500 ml" */
+function packGrams(q,unit,text){
+  if(q!=null&&!isNaN(+q)&&+q>0){const u=String(unit||"g").toLowerCase();return u==="kg"||u==="l"?+q*1000:+q}
+  const t=String(text||"").toLowerCase().replace(",",".");let m;
+  if((m=t.match(/([\d.]+)\s*(kg|g|ml|l|cl)\b/)))return +m[1]*({kg:1000,g:1,ml:1,l:1000,cl:10}[m[2]]);
+  if((m=t.match(/([\d.]+)\s*(fl\.?\s*oz|oz)\b/)))return +m[1]*(m[2].startsWith("fl")?29.57:28.35);
+  if((m=t.match(/([\d.]+)\s*lbs?\b/)))return +m[1]*453.6;
+  return null;
+}
+const servingsPerPack=L=>L.packG&&L.servingG?L.packG/L.servingG:null;
+function perServing(L){
+  if(SCAN.per==="pack"&&L.packG){const k=L.packG/100,n={};for(const [a,v] of Object.entries(L.n))n[a]=typeof v==="number"&&a!=="nova"?v*k:v;return {n,basis:"whole pack ("+(L.qty||Math.round(L.packG)+" g")+")"}}
+  if(SCAN.per!=="serving"||!hasServing(L))return {n:L.n,basis:L.basis||"per 100 g"};
+  const lab="per serving"+(L.serving?" ("+L.serving+")":"");
+  if(L.nServ&&L.nServ.kcal!=null)return {n:{...L.n,...L.nServ},basis:lab};
+  const k=L.servingG/100,n={};for(const [a,v] of Object.entries(L.n))n[a]=typeof v==="number"&&a!=="nova"?v*k:v;return {n,basis:lab}}
+/* serving vs pack, said out loud */
+function packCallout(L){
+  const sp=servingsPerPack(L),kS=L.nServ?.kcal??(L.servingG&&L.n.kcal!=null?L.n.kcal*L.servingG/100:null);
+  if(!sp||kS==null)return "";
+  const single=sp<1.3;
+  const packK=L.n.kcal!=null?L.n.kcal*L.packG/100:kS*sp;
+  const dots=Math.min(12,Math.round(sp));
+  return `<div class="packnote" role="note">
+    <div class="pk-ico" aria-hidden="true">${single?'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M8 4V2.5h8V4M9 11h6"/></svg>':'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="9" cy="6" rx="4" ry="3"/><path d="M9 9v12M16 4v17M14 4v4a2 2 0 0 0 4 0V4"/></svg>'}</div>
+    <div>${single?`<b>This pack is one serving.</b> The label numbers are for the whole pack: <b class="mono">${Math.round(kS)} kcal</b>.`
+      :`<b>Heads up: the label is for 1 serving</b>${L.serving?` (${esc(L.serving)})`:""}. The pack holds about <b>${sp<10?fx(sp,1).replace(/\.0$/,""):Math.round(sp)} servings</b>, so the whole pack is <b class="mono">${Math.round(packK).toLocaleString()} kcal</b>.`}
+     ${single?"":`<div class="pk-dots" aria-hidden="true">${Array.from({length:dots},(_,i)=>`<i class="${i===0?"on":""}"></i>`).join("")}${sp>12?"<span>+</span>":""}</div>`}</div></div>`;
+}
+/* plain-language ingredient notes (no AI needed): at most 3, most important first */
+const SUGARS=/\b(high fructose corn syrup|corn syrup|glucose(-fructose)? syrup|cane sugar|brown sugar|sugar|dextrose|maltodextrin|fructose|sucrose|invert sugar|rice syrup|agave|honey|molasses)\b/i;
+const NOTE_RULES=[
+  {re:/partially hydrogenated|hydrogenated (vegetable )?oil|hydrogenated fat/i,lv:"b",t:"Contains hydrogenated oil",x:"This can add trans fat, the kind of fat health experts say to keep as low as possible."},
+  {re:/sodium nitrite|potassium nitrite|sodium nitrate|\be25[0-2]\b/i,lv:"w",t:"Cured with nitrites",x:"Common in processed meats. Eating a lot of processed meat is linked to a higher bowel cancer risk."},
+  {re:/aspartame|sucralose|acesulfame|saccharin|\be95[0-5]\b|\be96[0-9]\b/i,lv:"n",t:"Sweetened with a sweetener",x:"Used instead of sugar to cut calories. Approved as safe in normal amounts; some people prefer to avoid them."},
+  {re:/red 40|red no\.? 40|yellow 5|yellow 6|blue 1|tartrazine|allura red|sunset yellow|\be1(02|04|10|22|24|29)\b/i,lv:"w",t:"Has artificial colouring",x:"Safe at permitted levels, though some studies link these colours to hyperactivity in some children."},
+  {re:/palm (kernel )?oil|palm fat/i,lv:"n",t:"Contains palm oil",x:"High in saturated fat. Fine now and then, but worth limiting."},
+];
+function ingredientNotes(L){
+  const ingr=String(L.ingr||""),list=ingr.split(/[,;(]/).map(x=>x.trim()).filter(Boolean),notes=[],n=L.n||{};
+  if(ingr){
+    const first=list.slice(0,3).join(", ");const sm=first.match(SUGARS);
+    if(sm)notes.push({lv:"w",t:"Sugar is a main ingredient",x:`"${sm[0]}" is in the first three ingredients. Ingredients are listed by amount, so there's a lot of it.`});
+    else if(SUGARS.test(ingr)&&n.sugar!=null&&n.sugar>=10)notes.push({lv:"n",t:"Has added sugar",x:`${fx(n.sugar,0)} g of sugar per 100 g. Look for the "added sugars" line on the pack.`});
+    for(const r of NOTE_RULES)if(r.re.test(ingr)||r.re.test((L.additives||[]).join(" ")))notes.push({lv:r.lv,t:r.t,x:r.x});
+  }
+  if(n.sodium!=null&&L.servingG&&n.sodium*L.servingG/100>=460)notes.push({lv:"w",t:"Salty",x:`One serving has about ${Math.round(n.sodium*L.servingG/100)} mg sodium, a fifth of the daily limit.`});
+  else if(n.sodium!=null&&n.sodium>=600)notes.push({lv:"w",t:"Salty",x:`${Math.round(n.sodium)} mg sodium per 100 g is on the high side.`});
+  if(n.nova===4&&notes.length<3)notes.push({lv:"n",t:"Highly processed",x:"Made mostly from refined ingredients and additives rather than whole foods."});
+  if(ingr&&list.length<=5&&!notes.some(x=>x.lv!=="g"))notes.unshift({lv:"g",t:"Short, simple ingredient list",x:`Just ${list.length} ingredient${list.length>1?"s":""}. That usually means less processing.`});
+  if(n.fiber!=null&&n.fiber>=6)notes.push({lv:"g",t:"Good source of fiber",x:`${fx(n.fiber,0)} g per 100 g helps you feel full.`});
+  const order={b:0,w:1,n:2,g:3};return notes.sort((a,b)=>order[a.lv]-order[b.lv]);
+}
+function notesCard(L){
+  const ns=ingredientNotes(L);
+  if(!L.ingr&&!ns.length)return `<p class="small muted" style="margin:0">No ingredient list for this product yet.</p>`;
+  const top=ns.slice(0,3),rest=ns.slice(3);
+  const head=!ns.some(x=>x.lv==="b"||x.lv==="w")?"Nothing worrying in the ingredients.":ns.filter(x=>x.lv==="b"||x.lv==="w").length===1?"One thing worth knowing.":"A few things worth knowing.";
+  return `<p class="nhead">${head}</p><ul class="notes">${top.map(x=>`<li class="${x.lv}"><b>${esc(x.t)}.</b> ${esc(x.x)}</li>`).join("")}</ul>
+   ${rest.length||L.ingr?`<details class="moreing"><summary>${rest.length?`${rest.length} more note${rest.length>1?"s":""} and the full ingredient list`:"Full ingredient list"}</summary>${rest.length?`<ul class="notes">${rest.map(x=>`<li class="${x.lv}"><b>${esc(x.t)}.</b> ${esc(x.x)}</li>`).join("")}</ul>`:""}${L.ingr?`<p class="small muted" style="margin:8px 0 0">${esc(L.ingr.slice(0,900))}</p>`:""}</details>`:""}`;
+}
+/* AI: plain-words explanation via the Netlify Function (keeps the API key off the page) */
+const AIX={};
+async function explain(L){
+  const hh=HH(),k=L.code+":"+hh.id;if(!DATA.explain_url||AIX[k]?.busy)return;
+  AIX[k]={busy:true};render();
+  const sv=SCAN.per,body={name:L.name,brand:L.brand,serving:L.serving,pack:L.qty,ingredients:L.ingr,allergens:L.allergens,
+    per_100g:L.n,per_serving:hasServing(L)?(SCAN.per="serving",perServing(L).n):null,household:{diet:hh.diet,avoids:hh.exclusions}};SCAN.per=sv;
+  try{const r=await fetch(DATA.explain_url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>({}));AIX[k]=r.ok&&j.summary?{summary:j.summary,points:j.points||[]}:{err:j.error||"The AI couldn't answer right now. Try again in a moment."}}
+  catch(e){AIX[k]={err:"Couldn't reach the AI. Check your connection and try again."}}
+  render();
+}
+function aiCard(L){
+  if(!DATA.explain_url)return "";
+  const a=AIX[L.code+":"+HH().id];
+  if(!a)return `<button class="btn aibtn" data-explain="1">${'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.4L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg>'} Explain it simply</button>`;
+  if(a.busy)return `<div class="aicard"><span class="label">AI explanation</span><p class="muted" style="margin:6px 0 0">Reading the label…</p></div>`;
+  if(a.err)return `<div class="aicard"><span class="label">AI explanation</span><p style="margin:6px 0 0;color:var(--bad)">${esc(a.err)}</p><button class="link small" data-explain="1">Try again</button></div>`;
+  return `<div class="aicard"><span class="label">In plain words · AI, may be imperfect</span><p style="margin:6px 0 0">${esc(a.summary)}</p>${a.points.length?`<ul>${a.points.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}</div>`;
+}
+/* do the calories add up? 4 kcal/g protein & carbs, 9 kcal/g fat */
+function calCheck(n){
+  if(n.kcal==null||n.fat==null||n.carbs==null||n.protein==null)return null;
+  const est=4*n.protein+4*n.carbs+9*n.fat;if(est<20&&n.kcal<40)return null;
+  if(n.kcal>0&&Math.abs(n.kcal/4.184-est)/Math.max(est,1)<0.15&&Math.abs(n.kcal-est)/Math.max(est,1)>0.6)return {kind:"kj",est,fixed:n.kcal/4.184};
+  const off=Math.abs(n.kcal-est)/Math.max(est,n.kcal,1);return off>0.3?{kind:"off",est}:null;
+}
+function swapFor(L,hh){
+  const pid=L.pid||L.match;if(!pid)return null;const cat=P[PIX[pid]].category;
+  const per100=p=>{const k=p.grams?100/p.grams:1;return {kcal:p.kcal*k,fat:p.fat*k,carbs:p.carbs*k,sugar:p.sugar*k,fiber:p.fiber*k,protein:p.protein*k,sodium:p.sodium*k}};
+  const opts=P.filter(p=>p.category===cat&&hh.ok.has(p.id)&&p.id!==L.pid).map(p=>({p,s:fitScore(per100(p),hh,p.allergens).s})).sort((a,b)=>b.s-a.s);
+  return opts[0]||null;
+}
+function addToList(pid,qty){const hh=HH(),k=pkey(hh,curWeek());ST.extra[k]=ST.extra[k]||{};ST.extra[k][pid]=(ST.extra[k][pid]||0)+qty;
+  const p=P[PIX[pid]];toast(`Added ${friendly(qty,p)} of ${p.name.toLowerCase()} to this week's list.`)}
+/* Optional: Barcode Lookup (paid, needs BARCODELOOKUP_API_KEY in .env) */
+async function fromBL(code){
+  const key=DATA.bl_key;if(!key)return null;
+  const r=await fetch(`https://api.barcodelookup.com/v3/products?barcode=${code}&formatted=y&key=${encodeURIComponent(key)}`);if(!r.ok)return null;
+  const j=await r.json(),p=(j.products||[])[0];if(!p)return null;
+  return {code,src:"Barcode Lookup",name:p.title||p.product_name||"Unnamed product",brand:p.brand||p.manufacturer||"",qty:p.size||"",n:{missing:true},allergens:[],
+    ingr:p.ingredients||"",serving:"",servingG:null,nutri:"",img:(p.images||[])[0]||"",pid:null,match:matchCatalogue([p.category,p.title].join(" ")),basis:"per 100 g",
+    stores:(p.stores||[]).slice(0,6).map(s=>({name:s.name||s.store_name,price:+s.price||+s.store_price||null,cur:s.currency||s.currency_code||"USD",city:s.country||"",date:s.last_update||""})).filter(s=>s.name)};
+}
+/* Optional: real shelf prices for this exact barcode from Open Prices */
+async function storePrices(L){
+  try{const r=await fetch(`https://prices.openfoodfacts.org/api/v1/prices?product_code=${L.code}&order_by=-date&size=8`);if(!r.ok)return;
+    const j=await r.json();const it=(j.items||[]).map(x=>({name:x.location?.osm_name||"A store",city:x.location?.osm_address_city||"",price:+x.price,cur:x.currency||"",date:String(x.date||"").slice(0,10)})).filter(x=>x.price>0);
+    if(it.length&&ST.lookup&&ST.lookup.code===L.code){ST.lookup.stores=it;ST.lookup.storeSrc="Open Prices";if(ST.view==="scan")render()}}catch(e){}
+}
+
+/* ===================== Tracking without typing =====================
+   Track what's bought (receipt photo, pasted order email), estimate what's used (the forecast already does),
+   and only ask about the exceptions: one "did you finish it?" question, a 30-second weekly check-in, a one-tap "Tossed".
+   What people report feeds back: food that was tossed is bought less of in the following weeks. */
+let LOG={};try{LOG=JSON.parse(localStorage.getItem("grocery-coach-log")||"{}")||{}}catch(e){LOG={}}
+const saveLog=()=>{try{localStorage.setItem("grocery-coach-log",JSON.stringify(LOG))}catch(e){}};
+const peekLog=(hh,w)=>LOG[pkey(hh,w)]||null;
+const logOf=(hh,w)=>{const k=pkey(hh,w);return LOG[k]=LOG[k]||{bought:null,used:{},tossed:{},still:{},fridge:null,src:{}}};
+function takeOut(st,i,q){const bs=st.inv[i].sort((a,b)=>b.age-a.age);let left=q;for(const b of bs){const t=Math.min(b.q,left);b.q-=t;left-=t;if(left<=1e-9)break}st.inv[i]=bs.filter(b=>b.q>1e-6)}
+/* the stock the app believes is at home, after what people told it */
+function applyLog(st,hh,w,after,fin){
+  const L=peekLog(hh,w),s=clone(st);
+  if(L){for(const [pid,q] of Object.entries({...L.used,...L.tossed})){const i=PIX[pid];if(i!=null)takeOut(s,i,q)}}
+  if(after){const bought=L?.bought;
+    /* receipt amounts replace the planned amounts for those items; the rest of the plan is assumed bought */
+    fin.forEach((q,i)=>{const r=bought?.[PID[i]],u=r!=null?r:q;if(u>1e-9)s.inv[i].push({q:u,age:0})});
+    if(bought)Object.entries(bought).forEach(([pid,q])=>{const i=PIX[pid];if(i!=null&&!(fin[i]>=0))s.inv[i].push({q,age:0})});}
+  if(L?.fridge)Object.entries(L.fridge).forEach(([pid,q])=>{const i=PIX[pid];if(i==null)return;const have=stockOf(s,i);
+    if(have>1e-6){const k=q/have;s.inv[i].forEach(b=>b.q*=k)}else if(q>0)s.inv[i].push({q,age:Math.round(P[i].shelf*0.3)})});
+  return s;
+}
+/* feedback: food tossed in the last 4 weeks is bought less of (−20% per week it was tossed, at most −50%) */
+function adjustFin(hh,w,fin){
+  const adj={};const out=fin.slice();
+  P.forEach((p,i)=>{if(p.shelf>=60||out[i]<=0.01)return;let n=0;
+    for(let k=1;k<=4;k++){const L=peekLog(hh,w-k);if(L?.tossed?.[p.id])n++}
+    if(n){const f=Math.max(0.5,1-0.2*n),to=out[i]*f;adj[p.id]={from:out[i],to,n};out[i]=to}});
+  return {fin:out,adj};
+}
+const tossedThisWeek=(hh,w,pid)=>!!peekLog(hh,w)?.tossed?.[pid];
+function tossItem(pid,q){const hh=HH(),w=curWeek(),L=logOf(hh,w),p=P[PIX[pid]];L.tossed[pid]=Math.max(q,0.05);saveLog();
+  toast(`Logged ${p.name.toLowerCase()} as tossed. Next week's list buys less of it.`);render()}
+
+/* one question at a time, only when the estimate is unsure: a little is left of something perishable */
+function unsureItem(hh,w,S){
+  const L=peekLog(hh,w);
+  return P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&!L?.used?.[p.id]&&!L?.still?.[p.id]&&!L?.tossed?.[p.id])
+    .map(([p,i])=>[p,i,stockOf(S.pre,i)]).filter(([p,i,q])=>q>0.03&&q<0.35).sort((a,b)=>a[2]-b[2])[0]||null;
+}
+function questionCard(hh,w,S){const u=unsureItem(hh,w,S);if(!u)return "";const [p,i,q]=u;
+  return `<div class="qcard" role="group" aria-label="Quick question"><span class="qi" aria-hidden="true">?</span><div style="min-width:0;flex:1"><b>Did you finish the ${esc(p.name.toLowerCase())}?</b>
+   <div class="xs muted">The estimate says about ${friendly(q,p)} is left. Your answer keeps it accurate.</div></div>
+   <div class="qa"><button class="btn" data-ans="used" data-pid="${p.id}" data-qty="${q}">Yes, it's gone</button><button class="btn" data-ans="still" data-pid="${p.id}" data-qty="${q}">Still some</button></div></div>`}
+
+/* 30-second weekly check-in: swipe cards for the perishables that were at home this week */
+const CK_KEY="grocery-coach-checkins";let CKD={};try{CKD=JSON.parse(localStorage.getItem(CK_KEY)||"{}")||{}}catch(e){CKD={}}
+const saveCk=()=>{try{localStorage.setItem(CK_KEY,JSON.stringify(CKD))}catch(e){}};
+const checkinsDone=hh=>Object.keys(CKD).filter(k=>k.startsWith(hh.id+":")).length;
+function checkinItems(hh,w){const S=planWeek(hh,w).S;
+  return P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.pre,i)>0.05)
+    .map(([p,i])=>({pid:p.id,q:stockOf(S.pre,i),d:freshness(p,S.pre.inv[i]).d??99})).sort((a,b)=>a.d-b.d).slice(0,6)}
+function openCheckin(){const hh=HH(),w=curWeek();ST.sheet={kind:"checkin",items:checkinItems(hh,w),at:0,res:{}};render();document.querySelector(".sheet [data-ck]")?.focus()}
+function answerCheckin(a){const C=ST.sheet;if(!C||C.kind!=="checkin")return;const it=C.items[C.at];if(!it)return;C.res[it.pid]=a;C.at++;C.dir=a;
+  if(C.at>=C.items.length)finishCheckin();else{render();document.querySelector(`.sheet [data-ck="${a}"]`)?.focus()}}
+function finishCheckin(){const hh=HH(),w=curWeek(),C=ST.sheet,L=logOf(hh,w);let tossed=0;
+  for(const it of C.items){const a=C.res[it.pid];if(a==="used")L.used[it.pid]=it.q;else if(a==="tossed"){L.tossed[it.pid]=it.q;tossed++}else if(a==="still")L.still[it.pid]=1}
+  saveLog();const k=pkey(hh,w),first=!CKD[k];CKD[k]=1;saveCk();ST.sheet=null;render();
+  if(first)fly({left:innerWidth/2,top:innerHeight/2},15);
+  toast(`Check-in done${first?", +15 points":""}. `+(tossed?`Next week's list buys less of the ${tossed} item${tossed>1?"s":""} you tossed.`:"Nothing tossed, nice."))}
+function checkinSheet(){const C=ST.sheet,it=C.items[C.at];
+  if(!C.items.length)return `<div class="scrim" data-close="1"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ckt"><div class="dhead"><h2 id="ckt">Weekly check-in</h2><button class="icon-btn" data-close="1" aria-label="Close">✕</button></div><div class="empty">No fresh food at home this week, so there's nothing to check.</div></div>`;
+  const p=P[PIX[it.pid]];
+  return `<div class="scrim" data-close="1"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ckt">
+   <div class="dhead"><div><h2 id="ckt">Weekly check-in</h2><span class="xs muted">${C.at+1} of ${C.items.length} · about 30 seconds</span></div><button class="icon-btn" data-close="1" aria-label="Close check-in">✕</button></div>
+   <div class="ckdots" aria-hidden="true">${C.items.map((_,j)=>`<i class="${j<C.at?"on":j===C.at?"cur":""}"></i>`).join("")}</div>
+   <div class="ckstage"><div class="ccard" id="ccard" tabindex="-1">${ico(p)}<b class="ckn">${esc(p.name)}</b><span class="xs muted">About ${friendly(it.q,p)} was at home at the start of the week</span>
+     <span class="ckhint xs" aria-hidden="true">Swipe right if used · left if tossed · up if you still have it</span></div></div>
+   <div class="ckbtns"><button class="btn ck-t" data-ck="tossed"><span aria-hidden="true">←</span> Tossed it</button><button class="btn" data-ck="still"><span aria-hidden="true">↑</span> Still have it</button><button class="btn primary" data-ck="used">Used it <span aria-hidden="true">→</span></button></div>
+</div>`}
+
+/* receipts, order emails and fridge photos → a review sheet before anything changes */
+const catalogueFor=hh=>P.map((p,i)=>({id:p.id,name:p.name,unit:p.unit})).filter((_,i)=>hh.ok.has(PID[i]));
+function parseOrderText(t){
+  const items={},un=[];
+  for(let ln of String(t||"").split(/\r?\n+/)){ln=ln.replace(/\s+/g," ").trim();if(!ln)continue;
+    if(/\b(sub-?total|total|tax|tip|delivery|service fee|fee|savings|discount|coupon|payment|visa|mastercard|change|balance|order #|thank)\b/i.test(ln))continue;
+    const pm=ln.match(/\$?\s?(\d{1,3}\.\d{2})\s*[A-Z]?\s*$/);if(!pm)continue;
+    let name=ln.slice(0,pm.index).trim(),qty=1;
+    const qm=name.match(/^(\d{1,2})\s*(?:x|×|@)?\s+/i)||name.match(/\s(?:x|×|qty:?)\s*(\d{1,2})$/i);if(qm){qty=+qm[1];name=name.replace(qm[0]," ").trim()}
+    if(!/[a-z]{3}/i.test(name))continue;
+    const pid=matchCatalogue(name);
+    if(pid){const it=items[pid]=items[pid]||{pid,qty:0,price:0,text:[]};it.qty+=qty;it.price+=+pm[1];it.text.push(name)}else un.push(name)}
+  return {items:Object.values(items).map(x=>({...x,text:x.text.join(", ")})),unmatched:un};
+}
+function sampleReceipt(hh,w){const X=planWeek(hh,w);
+  const items=P.map((p,i)=>[p,i]).filter(([,i])=>X.fin[i]>0.05).map(([p,i],j)=>{const q=Math.max(1,Math.round(X.fin[i]*(j%4===1?1.3:1)));return {pid:p.id,qty:q,price:+(q*X.price[i]).toFixed(2),text:p.name}});
+  return {items:items.filter((_,j)=>j%7!==3),unmatched:["Paper towels","Dish soap"]}}
+function sampleFridge(hh,w){const X=planWeek(hh,w),st=applyLog(X.S.pre,hh,w,true,X.fin);
+  return {items:P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(st,i)>0.05).map(([p,i],j)=>{const est=stockOf(st,i);const q=est*[0.6,1,0.8,1.15,0.5][j%5];
+    return {pid:p.id,qty:q,was:est,conf:j%3===2?"low":"high",text:p.name}}),unmatched:[]}}
+async function readWithAI(kind,body){
+  ST.sheet={kind,busy:true};render();
+  try{const r=await fetch(DATA.explain_url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,catalogue:catalogueFor(HH())})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.error){ST.sheet={kind,err:j.error||"The AI couldn't read that. Try again."};render();return}
+    const ok=x=>PIX[x.id]!=null;
+    const items=(j.items||[]).filter(x=>x&&x.id&&ok(x)).map(x=>({pid:x.id,qty:Math.max(0,+x.qty||0),price:x.price!=null?+x.price:null,text:String(x.text||x.name||P[PIX[x.id]].name),conf:x.confidence||"high",was:null}));
+    const unmatched=(j.items||[]).filter(x=>x&&(!x.id||!ok(x))).map(x=>String(x.text||x.name||"")).filter(Boolean).concat((j.unmatched||[]).map(String));
+    openReview(kind,{items,unmatched,store:j.store||"",total:j.total??null},false);
+  }catch(e){ST.sheet={kind,err:"Couldn't reach the AI. Check your connection and try again."};render()}
+}
+async function receiptPhoto(file,kind){
+  if(!DATA.explain_url){ST.sheet={kind,err:`Reading ${kind==="fridge"?"fridge":"receipt"} photos isn't available here. Try a sample instead.`,canSample:true};render();return}
+  let big;try{big=await shrink(file,1600)}catch(e){ST.sheet={kind,err:"That file doesn't look like a photo. Try a JPEG or PNG."};render();return}
+  readWithAI(kind,{[kind]:{image:{media_type:"image/jpeg",data:big.split(",")[1]}}});
+}
+function openReview(kind,R,sample){const hh=HH(),w=curWeek();
+  if(kind==="fridge"){const X=planWeek(hh,w),st=applyLog(X.S.pre,hh,w,true,X.fin);R.items.forEach(x=>{if(x.was==null)x.was=stockOf(st,PIX[x.pid])})}
+  ST.sheet={kind,R,sample,on:R.items.map(()=>true)};render();document.querySelector(".sheet [data-close]")?.focus()}
+function confirmReview(){const hh=HH(),w=curWeek(),C=ST.sheet,L=logOf(hh,w);const sel=C.R.items.filter((_,j)=>C.on[j]);
+  if(C.kind==="fridge"){L.fridge=L.fridge||{};sel.forEach(x=>L.fridge[x.pid]=x.qty);L.src.fridge=C.sample?"sample":"photo"}
+  else{L.bought=L.bought||{};sel.forEach(x=>L.bought[x.pid]=(L.bought[x.pid]||0)+x.qty);L.src.bought=C.kind==="email"?"email":C.sample?"sample":"receipt"}
+  saveLog();ST.sheet=null;ST.view="inventory";if(C.kind!=="fridge")ST.invAfter=true;render();
+  toast(C.kind==="fridge"?`Updated ${sel.length} item${sel.length===1?"":"s"} from your fridge photo.`:`Added ${sel.length} item${sel.length===1?"":"s"} to what's at home.`)}
+function reviewSheet(){const C=ST.sheet,hh=HH(),T={receipt:"From your receipt",email:"From your order email",fridge:"From your fridge photo"}[C.kind];
+  const head=`<div class="scrim" data-close="1"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rvt"><div class="dhead"><h2 id="rvt">${C.kind==="email"&&!C.R&&!C.busy&&!C.err?"Paste an order email":T}</h2><button class="icon-btn" data-close="1" aria-label="Close">✕</button></div>`;
+  if(C.busy)return head+`<div class="busy" role="status"><span class="spin" aria-hidden="true"></span>The AI is reading it…</div></div>`;
+  if(C.err)return head+`<div class="note">${esc(C.err)}</div>${C.canSample?`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-sample="${C.kind}">Try a sample ${C.kind==="fridge"?"fridge photo":"receipt"}</button></div>`:""}</div>`;
+  if(!C.R)return head+`<form id="mailForm" style="display:grid;gap:10px"><label class="label" for="mailtxt">Copy the item list from an Instacart, Walmart, Kroger or any store's confirmation email and paste it here.</label>
+     <textarea id="mailtxt" rows="9" placeholder="2 x Bananas  $1.98&#10;Baby spinach 5 oz  $3.49&#10;Whole milk 1 gal  $3.79"></textarea>
+     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit">Read the items</button><button class="btn" type="button" data-sample="receipt">Use a sample</button></div>
+     <p class="xs muted" style="margin:0">${DATA.explain_url?"The AI reads it and matches each item to your catalogue.":"Read on this device: lines with a price are matched to your catalogue."}</p></form></div>`;
+  const R=C.R,n=C.on.filter(Boolean).length,fr=C.kind==="fridge";
+  return head+`${C.sample?`<div class="note" style="margin:0">Sample made from this week's ${fr?"stock estimate":"shopping list"}, so you can see how it works.</div>`:""}
+   <p class="small" style="margin:0">${fr?"Here's what the AI thinks is on your shelves. Untick anything that's wrong.":`${R.items.length} item${R.items.length===1?"":"s"} matched to your catalogue${R.store?" at "+esc(R.store):""}. These amounts replace the planned ones; untick anything that's wrong.`}</p>
+   <div class="rvlist">${R.items.map((x,j)=>{const p=P[PIX[x.pid]];const d=fr&&x.was!=null?x.qty-x.was:0;
+     return `<button class="rvi" data-rv="${j}" aria-pressed="${C.on[j]}"><span class="check" aria-hidden="true">${C.on[j]?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>':""}</span>${ico(p)}
+      <span style="min-width:0;flex:1;text-align:left"><b>${esc(p.name)}</b>${x.text&&x.text.toLowerCase()!==p.name.toLowerCase()?`<span class="xs muted" style="display:block">“${esc(x.text)}”</span>`:""}</span>
+      <span class="mono xs" style="text-align:right">${friendly(x.qty,p)}${fr&&Math.abs(d)>0.05?`<span class="${d<0?"c-bad":"c-good"}" style="display:block">${d<0?"−":"+"}${friendly(Math.abs(d),p)} vs estimate</span>`:""}${!fr&&x.price!=null?`<span class="muted" style="display:block">${money(x.price)}</span>`:""}${x.conf==="low"?`<span class="muted" style="display:block">not sure</span>`:""}</span></button>`}).join("")||`<div class="empty">Nothing matched your catalogue.</div>`}</div>
+   ${R.unmatched?.length?`<p class="xs muted" style="margin:0">Not food in your catalogue, so skipped: ${esc(R.unmatched.slice(0,6).join(", "))}${R.unmatched.length>6?"…":""}</p>`:""}
+   <button class="btn primary" data-confirm="1" ${n?"":"disabled"}>${fr?`Update ${n} item${n===1?"":"s"}`:`Add ${n} item${n===1?"":"s"} to what's at home`}</button></div>`;
+}
+function sheet(){const C=ST.sheet;return C.kind==="checkin"?checkinSheet():reviewSheet()}
+function trackCard(hh,w){const L=peekLog(hh,w),ck=CKD[pkey(hh,w)];
+  const src=L?.src||{},status=[src.bought&&`Purchases from your ${src.bought==="sample"?"sample receipt":src.bought}`,src.fridge&&`shelves from your ${src.fridge==="sample"?"sample fridge photo":"fridge photo"}`].filter(Boolean).join(" · ");
+  return `<section class="c12 trk" aria-label="Update what's at home"><div class="trkh"><span class="label">Update without typing</span>${status?`<span class="xs muted">${esc(status)}</span>`:""}</div>
+   <div class="trkb">
+    <label class="tbtn" for="rcptin">${TICO.receipt}<b>Receipt</b><input id="rcptin" type="file" accept="image/*" capture="environment" class="sr"></label>
+    <button class="tbtn" data-mail="1">${TICO.mail}<b>Order email</b></button>
+    <label class="tbtn" for="fridgein">${TICO.fridge}<b>Fridge photo</b><input id="fridgein" type="file" accept="image/*" capture="environment" class="sr"></label>
+    <button class="tbtn ${ck?"":"hot"}" data-checkin="1">${TICO.check}<b>${ck?"Checked in ✓":"Weekly check-in"}</b>${ck?"":`<span class="pill15">+15</span>`}</button>
+   </div></section>`}
+const TI=d=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const TICO={receipt:TI('<path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/>'),mail:TI('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'),
+  fridge:TI('<rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M6 10h12M9 6v2M9 13v3"/>'),check:TI('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/>')};
+/* swipe on the check-in card */
+(()=>{let x0=null,y0=null,el=null;
+  document.addEventListener("pointerdown",e=>{const c=e.target.closest?.("#ccard");if(!c)return;el=c;x0=e.clientX;y0=e.clientY;c.setPointerCapture?.(e.pointerId)});
+  document.addEventListener("pointermove",e=>{if(!el)return;const dx=e.clientX-x0,dy=e.clientY-y0;el.style.transform=`translate(${dx}px,${Math.min(0,dy)}px) rotate(${dx/18}deg)`;
+    el.dataset.lean=dx>60?"used":dx<-60?"tossed":dy<-60?"still":""});
+  document.addEventListener("pointerup",e=>{if(!el)return;const dx=e.clientX-x0,dy=e.clientY-y0,c=el;el=null;
+    const a=dx>80?"used":dx<-80?"tossed":dy<-80?"still":null;if(a)answerCheckin(a);else{c.style.transform="";c.dataset.lean=""}});
+  document.addEventListener("keydown",e=>{if(ST.sheet?.kind!=="checkin"||!ST.sheet.items?.length)return;const a={ArrowRight:"used",ArrowLeft:"tossed",ArrowUp:"still"}[e.key];if(a){e.preventDefault();answerCheckin(a)}});
+})();
+
+/* ===================== Pages ===================== */
+views.plan=()=>{
+  const hh=HH(),w=curWeek(),X=planWeek(hh,w),S=X.S,N=NAME(hh),fl=DATA.flags?.[hh.id]||{},promo=i=>(DATA.promos?.[PID[i]]||[])[w]||0;
+  const lines=P.map((p,i)=>[p,i]).filter(([,i])=>X.fin[i]>0.01);
+  const left=X.budget-X.total,saveVsFixed=X.fixedTot-X.total,OW=X.off,ML=OW?methodLabel(OW.mk):N.coach;
+  const flags=[fl.away?.[w]&&"You're away this week, so the plan keeps fresh food to a minimum.",fl.guest?.[w]&&"Guests this week. Expect to eat more than usual; the forecast can't see this coming.",fl.holiday?.[w]&&"Holiday week. Some foods sell much more than usual."].filter(Boolean);
+  const cats=[...new Set(lines.map(([p])=>p.category))];
+  let shown=0;const LIM=ST.showAll?999:12;
+  const listHTML=cats.map(c=>{const ls=lines.filter(([p])=>p.category===c);const vis=ls.filter(()=>shown++<LIM);if(!vis.length)return "";
+    return `<div class="cat">${esc(catName(c))}</div>${vis.map(([p,i])=>{const fc=S.fc[i],h=stockOf(S.pre,i),forMeal=X.add[i]>0.05;
+      const why=forMeal?`Added so you have enough for ${list(X.chosen.filter(o=>o.ing.some(x=>x.i===i)).map(o=>o.r.name))}.`:p.shelf<7&&X.raw[i]<fc-h-0.01?`A little under expected use: it keeps only ${p.shelf} days.`:h>0.01?"Tops up what's at home to cover the week.":"Covers what you're expected to use this week.";
+      return `<details class="li"><summary>${ico(p)}<span class="nm">${esc(p.name)}${promo(i)>0.01?`<span class="tag t-sale">Sale −${Math.round(promo(i)*100)}%</span>`:""}${forMeal?`<span class="tag t-meal">For meals</span>`:""}${X.ex[p.id]?`<span class="tag t-scan">Scanned</span>`:""}${X.adj[p.id]?`<span class="tag t-adj">Less than usual</span>`:""}</span><span class="q">${friendly(X.fin[i],p)}</span><span class="p">${money(X.fin[i]*X.price[i])}</span></summary>
+       <div class="trace"><span class="s">Forecast <b>${friendly(fc,p)}</b></span><span class="arr">−</span><span class="s">At home <b>${h>0.01?friendly(h,p):"0"}</b></span><span class="arr">→</span><span class="s">${esc(ML)} <b>${friendly(X.raw[i],p)}</b></span>${Math.abs(S.co[i]-X.raw[i])>0.01?`<span class="arr">→</span><span class="s">Rules <b>${friendly(S.co[i],p)}</b></span>`:""}${forMeal?`<span class="arr">→</span><span class="s">Meals <b>+${friendly(X.add[i],p)}</b></span>`:""}${X.ex[p.id]?`<span class="arr">→</span><span class="s">Scanned <b>+${friendly(X.ex[p.id],p)}</b></span>`:""}${X.adj[p.id]?`<span class="arr">→</span><span class="s">Your check-ins <b>−${friendly(X.adj[p.id].from-X.adj[p.id].to,p)}</b></span>`:""}<span class="why">${esc(X.adj[p.id]?`You tossed some ${p.name.toLowerCase()} in ${X.adj[p.id].n} of the last 4 weeks, so the list buys ${Math.round((1-X.adj[p.id].to/X.adj[p.id].from)*100)}% less.`:why)}</span></div></details>`}).join("")}`}).join("");
+  const uf=P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.pre,i)>0.01).map(([p,i])=>[p,i,freshness(p,S.pre.inv[i])]).filter(x=>x[2].d<=3).sort((a,b)=>a[2].d-b[2].d);
+  const adds=X.add.filter(a=>a>0.05).length;
+  return `<div class="page">
+   ${PH("cart","Shopping list",`${lines.length} items this week · planned by ${esc(ML)}`)}
+   ${flags.length?`<section class="c12">${flags.map(f=>`<div class="note" style="margin:0">${esc(f)}</div>`).join("")}</section>`:""}
+
+
+   <section class="c8 card" aria-label="Shopping list"><p class="xs muted" style="margin:0 0 6px">Tap an item to see why.</p>
+    <div class="list">${listHTML||`<div class="empty">Nothing to buy this week.</div>`}</div>
+    ${lines.length>12?`<button class="more" data-showall="1">${ST.showAll?"Show fewer":`Show all ${lines.length} items`}</button>`:""}
+    <div class="foot"><span>Total</span><span class="tot num">${money(X.total)}</span>
+     <span class="muted">Budget ${money(X.budget,0)}</span><span class="mono ${left<0?"c-bad":"c-good"}">${money(left)} ${left<0?"over":"left"}</span></div>
+    <details class="how"><summary>How this list was made</summary><div class="pipe">
+    <div class="step"><span class="k">1 · Forecast</span><b>${money(X.fcCost,0)} of food</b><span>${esc(FC_NAME)}</span></div>
+    <div class="step"><span class="k">2 · ${OW?(OW.mk.startsWith("ppo")?"RL agent":OW.mk==="optimization"?"Optimizer":"Forecast rule"):"Purchase plan"}</span><b>${X.rawN} items · ${money(X.rawCost,0)}</b><span>${OW?esc(ML):DATA.plans?.[hh.id]?.[w]?"from the RL agent":"in-browser preview"}</span></div>
+    <div class="step"><span class="k">3 · Rules</span><b>${S.notes.length?S.notes.length+" change"+(S.notes.length>1?"s":""):"All clear"}</b><span>${OW?"packages, storage, budget, diet":"budget, stock, diet, allergies"}</span></div>
+    <div class="step"><span class="k">4 · Meals</span><b>${X.chosen.length} meal${X.chosen.length===1?"":"s"}${adds?` · +${adds}`:""}</b><span>${adds?`item${adds>1?"s":""} added for recipes`:"covered by the plan"}</span></div>
+    <div class="step final"><span class="k">Shopping list</span><b>${money(X.total)}</b><span>${lines.length} items</span></div>
+</div>
+     ${S.notes.length?`<p class="xs muted" style="margin:10px 0 0">${S.notes.map(esc).join(" ")}</p>`:""}</details>
+   </section>
+
+   <div class="c4" style="display:grid;gap:var(--s3);align-content:start">
+    <section class="card sumc" aria-label="This week">
+     <div class="srow">${HI(HICO.wallet,left<0?"--bad":"--good")}<span><span class="xs muted">Total</span><b class="num">${money(X.total)}</b></span><span class="${left<0?"c-bad":"c-good"} small" style="margin-left:auto;font-weight:700">${money(Math.abs(left),0)} ${left<0?"over":"left"}</span></div>
+     <div class="srow">${HI(HICO.bolt||'<path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z"/>',"--c-protein")}<span><span class="xs muted">Protein goal</span><b class="num">${pct(Math.min(X.pcov,9.99))}</b></span></div>
+     <div class="srow">${HI(HICO.leaf,"--warn")}<span><span class="xs muted">Expected waste</span><b class="num">${money(X.ef.waste_cost)}</b></span></div>
+     <div class="smode"><span class="label">Shopping mode</span>${prioSwitch()}</div>
+    </section>
+    <section class="card" aria-label="Use first"><div class="ch"><div><h2>Use first</h2><p>${uf.length?"Close to its date.":"Nothing is close to its date."}</p></div></div>
+     ${uf.length?`<div class="uf">${uf.slice(0,6).map(([p,i,f])=>{const done=MISS[mkey(hh,w,p.id)];return `<div class="ufi">${ico(p)}<div style="min-width:0"><b>${esc(p.name)}</b><div class="xs muted mono">${friendly(stockOf(S.pre,i),p)}</div></div>
+       <div style="display:flex;align-items:center;gap:8px"><span class="dl ${f.cls}">${f.txt}</span>${done?`<span class="done-tag">Rescued</span>`:tossedThisWeek(hh,w,p.id)?`<span class="done-tag tossed">Tossed</span>`:`<button class="float" data-rescue="${p.id}" aria-label="Mark ${esc(p.name)} as used up for 10 points">${STAR(11)}+10</button><button class="tossb" data-toss="${p.id}" data-qty="${stockOf(S.pre,i)}" aria-label="${esc(p.name)} was thrown away">Tossed</button>`}</div></div>`}).join("")}</div>`:""}
+    </section>
+    <button class="dcard" data-go="meals"><span class="dh">${HI(HICO.chef,"--gold")}<span><b>${X.chosen.length} meal${X.chosen.length===1?"":"s"} planned</b><span class="xs muted">See meal ideas</span></span><span class="chevr" aria-hidden="true">›</span></span></button>
+   </div>
+  </div>`;
+};
+
+/* ===================== Meal ideas ===================== */
+views.meals=()=>{
+  const hh=HH(),w=curWeek(),X=planWeek(hh,w),lines=P.filter((_,i)=>X.fin[i]>0.01).length;
+  return `<div class="page">
+   ${PH("chef","Meal ideas","Simple meals for this week, using what you have and plan to buy.")}
+   <section class="c8 mlist" aria-label="Meals">${X.opts.slice(0,6).map(o=>{const on=X.sel.has(o.r.id),mk=pkey(hh,w)+":"+o.r.id,uses=(o.rescue.length?o.rescue:o.ing).slice(0,3);
+     return `<div class="mcard ${on?"on":""}">
+      <span class="mthumb" aria-hidden="true">${o.ing.slice(0,3).map(x=>ico(x.p)).join("")}</span>
+      <div class="mbody"><h3>${esc(o.r.name)}</h3><div class="mmeta">${MI("clock",o.r.prep_time_min+" min")}${MI("fork",Math.round(o.protein)+" g protein")}</div>
+       <span class="uses ${o.rescue.length?"rescue":""}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>${o.rescue.length?"Uses up":"Uses"}: ${esc(uses.map(x=>x.p.name.toLowerCase()).join(", "))}</span></div>
+      <button class="mcheck" data-pick="${o.r.id}" aria-pressed="${on}" aria-label="${on?"Remove":"Add"} ${esc(o.r.name)} ${on?"from":"to"} this week">${on?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>':""}</button>
+      ${o.rescue.length&&on&&!MEALP[mk]?`<button class="float" data-mealpts="${o.r.id}" aria-label="Claim 5 points for using up food">${STAR(11)}+5</button>`:""}</div>`}).join("")||`<div class="empty">No meals fit this household's diet yet.</div>`}</section>
+   <div class="c4" style="display:grid;gap:var(--s3);align-content:start">
+    <section class="card"><h2 style="font-size:20px;margin:0 0 12px">This week's plan</h2>
+     <button class="srow linkrow" data-go="plan">${HI(HICO.cart,"--accent")}<b>${lines} items</b><span class="chevr" aria-hidden="true" style="margin-left:auto">›</span></button>
+     <div class="srow" style="border:0">${HI(HICO.fridge,"--c-dairy")}<span><b class="small">Meals use your updated inventory</b><span class="xs muted">What's at home plus this week's shop. Picked meals add what's missing to the list.</span></span></div></section>
+    <button class="nudge" data-rewards="1"><span class="nudgepip" aria-hidden="true">${document.querySelector(".sidepip")?.innerHTML||""}</span><span class="small">Cook, eat and waste less to grow your garden!</span><span class="chevr" aria-hidden="true">→</span></button>
+   </div>
+  </div>`;
+};
+
+
+/* ===================== Home: the week at a glance, few numbers ===================== */
+const HI=(d,c)=>`<span class="hico" style="--c:var(${c})" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}</svg></span>`;
+const HICO={chef:'<path d="M6 13.5a4 4 0 0 1 1.6-7.6 4.6 4.6 0 0 1 8.8 0A4 4 0 0 1 18 13.5V20H6zM6 16.5h12"/>',bars:'<path d="M5 20V11M12 20V5M19 20v-6"/>',camera:'<rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6l1.5-2h4l1.5 2"/>',clock:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',fridge:'<rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M6 10h12M9 6v2M9 13v3"/>',wallet:'<path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm0 0l11-3v3"/><circle cx="16" cy="13.5" r="1.2"/>',leaf:'<path d="M5 19C5 10 11 4 19 5c1 8-5 14-14 14z"/><path d="M5 19l8-8"/>',
+  bowl:'<path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M9 8c0-1 1-1.5 1-2.5M12 8c0-1 1-1.5 1-2.5M15 8c0-1 1-1.5 1-2.5"/>',spark:'<path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6L12 4zM18.5 15l.7 1.8L21 17.5l-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"/>',
+  cart:'<path d="M3 4h2l2 11h11l2-8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>',box:'<rect x="4" y="5" width="16" height="5" rx="1.5"/><path d="M5.5 10v8a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-8M10 14h4"/>',
+  scan:'<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/>',bag:'<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8a3 3 0 0 1 6 0"/>',fork:'<path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v10M16 3c-2 1.5-2.5 4-2.5 7 0 1.5 1 2 2.5 2V21"/>'};
+const PH=(ic,t,sub,right="")=>`<section class="c12 phead"><span class="phi" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${HICO[ic]}</svg></span><div style="min-width:0;flex:1"><h1>${t}</h1><p>${sub}</p></div>${right}</section>`;
+const MI=(ic,txt)=>`<span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${HICO[ic]}</svg>${txt}</span>`;
+views.home=()=>{
+  const hh=HH(),w=curWeek(),X=planWeek(hh,w),S=X.S,G=gardenState(hh,w),pt=points(hh,w),lvl=Math.min(5,1+Math.floor(pt.total/50));
+  const left=X.budget-X.total;
+  const soon=P.map((p,i)=>[p,i]).filter(([p,i])=>relevant(hh,i)&&p.shelf<60&&stockOf(S.pre,i)>0.01&&(freshness(p,S.pre.inv[i]).d??99)<=3).length;
+  const lines=P.map((p,i)=>[p,i]).filter(([,i])=>X.fin[i]>0.01).sort((a,b)=>X.fin[b[1]]*X.price[b[1]]-X.fin[a[1]]*X.price[a[1]]);
+  const meal=X.chosen[0]||X.opts[0];
+  const tile=(ic,c,label,val,cls="")=>`<div class="gl ${cls}">${HI(HICO[ic],c)}<span><span class="xs muted">${label}</span><b>${val}</b></span></div>`;
+  const act=(ic,c,label,attrs)=>`<button class="act" ${attrs}>${HI(HICO[ic],c)}<b>${label}</b></button>`;
+  const seen=GSEEN[hh.id];GSEEN[hh.id]={leaves:G.leaves,flowers:G.flowers,fruit:G.fruit,stage:G.stage};
+  return `<div class="page home">
+   <section class="c12 hero" aria-label="Your garden"><button class="herobtn" data-rewards="1" aria-label="Open your garden and rewards">
+    <span class="htxt"><span class="lvlpill">${STAR(14)} Level ${lvl}</span><h1>Grow your garden</h1><p>${esc(gardenLine(G,hh))}</p><span class="xs hlink">See your rewards →</span></span>
+    <span class="hart">${gardenSVG(G,seen)}</span></button></section>
+   <section class="c12"><h2 class="hh2">This week at a glance</h2><div class="glance">
+    ${tile("wallet",left<0?"--bad":"--good",left<0?"Over budget":"Budget left",money(Math.abs(left),0),left<0?"bad":"good")}
+    ${tile("leaf","--warn","Use soon",soon?`${soon} item${soon>1?"s":""}`:"All fresh","warn")}
+    ${tile("bowl","--accent","Meals planned",`${X.chosen.length} meal${X.chosen.length===1?"":"s"}`)}
+    ${tile("spark","--c-bev","Strategy",PRIO[ST.prio].short)}</div></section>
+   <section class="c12"><h2 class="hh2">This week's plan</h2><div class="acts">
+    ${act("cart","--accent","Shopping list",'data-go="plan"')}${act("bowl","--gold","Meal ideas",'data-go="meals"')}
+    ${act("box","--good","Inventory check",'data-go="inventory"')}${act("scan","--c-bev","Scan receipt",'data-receipt="1"')}</div></section>
+   <section class="c12"><h2 class="hh2">Shopping mode</h2>${prioSwitch()}</section>
+   <section class="c12 duo">
+    <button class="dcard" data-go="plan"><span class="dh">${HI(HICO.bag,"--accent")}<span><b>Buy this week</b><span class="xs muted">${lines.length} items, ${left<0?"a little over":"within"} budget</span></span><span class="chevr" aria-hidden="true">›</span></span>
+     <span class="foods">${lines.slice(0,4).map(([p])=>ico(p)).join("")}</span></button>
+    <button class="dcard" data-go="meals"><span class="dh">${HI(HICO.fork,"--gold")}<span><b>Meal ideas</b><span class="xs muted">${meal?esc(meal.r.name):"Simple meals with what you have"}</span></span><span class="chevr" aria-hidden="true">›</span></span>
+     <span class="foods">${meal?meal.ing.slice(0,4).map(x=>ico(x.p)).join(""):""}</span></button>
+   </section>
+  </div>`;
+};
+
+views.inventory=()=>{
+  const hh=HH(),w=curWeek(),X=planWeek(hh,w),S=X.S;
+  const st=applyLog(S.pre,hh,w,ST.invAfter,X.fin);
+  const items=P.map((p,i)=>[p,i]).filter(([,i])=>relevant(hh,i)).map(([p,i])=>[p,i,freshness(p,st.inv[i])]);
+  const G=[["soon","Use first","var(--warn)"],["fresh","Fresh","var(--good)"],["long","Cupboard & freezer","var(--l-fixed)"],["out","Out of stock","var(--bad)"]];
+  const filt=ST.invFilter,cnt=k=>items.filter(x=>x[2].k===k).length;
+  const value=items.reduce((a,[p,i])=>a+stockOf(st,i)*X.price[i],0);
+  return `<div class="page">
+   ${PH("box","Inventory",`About ${money(value,0)} of food at home${cnt("soon")?` · ${cnt("soon")} to use first`:""}`)}
+   ${(()=>{const q=questionCard(hh,w,S);return q?`<section class="c12">${q.replace('class="qcard"','class="qcard" style="margin:0"')}</section>`:""})()}
+   ${trackCard(hh,w)}
+   <section class="c12" style="display:flex;gap:var(--s2);flex-wrap:wrap;justify-content:space-between">
+    <div class="seg" role="group" aria-label="When"><button data-inv="0" aria-pressed="${!ST.invAfter}">Before shopping</button><button data-inv="1" aria-pressed="${ST.invAfter}">After shopping</button></div>
+    <div class="seg" role="group" aria-label="Show"><button data-filt="all" aria-pressed="${filt==="all"}">All</button><button data-filt="soon" aria-pressed="${filt==="soon"}">Use first · ${cnt("soon")}</button><button data-filt="out" aria-pressed="${filt==="out"}">Out · ${cnt("out")}</button></div>
+   </section>
+   <section class="c12">${G.filter(([k])=>filt==="all"||filt===k).map(([k,label,c])=>{const g=items.filter(x=>x[2].k===k).sort((a,b)=>(a[2].d??99)-(b[2].d??99));if(!g.length)return "";
+     return `<h2 class="gh"><i class="dot" style="background:${c}"></i>${label} <span class="n">${g.length}</span></h2><div class="grid-tiles">${g.map(([p,i,f])=>{const done=MISS[mkey(hh,w,p.id)];
+      return `<div class="tile ${f.k==="out"?"out":""}"><div class="hd">${ico(p)}<div style="min-width:0"><div class="nm">${esc(p.name)}</div><div class="amt">${f.k==="out"?"none left":friendly(stockOf(st,i),p)+(st.inv[i].some(b=>b.where==="freezer")?" · freezer":"")}</div></div></div>
+       <div class="meter"><i class="${f.cls}" style="width:${f.frac*100}%"></i></div><span class="dl ${f.cls}">${done&&f.k==="soon"?"Rescued":f.txt}</span>
+       ${f.k==="soon"&&!done?`<button class="float" data-rescue="${p.id}" aria-label="Mark ${esc(p.name)} as used up for 10 points">${STAR(11)}+10</button><button class="tossb tile-t" data-toss="${p.id}" data-qty="${stockOf(st,i)}" aria-label="${esc(p.name)} was thrown away">Tossed it</button>`:""}</div>`}).join("")}</div>`}).join("")||`<div class="empty">Nothing here.</div>`}</section>
+  </div>`;
+};
+
+function forecastCard(hh){
+  const wk=[];for(let w=TRAIN_END;w<NW;w++)wk.push(w);
+  const ids=P.map((_,i)=>i).filter(i=>hh.ok.has(PID[i]));
+  let eM=0,eA=0,tot=0;const act=[],ml=[],avg=[];
+  for(const w of wk){let a$=0,m$=0,v$=0;for(const i of ids){const a=DEM[hh.id][PID[i]][w],m=fc(hh,w,i),v=ma(hh,w,i);eM+=Math.abs(m-a);eA+=Math.abs(v-a);tot+=a;a$+=a*P[i].price;m$+=m*P[i].price;v$+=v*P[i].price}act.push(a$);ml.push(m$);avg.push(v$)}
+  const wM=tot?eM/tot:0,wA=tot?eA/tot:0;
+  const series=[{name:"Actual",color:"var(--ink-2)",values:act},{name:"4-week average",color:"var(--l-fixed)",dash:true,values:avg}].concat(HAS_ML?[{name:FC_NAME,color:"var(--accent)",focus:true,values:ml}]:[]);
+  return `<section class="c12 card"><div class="ch"><div><h2>How good is the forecast?</h2><p>Food needed each week, in dollars.</p></div></div>
+   <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr);gap:var(--s3);align-items:center" class="fcgrid">
+    <div style="display:grid;gap:var(--s2)">
+     ${HAS_ML?`<div class="stat" style="box-shadow:none"><span class="label">${esc(FC_NAME)} error</span><b class="num">${pct(wM)}</b><span class="delta ${wM<wA?"good":"bad"}">${wA?Math.round(Math.abs(1-wM/wA)*100)+"% "+(wM<wA?"lower":"higher")+" than the 4-week average":""}</span></div>`:""}
+     <div class="stat" style="box-shadow:none"><span class="label">4-week average error</span><b class="num">${pct(wA)}</b></div>
+</div>
+    <div>${lineChart(series,{yfmt:v=>"$"+Math.round(v),label:"Weekly food need: actual vs forecast",W:640,H:220})}
+     <div class="legend" style="margin-top:6px">${series.map(x=>`<span style="color:${x.color}"><i class="sw ${x.dash?"dash":""}" style="background:${x.color}"></i><span style="color:var(--ink)">${esc(x.name)}</span></span>`).join("")}</div></div>
+   </div></section>`;
+}
+views.results=()=>{if(isOff(HH()))return resultsOff(HH());return resultsLocal()};
+function resultsLocal(){
+  const hh=HH(),pols=polsFor(hh),live=isLive(hh),N=NAME(hh),c=pols.coach,fx0=pols.fixed,fc=pols.forecast_rule,wm=_wasteMoney,wk=wm?"waste_cost":"waste_units";
+  const delta=(a,b,lower=true,isPct=false)=>{if(a==null||b==null)return "";const d=a-b,rel=b?d/Math.abs(b):0,good=lower?d<0:d>0,flat=Math.abs(isPct?d:rel)<0.02;
+    return `<span class="delta ${flat?"flat":good?"good":"bad"}">${isPct?(d>=0?"+":"−")+Math.abs(Math.round(d*100))+" pts":(d<=0?"−":"+")+Math.abs(Math.round(rel*100))+"%"} vs fixed list</span>`};
+  const L=[["fixed","Fixed list","var(--l-fixed)",true],["forecast_rule","Forecast + rules","var(--l-fc)",false],["coach",N.coach,"var(--accent)",false]];
+  const chart=(key,label,fmt)=>{const series=L.map(([k,n,col,dash])=>({name:n,color:col,dash,focus:k==="coach",values:roll((pols[k].weekly||[]).map(r=>+(key==="spend"?r.spend:key==="waste"?(r.waste_cost??r.waste_units):r.stockout_days)||0))}));
+    return `<section class="c4 card"><div class="ch"><div><h2>${label}</h2><p>per week, 4-week average</p></div></div>${lineChart(series,{yfmt:fmt,label:label+" per week",W:340,H:200,L:44,Rr:20,T:10,B:26})}</section>`};
+  const save=(fx0.weekly_cost-c.weekly_cost)*52;
+  const T=[["Spend / week",p=>p.weekly_cost,v=>money(v),true],["Food wasted / week",p=>p[wk],v=>wm?money(v):fx(v,2),true],["Empty-shelf days / week",p=>p.stockout_days,v=>fx(v,1),true],["Protein goal met",p=>p.protein_target_met,v=>pct(v),false]];
+  const best=T.map(([,g,,lo])=>{const v=ORDER.map(k=>+g(pols[k]));return lo?Math.min(...v):Math.max(...v)});
+  return `<div class="page">
+   ${PH("bars","Results",`${live?"RL agent":"Coach"} vs a fixed shopping list · ${esc(hh.persona)}`)}
+   <section class="c12 kgrid">
+    <div class="stat"><span class="label">Spend / week</span><b class="num">${money(c.weekly_cost)}</b>${delta(c.weekly_cost,fx0.weekly_cost)}</div>
+    <div class="stat"><span class="label">Food wasted / week</span><b class="num">${wm?money(c[wk]):fx(c[wk],2)}</b>${delta(c[wk],fx0[wk])}</div>
+    <div class="stat"><span class="label">Empty-shelf days / week</span><b class="num">${fx(c.stockout_days,1)}</b>${delta(c.stockout_days,fx0.stockout_days)}</div>
+    <div class="stat"><span class="label">Protein goal met</span><b class="num">${pct(c.protein_target_met)}</b>${delta(c.protein_target_met,fx0.protein_target_met,false,true)}</div>
+   </section>
+   <section class="c12 legend" aria-label="Legend">${L.map(([,n,col,dash])=>`<span style="color:${col}"><i class="sw ${dash?"dash":""}" style="background:${col}"></i><span style="color:var(--ink)">${esc(n)}</span></span>`).join("")}</section>
+   ${chart("spend","Spending",v=>"$"+Math.round(v))}${chart("waste","Food waste",v=>wm?"$"+fx(v,v<10?1:0):fx(v,1))}${chart("so","Shortages",v=>fx(v,0)+"d")}
+   ${forecastCard(hh)}
+   <section class="c12 card"><div class="ch"><div><h2>All strategies</h2><p>Mean per simulated week. Green is best in each column.</p></div></div>
+    <div class="scroll"><table class="cmp"><thead><tr><th>Strategy</th>${T.map(([n])=>`<th>${n}</th>`).join("")}</tr></thead><tbody>
+    ${ORDER.slice().reverse().map(k=>`<tr class="${k==="coach"?"me":""}"><td>${esc({fixed:"Fixed list",average_rule:"Recent average",forecast_rule:"Forecast + rules",coach:N.coach}[k])}</td>${T.map(([,g,f],j)=>{const v=+g(pols[k]);return `<td class="${Math.abs(v-best[j])<1e-9?"best":""}">${f(v)}</td>`}).join("")}</tr>`).join("")}
+    </tbody></table></div></section>
+
+  </div>`;
+};
+
+views.scan=()=>{
+  const hh=HH(),L=ST.lookup,m=SCAN.mode;
+  const fmt=c=>c.length===13?"EAN-13":c.length===12?"UPC-A":c.length===8?"EAN-8":c.length===14?"GTIN-14":"Code";
+  const val=P.filter(p=>p.protein>0&&hh.ok.has(p.id)).map(p=>({p,v:p.protein/p.price})).sort((a,b)=>b.v-a.v),vmax=val[0]?.v||1;
+  const catSelect=(code,sel)=>`<select id="stsel" class="hhsel" data-code="${esc(code||"")}" style="max-width:100%"><option value="">Choose a product…</option>${[...new Set(P.map(p=>p.category))].map(c=>`<optgroup label="${esc(catName(c))}">${P.filter(p=>p.category===c).map(p=>`<option value="${p.id}" ${sel===p.id?"selected":""}>${esc(p.name)}${hh.ok.has(p.id)?"":" (not for this household)"}</option>`).join("")}</optgroup>`).join("")}</select>`;
+  let res="";
+  if(L?.busy)res=`<section class="c12 card"><div class="skel"><span></span><span></span><span></span></div><p class="muted" style="margin:0">Looking up ${esc(L.code)}…</p></section>`;
+  else if(L?.err)res=`<section class="c12 card"><div class="ch"><div><h2>${L.err==="offline"?"Couldn't reach the product databases":"Not found yet"}</h2><p>Barcode <span class="mono">${esc(L.code)}</span>. Pick the closest product from your catalogue to keep going.</p></div></div>${catSelect(L.code,"")}</section>`;
+  else if(L){
+    const f=fitScore(L.n,hh,L.allergens);
+    const pid=L.pid||L.match,pp=pid&&P[PIX[pid]];
+    if(L.pid&&!hh.ok.has(L.pid)&&!L.allergens.some(a=>hh.exclusions.includes(a))){f.s=Math.min(f.s,20);f.cls="c-bad";f.label="Not for this household";f.ins.unshift(["b",`Not part of a ${hh.diet} diet.`])}
+    if(!L.pid&&pp&&!hh.ok.has(pid)){f.s=Math.min(f.s,25);f.cls="c-bad";f.label="Not for this household";
+      const algHit=pp.allergens.filter(a=>hh.exclusions.includes(a));
+      if(algHit.length&&!L.allergens.some(a=>hh.exclusions.includes(a)))f.ins.unshift(["b",`Products like this usually contain ${algHit.join(", ")}. Check the label.`]);
+      else if(!algHit.length)f.ins.unshift(["b",`Looks like ${pp.name.toLowerCase()}, which isn't part of a ${hh.diet} diet.`])}
+    const hit=L.allergens.filter(a=>hh.exclusions.includes(a));
+    const sw=swapFor(L,hh),view=perServing(L);
+    const rp=pid&&DATA.real_prices?.[pid];
+    const stores=L.stores&&L.stores.length?`<ul class="stores">${L.stores.map(s=>`<li><span><b>${esc(s.name)}</b>${s.city?` <span class="muted">· ${esc(s.city)}</span>`:""}</span><span class="mono">${s.price?(s.cur==="USD"||!s.cur?"$"+s.price.toFixed(2):s.price.toFixed(2)+" "+esc(s.cur)):"—"}</span><span class="xs muted">${esc(s.date||"")}</span></li>`).join("")}</ul><p class="xs muted" style="margin:8px 0 0">From ${esc(L.storeSrc||L.src)}.</p>`
+      :rp?`<p style="margin:0"><b class="mono" style="font-size:22px">${money(rp.median)}</b> <span class="muted small">typical for ${esc(pp.name.toLowerCase())} per ${esc(pp.unit)}</span></p><p class="small muted" style="margin:4px 0 0">${money(rp.low)} to ${money(rp.high)} across ${rp.stores} US stores (Open Prices, closest catalogue item).</p>`
+      :`<p class="small muted" style="margin:0">No store prices for this product yet.</p>`;
+    res=`<section class="c12 card product" aria-label="Product">
+      <div class="pimg">${L.img?`<img src="${esc(L.img)}" alt="${esc(L.name)}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'pph',textContent:'${esc((L.name||"?")[0])}'}))">`:(L.pid||L.match)&&PIX[L.pid||L.match]!=null?`<span class="pph pico">${ico(P[PIX[L.pid||L.match]])}</span>`:`<span class="pph">${esc((L.name||"?")[0])}</span>`}</div>
+      <div class="pmain">
+       <div><span class="label">${esc(L.src||"Your catalogue")}${L.url?` · <a href="${esc(L.url)}" target="_blank" rel="noopener">view record</a>`:""}</span><h2 class="ptitle">${esc(L.name)}</h2><p class="muted" style="margin:2px 0 0">${esc([L.brand,L.qty].filter(Boolean).join(" · "))}</p></div>
+       <dl class="kv">
+        ${L.code&&!L.photo&&!/^[a-z_]+$/.test(L.code)?`<dt>Barcode</dt><dd><span class="mono">${esc(L.code)}</span> <span class="muted xs">${fmt(L.code)} · not the right product? <button class="link xs" data-smode="type">Type the number</button></span></dd>`:""}
+        ${pp?`<dt>Matches</dt><dd>${esc(pp.name)} <span class="muted xs">in your catalogue · ${esc(catName(pp.category))}</span></dd>`:`<dt>Matches</dt><dd class="muted">No catalogue item. ${catSelect(L.code,"")}</dd>`}
+        ${L.serving?`<dt>Serving</dt><dd>${esc(L.serving)}</dd>`:""}
+        ${L.nutri?`<dt>Nutri-Score</dt><dd><span class="ns ns-${esc(L.nutri)}">${esc(L.nutri.toUpperCase())}</span></dd>`:""}
+       </dl>
+       <div class="verdict"><span class="ring ${f.cls}">${f.s}</span><div><b style="font-family:var(--f-display);font-size:19px">${f.label}</b><div class="xs muted">for ${esc(hh.persona.toLowerCase())}</div></div></div>
+       ${hit.length?`<div class="note" style="background:var(--bad-soft);margin:0"><b>Contains ${esc(hit.join(", "))}.</b>&nbsp;This household avoids it.</div>`:""}
+       <ul class="ins">${f.ins.filter(([k,t])=>!/^Contains/.test(t)).map(([k,t])=>`<li class="${k}">${esc(t)}</li>`).join("")||"<li>No concerns found.</li>"}</ul>
+       <div class="actions">${pp&&hh.ok.has(pid)?`<div class="stepper" role="group" aria-label="Quantity"><button data-q="-1" aria-label="Fewer">−</button><span class="mono">${friendly(SCAN.qty,pp)}</span><button data-q="1" aria-label="More">+</button></div><button class="btn primary" data-addlist="${pid}">Add to this week's list</button>`:""}
+        ${sw&&sw.s>f.s+5?`<button class="btn" data-swap="${sw.p.id}">Try instead: ${esc(sw.p.name)} <span class="muted">(${sw.s})</span></button>`:""}</div>
+      </div>
+      <div class="pside">
+       <div class="seg" role="group" aria-label="Nutrition amount"><button data-per="serving" aria-pressed="${SCAN.per==="serving"}" ${hasServing(L)?"":"disabled"}>Per serving</button><button data-per="100g" aria-pressed="${SCAN.per==="100g"}">Per 100 g</button><button data-per="pack" aria-pressed="${SCAN.per==="pack"}" ${L.packG?"":"disabled"}>Whole pack</button></div>
+       ${packCallout(L)}
+       ${(()=>{const sv=hasServing(L)?(L.nServ?.kcal??(L.servingG&&L.n.kcal!=null?L.n.kcal*L.servingG/100:null)):null;
+         return `<p class="small" style="margin:0">${sv!=null?`<b class="mono">${Math.round(sv)} kcal</b> per serving${L.serving?" ("+esc(L.serving)+")":""} · `:""}<b class="mono">${L.n.kcal!=null?Math.round(L.n.kcal):"—"} kcal</b> per 100 g</p>`})()}
+       ${L.n.kcalFixed?`<div class="note" style="margin:0;max-width:330px;background:var(--sunk)"><span>Corrected: this record had kilojoules typed in as calories (${Math.round(L.n.kcalRaw)}). Its fat, carbs and protein add up to the ${Math.round(L.n.kcal)} kcal per 100 g shown. ${L.url?`<a href="${esc(L.url)}" target="_blank" rel="noopener">Fix the record</a>`:""}</span></div>`:""}
+       ${(()=>{const c=L.n.kcalFixed?null:calCheck(L.n);if(!c)return "";return `<div class="note" style="margin:0;max-width:330px"><span>${c.kind==="kj"?`This record's calories look like kilojoules typed in as calories. The fat, carbs and protein add up to about <b>${Math.round(c.est)} kcal</b> per 100 g.`:`These calories don't add up: fat, carbs and protein come to about <b>${Math.round(c.est)} kcal</b> per 100 g, not ${Math.round(L.n.kcal)}. The record may have a mistake.`} Check the package${L.url?` or <a href="${esc(L.url)}" target="_blank" rel="noopener">the source record</a>`:""}.</span></div>`})()}
+       ${L.n&&!(L.n.missing&&L.n.kcal==null&&L.n.protein==null)?nfLabel(view.n,hh,view.basis):`<p class="small muted">No nutrition facts for this product.</p>`}
+      </div>
+      <div class="pfoot"><div><h3 class="sh">Prices in stores</h3>${stores}</div>
+       <div><h3 class="sh">What's inside</h3>${notesCard(L)}${aiCard(L)}</div></div>
+    </section>`;
+  }
+  return `<div class="page">
+   ${PH("camera","Scan","Check any product: nutrition, price and how it fits this household.")}
+   <section class="c8 card"><div class="ch"><div><h2>Scan a product</h2><p>Use the camera, ${DATA.explain_url?"a photo of the barcode or label":"a photo of the barcode"}, or type the number.</p></div>
+     <div class="seg" role="group" aria-label="Scan method"><button data-smode="camera" aria-pressed="${m==="camera"}">Camera</button><button data-smode="photo" aria-pressed="${m==="photo"}">Photo</button><button data-smode="type" aria-pressed="${m==="type"}">Type</button></div></div>
+    ${m==="camera"?`<div class="vf" id="vf"><div id="viewfinder" aria-label="Camera view"></div><div class="vf-idle"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg><span>Camera is off</span></div></div>
+      <div class="row-actions"><button class="btn primary" id="camtoggle" data-cam="1">${SCAN.running?"Stop camera":"Start camera"}</button>${SCAN.cams.length>1?`<label class="sr" for="camsel">Camera</label><select id="camsel" class="hhsel">${SCAN.cams.map(c=>`<option value="${esc(c.id)}" ${c.id===SCAN.camId?"selected":""}>${esc(c.label||"Camera")}</option>`).join("")}</select>`:""}</div>`
+    :m==="photo"?`<label class="drop" id="drop" for="photoin"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg><b>Photo of the barcode${DATA.explain_url?" or the ingredients label":""}</b><span class="xs muted">${DATA.explain_url?"No barcode? The AI reads the ingredients and nutrition panel instead.":"JPEG or PNG. Get close and keep the bars straight."}</span><input id="photoin" type="file" accept="image/*" capture="environment" class="sr"></label>`
+    :`<form id="bcForm" class="search"><label for="bc" class="sr">Barcode number</label><input id="bc" type="text" inputmode="numeric" autocomplete="off" placeholder="8, 12 or 13 digits, e.g. 737628064502" value="${esc(L&&!L.pid&&!L.photo&&L.code&&!/^[a-z_]+$/.test(L.code)?L.code:"")}"><button class="btn primary" type="submit">Look up</button></form>`}
+    <p id="scanstatus" class="sstatus" role="status" aria-live="polite">${esc(SCAN.status)}</p>
+    <div id="filedecode" hidden></div>
+   </section>
+   <section class="c4 card"><div class="ch"><div><h2>Recent scans</h2><p>${HIST.length?"Tap to open again.":"Your scans will show up here."}</p></div></div>
+    ${HIST.length?`<ul class="hist">${HIST.map((h,i)=>{const s=fitScore(h.n||{},hh,h.allergens||[]).s;return `<li><button data-hist="${i}"><span class="hs ${s>=70?"c-good":s>=45?"c-ok":"c-bad"}">${s}</span><span style="min-width:0"><b>${esc(h.name)}</b><span class="xs muted mono">${esc(h.code)}</span></span></button></li>`}).join("")}</ul>`:`<div style="display:grid;gap:8px"><span class="label">Or check a catalogue item</span>${catSelect("",L?.pid||"")}</div>`}
+   </section>
+   ${res}
+   <section class="c12 card"><div class="ch"><div><h2>Most protein per dollar</h2><p>Foods that fit this household's diet.</p></div></div>
+    <ol class="vlist cols">${val.slice(0,8).map(x=>`<li>${ico(x.p)}<div style="min-width:0"><b class="small">${esc(x.p.name)}</b><div class="vt"><i style="width:${x.v/vmax*100}%"></i></div></div><span class="mono xs">${Math.round(x.v)} g/$</span></li>`).join("")}</ol></section>
+  </div>`;
+};
+
+/* ===================== Rewards panel ===================== */
+function sring(score,size=92){const r=size/2-7,c=2*Math.PI*r;return `<svg class="sring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="Fridge score ${score} of 100"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="8"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c*score/100} ${c}" transform="rotate(-90 ${size/2} ${size/2})"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" style="font-family:var(--f-display);font-weight:700;font-size:${size*.32}px">${score}</text></svg>`}
+/* ===================== Garden: progress you can see =====================
+   Plant stage ← points · leaves ← waste-free weeks · flowers ← badges · fruit ← rescued food
+   soil moisture ← last week's budget · Pip's mood ← last week's fridge score */
+const GSEEN={};
+function gardenState(hh,w){
+  const pt=points(hh,w),g=pt.g,B=budgetOf(hh),last=g.recs.at(-1);
+  const sc=last?fridgeScore(last,hh).total:null;
+  return {stage:Math.min(5,1+Math.floor(pt.total/50)),leaves:Math.min(14,g.recs.filter(r=>wasteFree(r,hh)).length),
+    flowers:Math.min(8,Object.keys(g.earned).length),fruit:Math.min(6,g.resc),
+    left:last?(B-last.spend)/B:null,score:sc,mood:sc==null?"new":sc>=75?"happy":sc>=60?"ok":"sad",weeks:g.recs.length};
+}
+function gardenSVG(G,seen){
+  const isNew=(k,i)=>seen&&i>=(seen[k]??0)?" gnew":"";
+  const baseX=212,baseY=168,H=[26,48,72,96,118][G.stage-1],top=baseY-H;
+  const dry=G.left!=null&&G.left<0,wet=G.left!=null&&G.left>=0.05;
+  const stem=`M${baseX} ${baseY} C ${baseX-10} ${baseY-H*0.35}, ${baseX+10} ${baseY-H*0.7}, ${baseX} ${top}`;
+  const leaf=(i)=>{const n=Math.max(G.leaves,1),t=(i+1)/(n+1),y=baseY-H*t*0.92,side=i%2?1:-1,len=14+Math.min(G.stage,4)*2;
+    return `<g class="gpart${isNew("leaves",i)}" style="--d:${i*40}ms"><path d="M${baseX} ${y} q ${side*len*0.55} ${-len*0.55} ${side*len} ${-len*0.05} q ${-side*len*0.45} ${len*0.45} ${-side*len} ${len*0.05}z" fill="var(--g-leaf)" stroke="var(--g-leaf-d)" stroke-width="1"/></g>`};
+  const flower=(i)=>{const spots=[[0,0],[-24,22],[22,30],[-20,52],[20,60],[-14,80],[16,88],[0,104]];const [dx,dy]=spots[i];const x=baseX+dx,y=top+Math.min(dy,H-14);
+    return `<g class="gpart${isNew("flowers",i)}" style="--d:${120+i*60}ms" transform="translate(${x} ${y})">${[0,72,144,216,288].map(a=>`<ellipse cx="0" cy="-6" rx="3.6" ry="6" transform="rotate(${a})" fill="var(--g-petal)"/>`).join("")}<circle r="3.4" fill="var(--gold)"/></g>`};
+  const fruit=(i)=>{const x=150+i*16-(G.fruit>3?8:0),y=baseY+6;
+    return `<g class="gpart${isNew("fruit",i)}" style="--d:${200+i*60}ms"><circle cx="${x}" cy="${y}" r="6" fill="var(--g-fruit)"/><path d="M${x} ${y-6} q 2 -4 5 -4" stroke="var(--g-leaf-d)" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>`};
+  /* Pip: an original seed-sprout character */
+  const m=G.mood,px=88,py=150;
+  const face=(m==="happy"||m==="new")?`<path d="M${px-6} ${py+4} q 6 6 12 0" stroke="var(--g-ink)" stroke-width="2" fill="none" stroke-linecap="round"/><ellipse cx="${px-11}" cy="${py+2}" rx="3" ry="2" fill="var(--g-petal)" opacity=".55"/><ellipse cx="${px+11}" cy="${py+2}" rx="3" ry="2" fill="var(--g-petal)" opacity=".55"/>`
+    :m==="sad"?`<path d="M${px-5} ${py+7} q 5 -4 10 0" stroke="var(--g-ink)" stroke-width="2" fill="none" stroke-linecap="round"/>`
+    :`<path d="M${px-4} ${py+5} h 8" stroke="var(--g-ink)" stroke-width="2" stroke-linecap="round"/>`;
+  const eyes=m==="sad"?`<path d="M${px-8} ${py-4} h 4 M${px+4} ${py-4} h 4" stroke="var(--g-ink)" stroke-width="2" stroke-linecap="round"/>`
+    :`<circle cx="${px-6}" cy="${py-4}" r="2.4" fill="var(--g-ink)"/><circle cx="${px+6}" cy="${py-4}" r="2.4" fill="var(--g-ink)"/>`;
+  const sproutA=m==="sad"?28:-12,ls=6+G.stage*1.6;
+  const pip=`<g class="pip ${m}"><ellipse cx="${px}" cy="${py+22}" rx="16" ry="3.5" fill="var(--g-ink)" opacity=".12"/>
+    <path d="M${px} ${py-17} q -2 -8 0 -12" stroke="var(--g-leaf-d)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M${px} ${py-27} q ${-ls} ${-ls*0.3} ${-ls*1.2} ${ls*0.5} q ${ls*0.7} ${ls*0.3} ${ls*1.2} ${-ls*0.5}z" transform="rotate(${sproutA} ${px} ${py-27})" fill="var(--g-leaf)"/>
+    <path d="M${px} ${py-27} q ${ls} ${-ls*0.3} ${ls*1.2} ${ls*0.5} q ${-ls*0.7} ${ls*0.3} ${-ls*1.2} ${-ls*0.5}z" transform="rotate(${-sproutA} ${px} ${py-27})" fill="var(--g-leaf)"/>
+    <path d="M${px} ${py-19} c 16 0 20 14 18 24 c -2 12 -10 18 -18 18 c -8 0 -16 -6 -18 -18 c -2 -10 2 -24 18 -24z" fill="var(--g-body)" stroke="var(--g-body-d)" stroke-width="1.5"/>
+    ${eyes}${face}</g>`;
+  const drops=wet?[0,1,2].map(i=>`<path class="drop" style="--d:${i*500}ms" d="M${170+i*30} ${baseY+14} q 2 3 0 5 q -2 -2 0 -5z" fill="var(--g-water)"/>`).join(""):"";
+  const cracks=dry?`<path d="M150 ${baseY+10} l8 6 l-4 6 M232 ${baseY+12} l-6 5 l5 7 M196 ${baseY+18} l6 4" stroke="var(--g-soil-d)" stroke-width="1.6" fill="none" stroke-linecap="round"/>`:"";
+  return `<svg class="garden" viewBox="0 0 320 210" width="100%" role="img" aria-label="Garden at stage ${G.stage} of 5 with ${G.leaves} leaves, ${G.flowers} flowers and ${G.fruit} fruit; Pip looks ${G.mood==="happy"?"happy":G.mood==="sad"?"a bit droopy":"calm"}">
+    <rect x="0" y="0" width="320" height="210" rx="16" fill="var(--g-sky)"/>
+    <circle cx="282" cy="36" r="16" fill="var(--g-sun)" opacity="${G.mood==="sad"?.35:.9}"/>
+    <path d="M0 ${baseY+2} Q 80 ${baseY-8} 160 ${baseY+2} T 320 ${baseY}" fill="none"/>
+    <rect x="0" y="${baseY}" width="320" height="${210-baseY}" fill="${dry?"var(--g-soil-dry)":"var(--g-soil)"}"/>
+    <rect x="0" y="${baseY}" width="320" height="6" fill="${dry?"var(--g-soil-d)":"var(--g-grass)"}" opacity="${dry?.35:1}"/>
+    ${cracks}${drops}
+    <g class="plant"><path d="${stem}" stroke="var(--g-leaf-d)" stroke-width="${2+G.stage*0.6}" fill="none" stroke-linecap="round"/>
+      ${Array.from({length:G.leaves},(_,i)=>leaf(i)).join("")}
+      ${G.stage>=2?`<circle cx="${baseX}" cy="${top}" r="${2+G.stage}" fill="var(--g-leaf)"/>`:""}
+      ${Array.from({length:G.flowers},(_,i)=>flower(i)).join("")}</g>
+    ${Array.from({length:G.fruit},(_,i)=>fruit(i)).join("")}
+    ${pip}
+  </svg>`;
+}
+function gardenLine(G,hh){
+  if(!G.weeks)return "Pip just planted your seed. Finish a week to watch it grow.";
+  if(G.left!=null&&G.left<0)return "Last week went over budget, so the soil dried out. One on-budget week waters it again.";
+  if(G.mood==="happy")return G.leaves?"Last week was a great one. Every low-waste week grows a new leaf.":"Great week! A low-waste week will grow your first leaf.";
+  if(G.mood==="sad")return "Pip's a little droopy after last week. Using food before it expires perks it up.";
+  return "Growing steadily. Rescue food that's about to expire to grow fruit.";
+}
+function gardenCard(hh,w){
+  const G=gardenState(hh,w),key=hh.id,seen=GSEEN[key];GSEEN[key]={leaves:G.leaves,flowers:G.flowers,fruit:G.fruit,stage:G.stage};
+  const stageName=["Seed","Sprout","Seedling","Young plant","In bloom"][G.stage-1];
+  return `<div class="gcard">${gardenSVG(G,seen)}
+    <div class="gtxt"><span class="label">Your garden · ${stageName} (stage ${G.stage} of 5)</span><p class="small" style="margin:4px 0 8px"><b>Pip:</b> ${esc(gardenLine(G,hh))}</p>
+     <ul class="gkey"><li><i style="background:var(--g-leaf)"></i>${G.leaves} lea${G.leaves===1?"f":"ves"} · low-waste weeks</li><li><i style="background:var(--g-petal)"></i>${G.flowers} flower${G.flowers===1?"":"s"} · badges</li><li><i style="background:var(--g-fruit)"></i>${G.fruit} fruit · food rescued</li><li><i style="background:${G.left!=null&&G.left<0?"var(--g-soil-dry)":"var(--g-water)"}"></i>${G.left==null?"soil · budget":G.left<0?"dry soil · over budget":"watered · on budget"}</li></ul></div></div>`;
+}
+const SPROUT=st=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 22v-${6+st*2}" stroke="var(--g-leaf-d)" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 ${16-st*2}c-4 0-7-2-7-6 4 0 7 2 7 6z" fill="var(--g-leaf)"/>${st>=2?`<path d="M12 ${18-st*2}c4 0 7-2 7-6-4 0-7 2-7 6z" fill="var(--g-leaf)"/>`:""}${st>=5?`<circle cx="12" cy="${14-st*2}" r="2.6" fill="var(--g-petal)"/>`:""}</svg>`;
+
+function drawer(){
+  const hh=HH(),w=curWeek(),pt=points(hh,w),g=pt.g,lvl=Math.min(5,1+Math.floor(pt.total/50)),into=lvl>=5?50:pt.total%50;
+  const last=g.recs.at(-1),sc=last?fridgeScore(last,hh):fridgeScore(planWeek(hh,w).ef,hh);
+  return `<div class="scrim" data-close="1"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="rwt">
+   <div class="dhead"><h2 id="rwt" style="font-size:22px">Rewards</h2><button class="icon-btn" data-close="1" aria-label="Close rewards">✕</button></div>
+   ${gardenCard(hh,w)}
+   <div class="lvl"><span class="label">Level ${lvl} · ${esc(hh.persona)}</span><b class="num" style="display:flex;align-items:center;gap:8px;color:var(--ink)"><span style="color:var(--gold)">${STAR(26)}</span>${pt.total.toLocaleString()} points</b>
+    <div class="bar2" style="height:8px"><i style="width:${into*2}%;background:var(--gold)"></i></div><span class="xs muted">${lvl>=5?"Full bloom: top level reached":`${50-into} points to level ${lvl+1}`}</span></div>
+   <div><span class="label">${last?"Last week's fridge score":"Projected fridge score"}</span>
+    <div class="score" style="margin-top:8px">${sring(sc.total)}<div class="parts">${sc.parts.map(([n,v,m])=>`<div><div class="pl"><span>${n}</span><span class="mono">${Math.round(v)}/${m}</span></div><div class="bar2"><i style="width:${v/m*100}%"></i></div></div>`).join("")}</div></div>
+</div>
+   <div class="streak"><span class="flame ${g.streak?"on":""}">${glyph("flame",24)}</span><div><b style="font-family:var(--f-display);font-size:20px">${g.streak} week${g.streak===1?"":"s"}</b><div class="xs muted">low-waste streak${g.best>g.streak?` · best ${g.best}`:""}</div></div>
+    <div class="wkdots" aria-label="Last 8 weeks">${g.recs.slice(-8).map(r=>`<i class="${wasteFree(r,hh)?"ok":""}"></i>`).join("")}</div></div>
+   <div><span class="label">Badges · ${Object.keys(g.earned).length} of ${BADGES.length}</span>
+    <div class="badges" style="margin-top:8px">${BADGES.map(([k,name,desc,ic])=>{const e=g.earned[k];return `<div class="bdg ${e!=null?"got":""}"><span class="md">${glyph(ic,18)}</span><span><b>${name}</b><span class="xs">${e!=null?(e>=0?"Week "+(e+1):"Earned"):desc}</span></span></div>`}).join("")}</div></div>
+   <div><span class="label">How to earn points</span><ul class="earn" style="margin-top:8px">
+    <li><span>Tap a floating <b style="font-family:var(--f-body)">+10</b> to rescue food before it expires</span><b>+10</b></li>
+    <li><span>Pick a meal that uses up food at home</span><b>+5</b></li>
+    <li><span>Do the 30-second weekly check-in (Inventory)</span><b>+15</b></li>
+    <li><span>Finish a week (a tenth of its fridge score)</span><b>+${sc.total?Math.round(sc.total/10):"~8"}</b></li></ul></div>
+  </aside>`;
+}
+
+/* ===================== Shell ===================== */
+function render(){
+  if(SCAN.running)stopCam();
+  const v=views[ST.view]?ST.view:"plan";
+  document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.go===v?"page":"false"));
+  {const w=curWeek(),wk=document.getElementById("wk");wk.innerHTML=["home","plan","meals","inventory"].includes(v)?`<button class="icon-btn" data-wk="-1" ${w<=TRAIN_END?"disabled":""} aria-label="Previous week">‹</button><span class="label">Week ${weekNo(w)} of ${NTEST}</span><button class="icon-btn" data-wk="1" ${w>=NW-1?"disabled":""} aria-label="Next week">›</button>`:""}
+  renderHH();renderPts();
+  try{app.innerHTML=views[v]()}catch(e){console.error(e);app.innerHTML=`<div class="empty">Something went wrong: ${esc(e.message)}</div>`}
+  document.getElementById("drawer").innerHTML=ST.rewards?drawer():ST.sheet?sheet():"";
+  /* a new scan result: bring it into view (it sits below the scanner) */
+  const L=ST.lookup;if(v==="scan"&&L&&!L.busy&&(L.code+L.name)!==ST._shown){ST._shown=L.code+L.name;
+    requestAnimationFrame(()=>document.querySelector(".card.product")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}))}
+}
+function go(v){ST.view=v;render();window.scrollTo({top:0})}
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,[data-close]");if(!t||t.disabled)return;const d=t.dataset;
+  if(d.receipt){go("inventory");setTimeout(()=>document.getElementById("rcptin")?.click(),50)}
+  else if(d.go)go(d.go);
+  else if(d.wk){const r0=t.getBoundingClientRect(),w0=curWeek();ST.scrub=Math.max(TRAIN_END,Math.min(NW-1,w0+ +d.wk));if(ST.scrub===w0)return;const g0=points(HH(),w0).total,l0=gardenState(HH(),w0);render();const g1=points(HH(),curWeek()).total,l1=gardenState(HH(),curWeek());if(g1>g0)fly(r0,g1-g0);
+    if(+d.wk>0){if(l1.stage>l0.stage)toast(`Your garden grew to stage ${l1.stage}!`);else if(l1.leaves>l0.leaves)toast("Low-waste week! A new leaf grew in your garden.");else if(l1.left!=null&&l1.left<0)toast("Over budget last week, so the garden soil dried out.")}}
+  else if(d.showall){ST.showAll=!ST.showAll;render()}
+  else if(d.prio){if(ST.prio!==d.prio){ST.prio=d.prio;savePrio();ST.picks={};render();const hh=HH();toast(`${PRIO[d.prio].title}: ${isOff(hh)?methodLabel(PRIO[d.prio].method):"in-browser preview"}`)}}
+  else if(d.pick){const hh=HH(),w=curWeek(),k=pkey(hh,w),a=ST.picks[k]||[];ST.picks[k]=a.includes(d.pick)?a.filter(x=>x!==d.pick):[...a,d.pick];render();
+    toast(ST.picks[k].includes(d.pick)?"Added to this week. The shopping list is updated.":"Removed. The shopping list is updated.")}
+  else if(d.mealpts){const hh=HH(),k=pkey(hh,curWeek())+":"+d.mealpts;if(!MEALP[k]){MEALP[k]=1;saveMealP();fly(t.getBoundingClientRect(),5);toast("+5 points for using up food");setTimeout(render,250)}}
+  else if(d.rescue)rescueItem(d.rescue,t.getBoundingClientRect());
+  else if(d.inv){ST.invAfter=d.inv==="1";render()}
+  else if(d.smode){stopCam();SCAN.mode=ST.scanMode=d.smode;SCAN.status="";render();if(d.smode==="camera")startCam();else if(d.smode==="type")document.getElementById("bc")?.focus()}
+  else if(d.cam){SCAN.running?stopCam():startCam()}
+  else if(d.hist){const h=HIST[+d.hist];if(h){ST.lookup=h;SCAN.per=hasServing(h)?"serving":"100g";SCAN.qty=1;setStatus(`Showing ${h.name}.`);render()}}
+  else if(d.per){SCAN.per=d.per;render()}
+  else if(d.explain){if(ST.lookup)explain(ST.lookup)}
+  else if(d.q){SCAN.qty=Math.max(0.5,Math.min(10,SCAN.qty+ +d.q*(SCAN.qty<1||(SCAN.qty===1&&+d.q<0)?0.5:1)));render()}
+  else if(d.addlist){addToList(d.addlist,SCAN.qty);render()}
+  else if(d.swap){const code=ST.lookup?.code;useCatalogue(d.swap);setStatus("Showing the better pick from your catalogue.","good")}
+  else if(d.filt){ST.invFilter=d.filt;render()}
+  else if(d.rewards){ST.rewards=true;render();document.querySelector(".drawer [data-close]")?.focus()}
+  else if(d.toss)tossItem(d.toss,+d.qty||0);
+  else if(d.ans){const hh=HH(),L=logOf(hh,curWeek()),p=P[PIX[d.pid]];if(d.ans==="used")L.used[d.pid]=+d.qty;else L.still[d.pid]=1;saveLog();render();toast(d.ans==="used"?`Thanks. ${p.name} marked as finished.`:`Thanks. ${p.name} stays on the shelf.`)}
+  else if(d.checkin)openCheckin();
+  else if(d.ck)answerCheckin(d.ck);
+  else if(d.mail){ST.sheet={kind:"email"};render();document.getElementById("mailtxt")?.focus()}
+  else if(d.sample){const hh=HH(),w=curWeek();openReview(d.sample,d.sample==="fridge"?sampleFridge(hh,w):sampleReceipt(hh,w),true)}
+  else if(d.rv){const C=ST.sheet;C.on[+d.rv]=!C.on[+d.rv];render();document.querySelector(`.sheet [data-rv="${d.rv}"]`)?.focus()}
+  else if(d.confirm)confirmReview();
+  else if(d.close){const wasSheet=!!ST.sheet;ST.rewards=false;ST.sheet=null;render();if(!wasSheet)document.getElementById("pts").focus()}
+});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(ST.sheet){ST.sheet=null;render()}else if(ST.rewards){ST.rewards=false;render();document.getElementById("pts").focus()}});
+document.addEventListener("change",e=>{
+  if(e.target.id==="hhsel"){ST.hh=e.target.value;save();render();return}
+  if(e.target.id==="stsel"&&e.target.value){const c=e.target.dataset.code;useCatalogue(e.target.value,c);if(!c)setStatus("")}
+  if(e.target.id==="camsel"){SCAN.camId=e.target.value;stopCam().then(startCam)}
+  if(e.target.id==="photoin"&&e.target.files[0])decodeFile(e.target.files[0]);
+  if((e.target.id==="rcptin"||e.target.id==="fridgein")&&e.target.files[0])receiptPhoto(e.target.files[0],e.target.id==="rcptin"?"receipt":"fridge");
+});
+document.addEventListener("submit",e=>{if(e.target.id==="mailForm"){e.preventDefault();const t=document.getElementById("mailtxt").value;if(!t.trim()){toast("Paste the item list first.");return}
+  if(DATA.explain_url)readWithAI("email",{email:{text:t.slice(0,8000)}});else openReview("email",parseOrderText(t),false);return}
+  if(e.target.id==="bcForm"){e.preventDefault();const c=document.getElementById("bc").value.replace(/\D/g,"");
+  if(!/^\d{8}$|^\d{12,14}$/.test(c)){setStatus("Barcodes have 8, 12, 13 or 14 digits. Check the number under the bars.","bad");return}
+  if(!gtinOk(c)){setStatus("That number's last digit doesn't check out. It may have a typo, but we'll look anyway.","warn")}lookupCode(c,"typed")}});
+document.addEventListener("dragover",e=>{const d=e.target.closest?.("#drop");if(d){e.preventDefault();d.classList.add("over")}});
+document.addEventListener("dragleave",e=>{e.target.closest?.("#drop")?.classList.remove("over")});
+document.addEventListener("drop",e=>{const d=e.target.closest?.("#drop");if(d){e.preventDefault();d.classList.remove("over");const f=e.dataTransfer?.files?.[0];if(f)decodeFile(f)}});
+render();
+</script>
