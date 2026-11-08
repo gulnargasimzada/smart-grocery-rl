@@ -1,13 +1,18 @@
-// Netlify Function: explains a food product in plain words using Claude.
+// Netlify Function: explains a food product in plain words using an AI model (Claude, or Google Gemini's free tier).
 // Modes: product data (from a barcode lookup), a photo of the label (ingredients and/or nutrition panel),
 // a receipt photo or pasted order email (what was bought), and a fridge photo (what's on the shelves).
-// The API key stays here on the server (Netlify → Site configuration → Environment variables):
-//   ANTHROPIC_API_KEY  (required)
+// The API key stays here on the server (Netlify → Project configuration → Environment variables). Set ONE of:
+//   GEMINI_API_KEY     free key from Google AI Studio (aistudio.google.com/apikey); used first when set
+//   GEMINI_MODEL       (optional, default gemini-3.6-flash)
+//   ANTHROPIC_API_KEY  Claude key from the Claude Console
 //   ANTHROPIC_MODEL    (optional, default claude-haiku-5-5: fast and low-cost for short answers)
 //   ANTHROPIC_VERSION  (optional, default 2026-10-21)
 //   ALLOWED_ORIGINS    (optional, comma-separated, e.g. http://localhost:8501,https://your-site.netlify.app)
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
 const VERSION = process.env.ANTHROPIC_VERSION || "2026-10-21";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const USE_GEMINI = !!process.env.GEMINI_API_KEY;
+const MODEL_USED = USE_GEMINI ? GEMINI_MODEL : MODEL;
 
 const SYSTEM = `You explain packaged food to everyday shoppers in plain, friendly words.
 Rules:
@@ -78,7 +83,7 @@ async function readShop(p, headers) {
     content.push(im.block, { type: "text", text: `Catalogue: ${JSON.stringify(cat)}\n\nRead this ${kind === "fridge" ? "fridge photo" : "receipt"}.` });
   }
   try {
-    const out = await callClaude(kind === "fridge" ? FRIDGE : BOUGHT, content, 1500);
+    const out = await callAI(kind === "fridge" ? FRIDGE : BOUGHT, content, 1500);
     if (out.error) return json({ error: kind === "fridge" ? "Couldn't make out the shelves in that photo. Try a brighter shot with the door wide open." : "Couldn't read that receipt. Try a flat, well-lit photo of the whole receipt." }, 422, headers);
     const num = (v) => (v == null || v === "" || isNaN(+v) ? null : Math.max(0, Math.min(100, +v)));
     const items = (out.items || []).slice(0, 80).map((x) => ({
@@ -86,7 +91,7 @@ async function readShop(p, headers) {
       qty: num(x.qty) ?? 1, price: num(x.price), confidence: x.confidence === "low" ? "low" : "high",
     }));
     return json({ store: out.store ? String(out.store).slice(0, 60) : null, total: num(out.total), items,
-      unmatched: (out.unmatched || []).slice(0, 30).map((x) => String(x).slice(0, 60)), model: MODEL }, 200, headers);
+      unmatched: (out.unmatched || []).slice(0, 30).map((x) => String(x).slice(0, 60)), model: MODEL_USED }, 200, headers);
   } catch (e) {
     return json({ error: e.message || "Couldn't reach the AI service. Try again in a moment." }, 502, headers);
   }
@@ -117,6 +122,39 @@ async function apiError(r) {
   return `The AI service returned ${r.status}${msg ? ": " + msg.slice(0, 160) : ""}.`;
 }
 
+// Gemini: same prompts, content blocks converted to Gemini "parts"; asks for JSON back.
+async function geminiError(r) {
+  let msg = "";
+  try { msg = (await r.json())?.error?.message || ""; } catch {}
+  console.error("Gemini API error", r.status, msg);
+  if (r.status === 400 && /api key/i.test(msg)) return "The AI key isn't valid. Check GEMINI_API_KEY in Netlify.";
+  if (r.status === 403) return "The Gemini key can't use this model. Check GEMINI_API_KEY, or set GEMINI_MODEL in Netlify.";
+  if (r.status === 404) return `The Gemini model "${GEMINI_MODEL}" wasn't found. Set GEMINI_MODEL in Netlify to a current Flash model.`;
+  if (r.status === 429) return "The free AI limit was reached for now. Try again in a minute.";
+  return `The AI service returned ${r.status}${msg ? ": " + msg.slice(0, 160) : ""}.`;
+}
+async function callGemini(system, content, maxTokens) {
+  const blocks = typeof content === "string" ? [{ type: "text", text: content }] : content;
+  const parts = blocks.map((b) => b.type === "image" ? { inline_data: { mime_type: b.source.media_type, data: b.source.data } } : { text: b.text });
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: "POST",
+    headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: system }] },
+      contents: [{ role: "user", parts }],
+      // room for the model's own reasoning tokens on top of the answer
+      generationConfig: { responseMimeType: "application/json", maxOutputTokens: Math.max(2048, maxTokens * 4) },
+    }),
+  });
+  if (!r.ok) throw new Error(await geminiError(r));
+  const data = await r.json();
+  const text = (data.candidates?.[0]?.content?.parts || []).map((x) => x.text || "").join("");
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("The AI answer couldn't be read. Try again.");
+  return JSON.parse(m[0]);
+}
+const callAI = (system, content, maxTokens) => (USE_GEMINI ? callGemini : callClaude)(system, content, maxTokens);
+
 async function callClaude(system, content, maxTokens) {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -138,14 +176,14 @@ async function readLabel(p, headers) {
   if (data.length > 4_500_000) return json({ error: "That photo is too large. Try a smaller one." }, 413, headers);
   const hh = { diet: String(p.household?.diet || "").slice(0, 20), avoids: (p.household?.avoids || []).slice(0, 8).map((a) => String(a).slice(0, 30)) };
   try {
-    const out = await callClaude(LABEL, [
+    const out = await callAI(LABEL, [
       { type: "image", source: { type: "base64", media_type: type, data } },
       { type: "text", text: `Household: ${JSON.stringify(hh)}. Read this label.` },
     ], 900);
     if (out.error) return json({ error: "Couldn't read a food label in that photo. Try a closer, well-lit shot of the ingredients or nutrition panel." }, 422, headers);
     out.points = (out.points || []).slice(0, 3).map((x) => String(x).slice(0, 160));
     out.summary = String(out.summary || "").slice(0, 400);
-    out.model = MODEL;
+    out.model = MODEL_USED;
     return json(out, 200, headers);
   } catch (e) {
     return json({ error: e.message || "Couldn't reach the AI service. Try again in a moment." }, 502, headers);
@@ -156,7 +194,7 @@ export default async (req) => {
   const headers = cors(req.headers.get("origin") || "");
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
   if (req.method !== "POST") return json({ error: "Use POST." }, 405, headers);
-  if (!process.env.ANTHROPIC_API_KEY) return json({ error: "The AI isn't set up yet: add ANTHROPIC_API_KEY in Netlify." }, 503, headers);
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) return json({ error: "The AI isn't set up yet: add GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in Netlify." }, 503, headers);
 
   let p;
   try { p = await req.json(); } catch { return json({ error: "Send the product as JSON." }, 400, headers); }
@@ -171,22 +209,10 @@ export default async (req) => {
   };
 
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": VERSION, "content-type": "application/json" },
-      body: JSON.stringify({
-        model: MODEL, max_tokens: 300, system: SYSTEM,
-        messages: [{ role: "user", content: `Product data:\n${JSON.stringify(product)}` }],
-      }),
-    });
-    if (!r.ok) return json({ error: await apiError(r) }, 502, headers);
-    const data = await r.json();
-    const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
-    const m = text.match(/\{[\s\S]*\}/);
-    const out = m ? JSON.parse(m[0]) : null;
+    const out = await callAI(SYSTEM, `Product data:\n${JSON.stringify(product)}`, 300);
     if (!out || typeof out.summary !== "string") return json({ error: "The AI answer couldn't be read. Try again." }, 502, headers);
-    return json({ summary: out.summary.slice(0, 400), points: (out.points || []).slice(0, 3).map((x) => String(x).slice(0, 160)), model: MODEL }, 200, headers);
+    return json({ summary: out.summary.slice(0, 400), points: (out.points || []).slice(0, 3).map((x) => String(x).slice(0, 160)), model: MODEL_USED }, 200, headers);
   } catch (e) {
-    return json({ error: "Couldn't reach the AI service. Try again in a moment." }, 502, headers);
+    return json({ error: e.message || "Couldn't reach the AI service. Try again in a moment." }, 502, headers);
   }
 };
