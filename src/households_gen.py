@@ -1,17 +1,23 @@
 """Creates data/households.csv (30 diverse households) from archetypes.
 Run from the repo root:  python -m src.households_gen
+Also writes data/household_budgets_regional.csv (same households, one budget per region, from the regional prices).
 
 Every household gets: size, diet, allergens, how much it eats out, weekly budget and protein target.
 Budgets are CALIBRATED: budget = expected normal-week grocery cost * tier factor (tight / normal / comfortable),
 so the budget constraint is meaningful for every household.
 All numbers are PLACEHOLDERS to be checked later by the business teammate.
 """
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
 from src.demand import DEFAULT_SEED, draw_taste, expected_weekly_cost
 
 SEED = 7
+REGIONAL_PRICES = "data/price_weekly_regional_synthetic.csv"   # columns: region_id, week, product_id, regular_price_usd, ...
+DEFAULT_REGION = "durham_nc"      # households.csv budgets use products.csv prices (= this region, see sync_reference_prices)
+TRAIN_WEEKS = 80                  # reference price = mean regular price over weeks 0-79
 PROTEIN_CHILD_G_DAY = 40     # protein targets per day are placeholders (see ARCHETYPES)
 
 TIER_FACTOR = {"tight": (1.10, 1.20), "normal": (1.20, 1.35), "comfortable": (1.35, 1.55)}
@@ -91,6 +97,20 @@ def describe(arch: dict, row: dict, budget: int) -> str:
     return f"{text}; {arch['tier']} budget (${budget}/week)"
 
 
+def regional_reference_prices(products: pd.DataFrame) -> dict:
+    """region_id -> reference price per product (same order as products). Empty dict if the file is missing."""
+    if not Path(REGIONAL_PRICES).exists():
+        return {}
+    prices = pd.read_csv(REGIONAL_PRICES)
+    col = "regular_price_usd" if "regular_price_usd" in prices.columns else "price_usd"
+    prices = prices[prices["week"] < TRAIN_WEEKS]
+    ref = prices.groupby(["region_id", "product_id"])[col].mean().unstack("product_id")
+    missing = sorted(set(products["product_id"]) - set(ref.columns))
+    if missing:
+        raise SystemExit(f"{REGIONAL_PRICES}: no prices for {missing}")
+    return {r: ref.loc[r, products["product_id"]].to_numpy() for r in ref.index}
+
+
 def main() -> None:
     rng = np.random.default_rng(SEED)
     products = pd.read_csv("data/products.csv")
@@ -108,6 +128,8 @@ def main() -> None:
                 demand_noise=uniform(rng, a["noise"]), guest_prob=uniform(rng, a["guest"]),
                 allergen_exclusions=draw_allergen(rng, diet)))
 
+    regional = regional_reference_prices(products)
+    regional_rows = []
     rows = []
     for i, s in enumerate(specs):
         a = ARCHETYPES[s["arch"]]
@@ -118,17 +140,29 @@ def main() -> None:
                "kcal_per_adult_day": a["kcal"]}
         taste = draw_taste(DEFAULT_SEED + i, len(products))      # same taste as data_gen will use for this household
         cost = expected_weekly_cost({**row}, products, taste)
-        budget = int(max(20, 5 * round(cost * uniform(rng, TIER_FACTOR[a["tier"]]) / 5)))
+        tier_factor = uniform(rng, TIER_FACTOR[a["tier"]])      # drawn once: tightness of the household in every region
+        budget = int(max(20, 5 * round(cost * tier_factor / 5)))
         protein_week = (s["n_adults"] * a["protein"] + s["n_children"] * PROTEIN_CHILD_G_DAY) * 7 \
             * (1 - s["eats_out_share"])
         row.update({"weekly_budget_usd": budget, "weekly_protein_target_g": int(10 * round(protein_week / 10)),
                     "weekend_boost": s["weekend_boost"], "demand_noise": s["demand_noise"],
                     "guest_prob": s["guest_prob"], "description": describe(a, {**s}, budget)})
         rows.append(row)
+        for region, ref_price in regional.items():              # same household, same taste, same tier, regional prices
+            region_cost = expected_weekly_cost({**row}, products.assign(price_usd=ref_price), taste)
+            regional_rows.append({"household_id": row["household_id"], "region_id": region,
+                                  "weekly_budget_usd": int(max(20, 5 * round(region_cost * tier_factor / 5)))})
 
     out = pd.DataFrame(rows)
     out.to_csv("data/households.csv", index=False)
     print(f"Wrote data/households.csv with {len(out)} households")
+    if regional_rows:
+        reg = pd.DataFrame(regional_rows)
+        reg.to_csv("data/household_budgets_regional.csv", index=False)
+        print(f"Wrote data/household_budgets_regional.csv: {len(reg)} rows "
+              f"({reg['household_id'].nunique()} households x {reg['region_id'].nunique()} regions)")
+        print("Average weekly budget by region:")
+        print(reg.groupby("region_id")["weekly_budget_usd"].mean().round(1).to_string())
     print(out[["household_id", "persona", "n_people", "diet", "allergen_exclusions", "weekly_budget_usd",
                "weekly_protein_target_g"]].to_string(index=False))
 

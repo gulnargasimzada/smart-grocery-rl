@@ -1,6 +1,7 @@
 """Validates all data files (data v2). Run from the repo root:  python -m src.check_data
 
-Checks products, households, recipes and (if present) the demand history, and that they agree with each other.
+Checks products, households, recipes, (if present) the regional budgets and the demand history, and that they agree
+with each other. Weekly prices are checked separately by src/check_prices.py.
 Prints per-recipe nutrition, cost and allergens, and how many recipes each household can actually use.
 """
 import sys
@@ -183,6 +184,19 @@ def check_demand(demand: pd.DataFrame, households: pd.DataFrame, products: pd.Da
     print(f"demand_weekly.csv: {len(demand)} rows | {n_weeks} weeks | all checks on the grid and exclusions done")
 
 
+def check_regional_budgets(budgets: pd.DataFrame, households: pd.DataFrame) -> None:
+    need = ["household_id", "region_id", "weekly_budget_usd"]
+    if missing_columns(budgets, need, "household_budgets_regional.csv"):
+        return
+    check(set(budgets["household_id"]) == set(households["household_id"]),
+          "household_budgets_regional.csv: households differ from households.csv (run python -m src.households_gen)")
+    n_regions = budgets["region_id"].nunique()
+    check(len(budgets) == len(households) * n_regions and not budgets.duplicated(["household_id", "region_id"]).any(),
+          f"household_budgets_regional.csv: expected one row per household and region ({len(households)} x {n_regions})")
+    check((budgets["weekly_budget_usd"] > 0).all(), "household_budgets_regional.csv: budgets must be > 0")
+    print(f"household_budgets_regional.csv: {len(budgets)} rows | {n_regions} regions: {sorted(budgets['region_id'].unique())}")
+
+
 def main() -> None:
     products = pd.read_csv("data/products.csv")
     households = pd.read_csv("data/households.csv")
@@ -195,6 +209,8 @@ def main() -> None:
     if not table.empty:
         print(table.drop(columns=["ingredients", "meal_type"]).to_string(index=False))
         check_recipe_coverage(households, products, table)
+    if Path("data/household_budgets_regional.csv").exists():
+        check_regional_budgets(pd.read_csv("data/household_budgets_regional.csv"), households)
     if Path("data/demand_weekly.csv").exists():
         check_demand(pd.read_csv("data/demand_weekly.csv"), households, products)
     else:
