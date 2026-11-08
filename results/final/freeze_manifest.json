@@ -1,0 +1,119 @@
+{
+  "base_git_commit": "2f5a6445953b4c81f4555bce475c608f62e35f53",
+  "code_sha256": {
+    "src/comparison.py": "a84d9a376318ff6ebff51a0f607ec9e286dc31dc15f368c4331eba038d1997ee",
+    "src/diets.py": "8dde7bf8bfd25b6996b21a09512abfcb2ea14ae1cb7b9d7018986fc770f64cab",
+    "src/env.py": "5c26bde6818cfc6f9befacad2391fda261256aaa09829b2e2cf00e2f48fc2d40",
+    "src/evaluate.py": "0603fd4feee850e4e84f92945807c935bfad801fca8ea835f12e41f1be5316b1",
+    "src/final_eval.py": "b61829b9b9e88ac7e71963acc51a9ebea2bd1cc59355d7aa17c6dc7ddad94c7f",
+    "src/forecast_table.py": "10510b679e98950080e7ea602903de6425e11921436d7e7a9cc8594ed8a949a2",
+    "src/optimization.py": "844064e645b842c4ca4ff562387b2467dc1edc5556c810b629377ab25bd40577",
+    "src/optimization_eval.py": "7c5611b22e47eaee6b4cd9a67d71beaf3bc3becfb9e07c099ed90caf8b38a633",
+    "src/policies.py": "c874c52adbad878f5b306ee3d5ef91b6d268007b390feb04f117568d13f9f6b1",
+    "src/rl_wrapper.py": "8dcbd1a345a47caf0632583cb97f2f1fd03a1aefac513b5c15881eecb99c80d3",
+    "src/train_rl.py": "39cc08b0d495bd436bc312c73f4cd0156b4ff6663f83267a1f77f377cfafc3a2"
+  },
+  "data_sha256": {
+    "data/demand_weekly.csv": "93e282be703d92a0f987542dcda0f23ce368d498af29d38b7dd5f90452a544a2",
+    "data/forecast_weekly.csv": "44f62eb89fdac52fb24a312c86454cef7ee3a6183e106a93e61ee2a49448fa7d",
+    "data/household_region_budgets.csv": "f0e5407fc8da16609b29ea5175eeedbb8d7803c9c4e5e3788517d86f86ecd04f",
+    "data/households.csv": "699feed3c9bc495025f62a6f7a8d7855d214c226250fa33b6dc0ecef0b8ad464",
+    "data/price_weekly_regional_synthetic.csv": "df947fb2807c7920398b7abdd19630edf0312d659030f2aa1dac69a5819eeb6f",
+    "data/products.csv": "18cf5a66fdc326cc5eefb9d23b425b82e009f9acf21bb0fd7eb1fba5c6a0a714",
+    "data_rl/household_storage.csv": "cf1ccbc7d8f2a3efcd7c0fc02eaaceac8c135c93017fbb262964a2f1b6cabbe6",
+    "data_rl/storage_rules.csv": "8d2acd1d1321e6add1db4deb93f2aabfd9a654bd26650297183ce884045304d4"
+  },
+  "environment_constants": {
+    "protein_weight": 0.5,
+    "stock_cap_weeks": 3.0,
+    "stockout_multiplier": 2.0,
+    "terminal_credit_buffer_weeks": 2.0,
+    "terminal_credit_days": 14.0
+  },
+  "evaluation": {
+    "budget_scenario": "normal",
+    "forecast_variant": "no_events",
+    "horizon_weeks": 13,
+    "household": "hh_student",
+    "metrics": [
+      "cash_spend",
+      "net_cost",
+      "waste_units",
+      "waste_cost",
+      "stockout_units",
+      "stockout_value",
+      "fill_rate_value",
+      "reward",
+      "protein_coverage",
+      "terminal_charge"
+    ],
+    "region": "durham_nc",
+    "replay": "deterministic, paired replay of the recorded demand and prices (one trajectory)",
+    "storage_scenario": "default",
+    "test_episodes": [
+      {
+        "end_week": 90,
+        "start_week": 78
+      },
+      {
+        "end_week": 103,
+        "start_week": 91
+      }
+    ],
+    "test_spec_hash": "94911ee3f75b"
+  },
+  "libraries": {
+    "gymnasium": "1.4.0",
+    "numpy": "2.2.6",
+    "pandas": "3.0.2",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "python": "3.12.11",
+    "scipy": "1.17.1",
+    "stable_baselines3": "2.9.2",
+    "torch": "2.13.0"
+  },
+  "methods": {
+    "average_rule": "order up to 1 week of trailing 4-week mean demand, whole packages",
+    "fixed": "standing order of the mean weekly demand of training weeks 4-63",
+    "forecast_rule": "order up to the Ridge no_events forecast, whole packages",
+    "optimization": {
+      "delta": 0.4,
+      "delta_chosen_on": "training windows only (results/optimization/tuned.json)",
+      "policy": "weekly MILP (src/optimization.py)"
+    },
+    "ppo": {
+      "checkpoints": {
+        "forecast_seed0": {
+          "path": "results/rl_pilot/selected/forecast_seed0.zip",
+          "sha256": "672411eb3cfddf20b6c58c5bfe226f41f45ad1381012dbe296c00306e2f05e58"
+        },
+        "forecast_seed1": {
+          "path": "results/rl_pilot/selected/forecast_seed1.zip",
+          "sha256": "3d8e5c25db7cde78874b099f54576dfc026c82f1afe9c2bdacdf9c2e8c6ccca2"
+        },
+        "forecast_seed2": {
+          "path": "results/rl_pilot/selected/forecast_seed2.zip",
+          "sha256": "61d2ac468ad0812555ece24825bd59035d1a1627120459560488ab5988ce972d"
+        },
+        "no_forecast_seed0": {
+          "path": "results/rl_pilot/selected/no_forecast_seed0.zip",
+          "sha256": "6b63bbe1dd2776c0c59cc5166fe8191728a39af7cfe71216d21fec40a6de373c"
+        },
+        "no_forecast_seed1": {
+          "path": "results/rl_pilot/selected/no_forecast_seed1.zip",
+          "sha256": "df8561e50fe4918be3765586ca52c1a1accbedefef4b80c7cfde7e57b7802b6b"
+        },
+        "no_forecast_seed2": {
+          "path": "results/rl_pilot/selected/no_forecast_seed2.zip",
+          "sha256": "06288bb82a1155f9ee7274bcbd8e405e7eb1b3c0527398fa57f5d60be4118705"
+        }
+      },
+      "forecast_variant": "no_events",
+      "selection": "best mean validation reward on windows 64 and 65 (results/rl_pilot/); no further training or tuning"
+    }
+  },
+  "purpose": "Frozen state for the one-time held-out test run (weeks 78-103). Nothing below may change before the run.",
+  "validation_reference_sha256": {
+    "results/comparison/comparison_table.csv": "5320d60253e2f63c38cb9dda578826b6e02362b90274c88574687b161799bb94"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "seed": 1,
+  "timesteps": 300000,
+  "eval_every": 20480,
+  "train_start_range": [
+    12,
+    51
+  ],
+  "select_starts": [
+    64,
+    65
+  ],
+  "hyperparameters": {
+    "n_envs": 4,
+    "n_steps": 512,
+    "batch_size": 256,
+    "n_epochs": 10,
+    "learning_rate": 0.0003,
+    "gamma": 1.0,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.0,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "log_std_init": -1.0,
+    "net_arch": [
+      64,
+      64
+    ],
+    "normalize_reward": true
+  },
+  "runs": [
+    {
+      "agent": "forecast",
+      "seconds": 584.5,
+      "nan_or_inf": false
+    },
+    {
+      "agent": "no_forecast",
+      "seconds": 599.4,
+      "nan_or_inf": false
+    }
+  ]
+}

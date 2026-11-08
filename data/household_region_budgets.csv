@@ -1,0 +1,151 @@
+household_id,region_id,region_name,original_budget_usd,calibrated_budget_usd,calibration_percentile,calibration_weeks,n_calibration_weeks,calib_mean_cost_usd,calib_median_cost_usd,calib_p75_cost_usd,budget_ratio_to_original,budget_source,normal_budget_usd,challenging_budget_usd,tight_budget_usd,calib_p90_cost_usd
+hh_04,atlanta_ga,"Atlanta, GA",45,59,75,0-77 normal weeks only,70,54.2963,52.9363,58.8917,1.3111,synthetic,64,59,45,63.8583
+hh_04,chicago_il,"Chicago, IL",45,63,75,0-77 normal weeks only,70,57.7987,56.3507,62.6921,1.4,synthetic,69,63,45,68.0354
+hh_04,durham_nc,"Durham, NC",45,59,75,0-77 normal weeks only,70,53.7456,52.4472,58.2244,1.3111,synthetic,64,59,45,63.2081
+hh_04,new_york_ny,"New York, NY",45,73,75,0-77 normal weeks only,70,66.6871,65.0034,72.2833,1.6222,synthetic,79,73,45,78.4303
+hh_04,san_francisco_ca,"San Francisco, CA",45,74,75,0-77 normal weeks only,70,67.4406,65.7522,73.2691,1.6444,synthetic,80,74,45,79.3016
+hh_05,atlanta_ga,"Atlanta, GA",45,62,75,0-77 normal weeks only,71,56.7134,55.413,61.4657,1.3778,synthetic,70,62,45,69.5858
+hh_05,chicago_il,"Chicago, IL",45,66,75,0-77 normal weeks only,71,60.2853,58.8619,65.2822,1.4667,synthetic,74,66,45,73.894
+hh_05,durham_nc,"Durham, NC",45,61,75,0-77 normal weeks only,71,56.0408,54.854,60.5275,1.3556,synthetic,69,61,45,68.7638
+hh_05,new_york_ny,"New York, NY",45,76,75,0-77 normal weeks only,71,69.6269,68.0822,75.2253,1.6889,synthetic,86,76,45,85.4206
+hh_05,san_francisco_ca,"San Francisco, CA",45,77,75,0-77 normal weeks only,71,70.5225,68.961,76.3673,1.7111,synthetic,87,77,45,86.5444
+hh_06,atlanta_ga,"Atlanta, GA",50,67,75,0-77 normal weeks only,66,63.1289,62.8799,66.3424,1.34,synthetic,74,67,50,73.6406
+hh_06,chicago_il,"Chicago, IL",50,71,75,0-77 normal weeks only,66,67.5385,67.2782,70.9822,1.42,synthetic,79,71,50,78.8272
+hh_06,durham_nc,"Durham, NC",50,66,75,0-77 normal weeks only,66,62.5455,62.2479,65.7939,1.32,synthetic,73,66,50,72.9614
+hh_06,new_york_ny,"New York, NY",50,82,75,0-77 normal weeks only,66,77.5523,77.2427,81.521,1.64,synthetic,91,82,50,90.5484
+hh_06,san_francisco_ca,"San Francisco, CA",50,83,75,0-77 normal weeks only,66,78.952,78.7954,82.9619,1.66,synthetic,93,83,50,92.094
+hh_07,atlanta_ga,"Atlanta, GA",45,61,75,0-77 normal weeks only,70,56.8692,56.2462,60.8527,1.3556,synthetic,67,61,45,66.1176
+hh_07,chicago_il,"Chicago, IL",45,65,75,0-77 normal weeks only,70,60.3429,59.6898,64.4941,1.4444,synthetic,71,65,45,70.1882
+hh_07,durham_nc,"Durham, NC",45,60,75,0-77 normal weeks only,70,56.143,55.55,59.9666,1.3333,synthetic,66,60,45,65.2531
+hh_07,new_york_ny,"New York, NY",45,75,75,0-77 normal weeks only,70,69.7218,68.9881,74.471,1.6667,synthetic,81,75,45,80.9788
+hh_07,san_francisco_ca,"San Francisco, CA",45,76,75,0-77 normal weeks only,70,70.5308,69.7341,75.3736,1.6889,synthetic,83,76,45,82.2294
+hh_08,atlanta_ga,"Atlanta, GA",110,133,75,0-77 normal weeks only,71,124.1173,122.5878,132.5657,1.2091,synthetic,143,133,110,142.5558
+hh_08,chicago_il,"Chicago, IL",110,143,75,0-77 normal weeks only,71,132.8026,131.2829,142.0607,1.3,synthetic,153,143,110,152.5336
+hh_08,durham_nc,"Durham, NC",110,132,75,0-77 normal weeks only,71,122.9014,121.3397,131.1904,1.2,synthetic,142,132,110,141.2435
+hh_08,new_york_ny,"New York, NY",110,163,75,0-77 normal weeks only,71,152.3871,150.3313,162.7476,1.4818,synthetic,176,163,110,175.0474
+hh_08,san_francisco_ca,"San Francisco, CA",110,166,75,0-77 normal weeks only,71,155.2366,153.3052,165.9379,1.5091,synthetic,179,166,110,178.0115
+hh_09,atlanta_ga,"Atlanta, GA",135,151,75,0-77 normal weeks only,66,138.4064,137.0223,150.0736,1.1185,synthetic,160,151,135,159.5021
+hh_09,chicago_il,"Chicago, IL",135,160,75,0-77 normal weeks only,66,147.3214,145.8536,159.6741,1.1852,synthetic,171,160,135,170.1373
+hh_09,durham_nc,"Durham, NC",135,149,75,0-77 normal weeks only,66,136.4336,135.0106,148.1423,1.1037,synthetic,158,149,135,157.083
+hh_09,new_york_ny,"New York, NY",135,185,75,0-77 normal weeks only,66,169.7112,167.9981,184.2012,1.3704,synthetic,196,185,135,195.4246
+hh_09,san_francisco_ca,"San Francisco, CA",135,186,75,0-77 normal weeks only,66,171.6643,169.8684,185.8442,1.3778,synthetic,199,186,135,198.1679
+hh_10,atlanta_ga,"Atlanta, GA",115,128,75,0-77 normal weeks only,63,118.8096,117.8491,127.0368,1.113,synthetic,144,128,115,143.5027
+hh_10,chicago_il,"Chicago, IL",115,136,75,0-77 normal weeks only,63,126.2392,125.0894,135.072,1.1826,synthetic,153,136,115,152.5668
+hh_10,durham_nc,"Durham, NC",115,126,75,0-77 normal weeks only,63,117.5673,116.5598,125.7782,1.0957,synthetic,142,126,115,141.9994
+hh_10,new_york_ny,"New York, NY",115,156,75,0-77 normal weeks only,63,145.4309,144.0818,155.5968,1.3565,synthetic,176,156,115,175.7609
+hh_10,san_francisco_ca,"San Francisco, CA",115,158,75,0-77 normal weeks only,63,147.4029,146.0722,157.6834,1.3739,synthetic,179,158,115,178.2259
+hh_11,atlanta_ga,"Atlanta, GA",110,167,75,0-77 normal weeks only,70,154.4112,152.4544,166.1374,1.5182,synthetic,184,167,110,183.5249
+hh_11,chicago_il,"Chicago, IL",110,179,75,0-77 normal weeks only,70,166.4282,164.309,178.8615,1.6273,synthetic,199,179,110,198.3146
+hh_11,durham_nc,"Durham, NC",110,165,75,0-77 normal weeks only,70,152.714,150.724,164.3755,1.5,synthetic,182,165,110,181.4037
+hh_11,new_york_ny,"New York, NY",110,205,75,0-77 normal weeks only,70,190.5598,187.9898,204.9477,1.8636,synthetic,227,205,110,226.6676
+hh_11,san_francisco_ca,"San Francisco, CA",110,209,75,0-77 normal weeks only,70,194.5895,192.2485,208.8249,1.9,synthetic,233,209,110,232.2515
+hh_12,atlanta_ga,"Atlanta, GA",240,275,75,0-77 normal weeks only,69,256.4301,257.9954,274.0741,1.1458,synthetic,303,275,240,302.9994
+hh_12,chicago_il,"Chicago, IL",240,291,75,0-77 normal weeks only,69,271.4773,273.6494,290.4635,1.2125,synthetic,321,291,240,320.0601
+hh_12,durham_nc,"Durham, NC",240,271,75,0-77 normal weeks only,69,252.8643,254.6161,270.5471,1.1292,synthetic,299,271,240,298.242
+hh_12,new_york_ny,"New York, NY",240,334,75,0-77 normal weeks only,69,312.1629,314.4976,333.7421,1.3917,synthetic,370,334,240,369.1553
+hh_12,san_francisco_ca,"San Francisco, CA",240,339,75,0-77 normal weeks only,69,316.0122,319.2002,338.3244,1.4125,synthetic,373,339,240,372.675
+hh_13,atlanta_ga,"Atlanta, GA",210,271,75,0-77 normal weeks only,67,241.9736,247.1498,270.1198,1.2905,synthetic,282,271,210,281.5072
+hh_13,chicago_il,"Chicago, IL",210,287,75,0-77 normal weeks only,67,256.7807,262.3895,286.988,1.3667,synthetic,299,287,210,298.7754
+hh_13,durham_nc,"Durham, NC",210,269,75,0-77 normal weeks only,67,240.5093,245.3629,268.8185,1.281,synthetic,280,269,210,279.7773
+hh_13,new_york_ny,"New York, NY",210,334,75,0-77 normal weeks only,67,298.1456,304.781,333.1355,1.5905,synthetic,347,334,210,346.9385
+hh_13,san_francisco_ca,"San Francisco, CA",210,338,75,0-77 normal weeks only,67,301.4908,307.7387,337.1576,1.6095,synthetic,350,338,210,349.714
+hh_14,atlanta_ga,"Atlanta, GA",225,277,75,0-77 normal weeks only,73,263.4589,261.8837,276.4207,1.2311,synthetic,316,277,225,315.7272
+hh_14,chicago_il,"Chicago, IL",225,295,75,0-77 normal weeks only,73,280.6166,278.6241,294.0288,1.3111,synthetic,338,295,225,337.2348
+hh_14,durham_nc,"Durham, NC",225,276,75,0-77 normal weeks only,73,261.9366,260.4537,275.0646,1.2267,synthetic,314,276,225,313.8107
+hh_14,new_york_ny,"New York, NY",225,340,75,0-77 normal weeks only,73,324.0866,321.8442,339.938,1.5111,synthetic,388,340,225,387.9832
+hh_14,san_francisco_ca,"San Francisco, CA",225,344,75,0-77 normal weeks only,73,327.6836,325.4392,343.282,1.5289,synthetic,394,344,225,393.2863
+hh_15,atlanta_ga,"Atlanta, GA",250,301,75,0-77 normal weeks only,70,272.508,267.0109,300.2758,1.204,synthetic,316,301,250,315.9356
+hh_15,chicago_il,"Chicago, IL",250,320,75,0-77 normal weeks only,70,290.4624,284.7569,319.6768,1.28,synthetic,339,320,250,338.2614
+hh_15,durham_nc,"Durham, NC",250,299,75,0-77 normal weeks only,70,270.3384,265.1631,298.2993,1.196,synthetic,314,299,250,313.9429
+hh_15,new_york_ny,"New York, NY",250,370,75,0-77 normal weeks only,70,335.7101,329.0549,369.6628,1.48,synthetic,391,370,250,390.1929
+hh_15,san_francisco_ca,"San Francisco, CA",250,374,75,0-77 normal weeks only,70,340.1982,333.3623,373.3198,1.496,synthetic,397,374,250,396.3109
+hh_16,atlanta_ga,"Atlanta, GA",190,235,75,0-77 normal weeks only,72,214.4506,211.5118,234.8548,1.2368,synthetic,251,235,190,250.7012
+hh_16,chicago_il,"Chicago, IL",190,249,75,0-77 normal weeks only,72,226.8467,223.8521,248.7898,1.3105,synthetic,265,249,190,264.9147
+hh_16,durham_nc,"Durham, NC",190,232,75,0-77 normal weeks only,72,211.8101,209.1304,231.7225,1.2211,synthetic,248,232,190,247.2472
+hh_16,new_york_ny,"New York, NY",190,287,75,0-77 normal weeks only,72,261.4324,258.021,286.2797,1.5105,synthetic,305,287,190,304.8336
+hh_16,san_francisco_ca,"San Francisco, CA",190,290,75,0-77 normal weeks only,72,264.3841,260.5737,289.5713,1.5263,synthetic,310,290,190,309.1241
+hh_17,atlanta_ga,"Atlanta, GA",175,208,75,0-77 normal weeks only,71,194.5464,191.72,207.656,1.1886,synthetic,225,208,175,224.6698
+hh_17,chicago_il,"Chicago, IL",175,222,75,0-77 normal weeks only,71,207.4565,204.7085,221.4811,1.2686,synthetic,240,222,175,239.8387
+hh_17,durham_nc,"Durham, NC",175,206,75,0-77 normal weeks only,71,192.5765,190.1199,205.4519,1.1771,synthetic,223,206,175,222.108
+hh_17,new_york_ny,"New York, NY",175,255,75,0-77 normal weeks only,71,238.99,235.984,254.9693,1.4571,synthetic,277,255,175,276.0213
+hh_17,san_francisco_ca,"San Francisco, CA",175,259,75,0-77 normal weeks only,71,241.9947,238.8464,258.277,1.48,synthetic,281,259,175,280.0075
+hh_18,atlanta_ga,"Atlanta, GA",180,213,75,0-77 normal weeks only,67,202.3451,202.563,212.5464,1.1833,synthetic,226,213,180,225.1296
+hh_18,chicago_il,"Chicago, IL",180,225,75,0-77 normal weeks only,67,213.9901,214.2524,224.6494,1.25,synthetic,239,225,180,238.5944
+hh_18,durham_nc,"Durham, NC",180,211,75,0-77 normal weeks only,67,200.2364,200.3862,210.3076,1.1722,synthetic,223,211,180,222.8285
+hh_18,new_york_ny,"New York, NY",180,262,75,0-77 normal weeks only,67,249.0217,249.2092,261.5735,1.4556,synthetic,278,262,180,277.076
+hh_18,san_francisco_ca,"San Francisco, CA",180,264,75,0-77 normal weeks only,67,250.7116,250.5098,263.1318,1.4667,synthetic,279,264,180,278.9469
+hh_19,atlanta_ga,"Atlanta, GA",95,105,75,0-77 normal weeks only,70,97.5256,97.1298,104.6779,1.1053,synthetic,115,105,95,114.3397
+hh_19,chicago_il,"Chicago, IL",95,112,75,0-77 normal weeks only,70,103.9793,103.555,111.6408,1.1789,synthetic,122,112,95,121.9847
+hh_19,durham_nc,"Durham, NC",95,105,75,0-77 normal weeks only,70,96.8647,96.348,104.1113,1.1053,synthetic,114,105,95,113.6616
+hh_19,new_york_ny,"New York, NY",95,129,75,0-77 normal weeks only,70,120.0732,119.4878,128.8915,1.3579,synthetic,142,129,95,141.0423
+hh_19,san_francisco_ca,"San Francisco, CA",95,131,75,0-77 normal weeks only,70,121.5656,120.9241,130.4726,1.3789,synthetic,143,131,95,142.5852
+hh_20,atlanta_ga,"Atlanta, GA",45,53,75,0-77 normal weeks only,70,47.5049,46.6021,52.0334,1.1778,synthetic,56,53,45,55.7592
+hh_20,chicago_il,"Chicago, IL",45,56,75,0-77 normal weeks only,70,50.421,49.5414,55.2184,1.2444,synthetic,60,56,45,59.1622
+hh_20,durham_nc,"Durham, NC",45,52,75,0-77 normal weeks only,70,47.1645,46.3359,51.6447,1.1556,synthetic,56,52,45,55.4222
+hh_20,new_york_ny,"New York, NY",45,64,75,0-77 normal weeks only,70,58.1878,57.1619,63.734,1.4222,synthetic,69,64,45,68.4076
+hh_20,san_francisco_ca,"San Francisco, CA",45,65,75,0-77 normal weeks only,70,58.8003,57.7709,64.3072,1.4444,synthetic,69,65,45,68.7906
+hh_21,atlanta_ga,"Atlanta, GA",85,102,75,0-77 normal weeks only,66,94.9203,95.1962,101.5708,1.2,synthetic,107,102,85,106.2776
+hh_21,chicago_il,"Chicago, IL",85,108,75,0-77 normal weeks only,66,100.0991,100.545,107.0777,1.2706,synthetic,113,108,85,112.1353
+hh_21,durham_nc,"Durham, NC",85,101,75,0-77 normal weeks only,66,94.0062,94.3717,100.6846,1.1882,synthetic,106,101,85,105.2669
+hh_21,new_york_ny,"New York, NY",85,125,75,0-77 normal weeks only,66,116.1005,116.4676,124.1748,1.4706,synthetic,130,125,85,129.9893
+hh_21,san_francisco_ca,"San Francisco, CA",85,127,75,0-77 normal weeks only,66,118.2286,118.7017,126.5809,1.4941,synthetic,133,127,85,132.5411
+hh_22,atlanta_ga,"Atlanta, GA",110,140,75,0-77 normal weeks only,70,132.0002,132.6521,139.5948,1.2727,synthetic,156,140,110,155.211
+hh_22,chicago_il,"Chicago, IL",110,148,75,0-77 normal weeks only,70,139.635,140.2507,147.6104,1.3455,synthetic,165,148,110,164.162
+hh_22,durham_nc,"Durham, NC",110,138,75,0-77 normal weeks only,70,129.6936,130.3317,137.1627,1.2545,synthetic,153,138,110,152.3115
+hh_22,new_york_ny,"New York, NY",110,171,75,0-77 normal weeks only,70,160.9439,161.7956,170.1877,1.5545,synthetic,190,171,110,189.0132
+hh_22,san_francisco_ca,"San Francisco, CA",110,173,75,0-77 normal weeks only,70,163.2043,164.0157,172.6328,1.5727,synthetic,192,173,110,191.6892
+hh_23,atlanta_ga,"Atlanta, GA",50,57,75,0-77 normal weeks only,70,53.5284,52.7076,56.7311,1.14,synthetic,63,57,50,62.2848
+hh_23,chicago_il,"Chicago, IL",50,62,75,0-77 normal weeks only,70,57.6292,56.628,61.0577,1.24,synthetic,68,62,50,67.0896
+hh_23,durham_nc,"Durham, NC",50,57,75,0-77 normal weeks only,70,53.0682,52.2126,56.1752,1.14,synthetic,62,57,50,61.5962
+hh_23,new_york_ny,"New York, NY",50,70,75,0-77 normal weeks only,70,65.7084,64.6665,69.5104,1.4,synthetic,77,70,50,76.2338
+hh_23,san_francisco_ca,"San Francisco, CA",50,72,75,0-77 normal weeks only,70,67.7269,66.4942,71.7551,1.44,synthetic,79,72,50,78.631
+hh_24,atlanta_ga,"Atlanta, GA",90,111,75,0-77 normal weeks only,70,100.4148,100.2217,110.5938,1.2333,synthetic,117,111,90,116.3475
+hh_24,chicago_il,"Chicago, IL",90,119,75,0-77 normal weeks only,70,107.941,107.6496,118.9343,1.3222,synthetic,126,119,90,125.0846
+hh_24,durham_nc,"Durham, NC",90,110,75,0-77 normal weeks only,70,99.3458,99.2008,109.3656,1.2222,synthetic,116,110,90,115.2874
+hh_24,new_york_ny,"New York, NY",90,136,75,0-77 normal weeks only,70,122.8677,122.4742,135.0325,1.5111,synthetic,142,136,90,141.9953
+hh_24,san_francisco_ca,"San Francisco, CA",90,138,75,0-77 normal weeks only,70,125.2654,124.5905,137.8913,1.5333,synthetic,145,138,90,144.9381
+hh_25,atlanta_ga,"Atlanta, GA",120,148,75,0-77 normal weeks only,72,138.0184,137.9832,147.9888,1.2333,synthetic,165,148,120,164.5644
+hh_25,chicago_il,"Chicago, IL",120,158,75,0-77 normal weeks only,72,146.8673,146.8155,157.5084,1.3167,synthetic,176,158,120,175.1966
+hh_25,durham_nc,"Durham, NC",120,147,75,0-77 normal weeks only,72,137.0224,136.9269,146.864,1.225,synthetic,164,147,120,163.378
+hh_25,new_york_ny,"New York, NY",120,182,75,0-77 normal weeks only,72,169.7094,169.5993,181.9533,1.5167,synthetic,203,182,120,202.5114
+hh_25,san_francisco_ca,"San Francisco, CA",120,185,75,0-77 normal weeks only,72,171.5931,171.7075,184.2001,1.5417,synthetic,206,185,120,205.0588
+hh_26,atlanta_ga,"Atlanta, GA",130,147,75,0-77 normal weeks only,72,135.6182,136.7634,146.649,1.1308,synthetic,156,147,130,155.0048
+hh_26,chicago_il,"Chicago, IL",130,157,75,0-77 normal weeks only,72,144.343,145.567,156.1147,1.2077,synthetic,165,157,130,164.9425
+hh_26,durham_nc,"Durham, NC",130,145,75,0-77 normal weeks only,72,133.9374,134.868,144.877,1.1154,synthetic,154,145,130,153.0434
+hh_26,new_york_ny,"New York, NY",130,180,75,0-77 normal weeks only,72,166.2045,167.4575,179.7973,1.3846,synthetic,190,180,130,189.9862
+hh_26,san_francisco_ca,"San Francisco, CA",130,182,75,0-77 normal weeks only,72,168.1496,169.6066,181.794,1.4,synthetic,193,182,130,192.2454
+hh_27,atlanta_ga,"Atlanta, GA",110,142,75,0-77 normal weeks only,71,130.6832,128.9986,141.4534,1.2909,synthetic,154,142,110,153.5426
+hh_27,chicago_il,"Chicago, IL",110,151,75,0-77 normal weeks only,71,139.4791,137.5331,150.9367,1.3727,synthetic,164,151,110,163.6079
+hh_27,durham_nc,"Durham, NC",110,141,75,0-77 normal weeks only,71,129.2595,127.5906,140.0485,1.2818,synthetic,152,141,110,151.854
+hh_27,new_york_ny,"New York, NY",110,174,75,0-77 normal weeks only,71,160.5092,158.4569,173.7958,1.5818,synthetic,189,174,110,188.4275
+hh_27,san_francisco_ca,"San Francisco, CA",110,177,75,0-77 normal weeks only,71,162.9861,160.6503,176.2546,1.6091,synthetic,192,177,110,191.275
+hh_28,atlanta_ga,"Atlanta, GA",190,246,75,0-77 normal weeks only,70,225.8671,227.2597,245.6904,1.2947,synthetic,260,246,190,259.6827
+hh_28,chicago_il,"Chicago, IL",190,261,75,0-77 normal weeks only,70,239.5368,241.2573,260.4743,1.3737,synthetic,276,261,190,275.7161
+hh_28,durham_nc,"Durham, NC",190,244,75,0-77 normal weeks only,70,223.699,225.427,243.9187,1.2842,synthetic,258,244,190,257.5256
+hh_28,new_york_ny,"New York, NY",190,302,75,0-77 normal weeks only,70,276.1524,277.9376,301.2951,1.5895,synthetic,318,302,190,317.6578
+hh_28,san_francisco_ca,"San Francisco, CA",190,304,75,0-77 normal weeks only,70,279.272,280.9355,303.7777,1.6,synthetic,322,304,190,321.3105
+hh_29,atlanta_ga,"Atlanta, GA",200,273,75,0-77 normal weeks only,70,249.9141,246.8346,272.1177,1.365,synthetic,291,273,200,290.947
+hh_29,chicago_il,"Chicago, IL",200,289,75,0-77 normal weeks only,70,265.4585,261.9455,288.5876,1.445,synthetic,309,289,200,308.3281
+hh_29,durham_nc,"Durham, NC",200,269,75,0-77 normal weeks only,70,246.6446,243.2719,268.1564,1.345,synthetic,287,269,200,286.6043
+hh_29,new_york_ny,"New York, NY",200,332,75,0-77 normal weeks only,70,304.8586,300.907,331.4865,1.66,synthetic,355,332,200,354.8754
+hh_29,san_francisco_ca,"San Francisco, CA",200,337,75,0-77 normal weeks only,70,309.1794,305.6676,336.3073,1.685,synthetic,361,337,200,360.0108
+hh_30,atlanta_ga,"Atlanta, GA",45,47,75,0-77 normal weeks only,70,42.878,42.0836,46.5695,1.0444,synthetic,51,47,45,50.1703
+hh_30,chicago_il,"Chicago, IL",45,50,75,0-77 normal weeks only,70,45.6354,44.7889,49.5254,1.1111,synthetic,54,50,45,53.5762
+hh_30,durham_nc,"Durham, NC",45,47,75,0-77 normal weeks only,70,42.3323,41.5831,46.0011,1.0444,synthetic,50,47,45,49.6027
+hh_30,new_york_ny,"New York, NY",45,57,75,0-77 normal weeks only,70,52.4966,51.5194,56.9907,1.2667,synthetic,62,57,45,61.4312
+hh_30,san_francisco_ca,"San Francisco, CA",45,58,75,0-77 normal weeks only,70,53.3752,52.4318,57.9059,1.2889,synthetic,63,58,45,62.5347
+hh_couple,atlanta_ga,"Atlanta, GA",120,143,75,0-77 normal weeks only,69,132.3259,130.6957,142.4349,1.1917,synthetic,153,143,120,152.2919
+hh_couple,chicago_il,"Chicago, IL",120,152,75,0-77 normal weeks only,69,141.0148,139.3571,151.8154,1.2667,synthetic,163,152,120,162.302
+hh_couple,durham_nc,"Durham, NC",120,142,75,0-77 normal weeks only,69,131.0606,129.5115,141.2194,1.1833,synthetic,151,142,120,150.7747
+hh_couple,new_york_ny,"New York, NY",120,176,75,0-77 normal weeks only,69,162.9062,161.1161,175.5011,1.4667,synthetic,188,176,120,187.4806
+hh_couple,san_francisco_ca,"San Francisco, CA",120,178,75,0-77 normal weeks only,69,165.0937,162.9315,177.9101,1.4833,synthetic,190,178,120,189.9743
+hh_family,atlanta_ga,"Atlanta, GA",220,267,75,0-77 normal weeks only,64,241.8329,239.4803,266.7098,1.2136,synthetic,279,267,220,278.816
+hh_family,chicago_il,"Chicago, IL",220,285,75,0-77 normal weeks only,64,258.184,255.4389,284.9176,1.2955,synthetic,298,285,220,297.8349
+hh_family,durham_nc,"Durham, NC",220,264,75,0-77 normal weeks only,64,239.4753,237.0019,263.9135,1.2,synthetic,276,264,220,275.8729
+hh_family,new_york_ny,"New York, NY",220,328,75,0-77 normal weeks only,64,297.4147,294.3819,327.5412,1.4909,synthetic,343,328,220,342.7282
+hh_family,san_francisco_ca,"San Francisco, CA",220,334,75,0-77 normal weeks only,64,301.9435,298.7625,333.0821,1.5182,synthetic,349,334,220,348.0637
+hh_student,atlanta_ga,"Atlanta, GA",55,69,75,0-77 normal weeks only,70,63.7939,62.0956,68.8584,1.2545,synthetic,75,69,55,74.4888
+hh_student,chicago_il,"Chicago, IL",55,74,75,0-77 normal weeks only,70,67.9785,66.2101,73.434,1.3455,synthetic,80,74,55,79.2738
+hh_student,durham_nc,"Durham, NC",55,69,75,0-77 normal weeks only,70,63.5978,61.9645,68.6318,1.2545,synthetic,75,69,55,74.2437
+hh_student,new_york_ny,"New York, NY",55,85,75,0-77 normal weeks only,70,78.6657,76.6165,84.8783,1.5455,synthetic,92,85,55,91.9703
+hh_student,san_francisco_ca,"San Francisco, CA",55,86,75,0-77 normal weeks only,70,79.3052,77.1871,85.7943,1.5636,synthetic,93,86,55,92.5154

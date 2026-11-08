@@ -1,0 +1,5 @@
+# Extra dependencies for the RL environment, its tests and the PPO pilot (requirements.txt is shared and unchanged)
+gymnasium==1.4.0
+pytest==8.4.2
+stable-baselines3==2.9.2
+torch==2.13.0

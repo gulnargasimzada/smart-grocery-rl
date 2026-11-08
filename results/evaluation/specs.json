@@ -1,0 +1,89 @@
+{
+  "train": {
+    "hash": "fa084da3f013",
+    "episodes": [
+      {
+        "split": "train",
+        "start_week": 4,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      },
+      {
+        "split": "train",
+        "start_week": 17,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      },
+      {
+        "split": "train",
+        "start_week": 30,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      },
+      {
+        "split": "train",
+        "start_week": 43,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      },
+      {
+        "split": "train",
+        "start_week": 51,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      }
+    ]
+  },
+  "validation": {
+    "hash": "66807c1116e1",
+    "episodes": [
+      {
+        "split": "validation",
+        "start_week": 64,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      }
+    ]
+  },
+  "test": {
+    "hash": "94911ee3f75b",
+    "episodes": [
+      {
+        "split": "test",
+        "start_week": 78,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      },
+      {
+        "split": "test",
+        "start_week": 91,
+        "household_id": "hh_student",
+        "region_id": "durham_nc",
+        "budget_scenario": "normal",
+        "storage_scenario": "default",
+        "horizon": 13
+      }
+    ]
+  }
+}
