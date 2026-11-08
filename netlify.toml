@@ -1,0 +1,9 @@
+# Netlify: builds the static Grocery Coach from the CSVs and serves the AI explanation function.
+# Set ANTHROPIC_API_KEY in Netlify → Site configuration → Environment variables.
+[build]
+  command = "pip install pandas python-dotenv && python build_static.py"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  PYTHON_VERSION = "3.11"

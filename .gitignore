@@ -1,5 +1,6 @@
 data/usda_raw/
 data/demand_daily.csv
+
 # Python caches
 __pycache__/
 *.pyc
@@ -10,3 +11,8 @@ __pycache__/
 
 # Open Prices raw snapshot (~80 MB), re-downloaded by src/fetch_open_prices.py
 data/open_prices_raw/
+
+# Local Python environment, static build output, Netlify local state
+.venv/
+dist/
+.netlify/
