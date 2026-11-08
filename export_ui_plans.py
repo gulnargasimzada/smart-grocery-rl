@@ -7,6 +7,11 @@ Ridge forecast) on the held-out test episodes, and records for every week: the b
 pipeline notes, prices, what was at home (each lot with its storage and days left), the forecast and what happened.
 The replay is deterministic, so its totals match results/final/test exactly; nothing is trained, tuned or re-selected.
 It refuses to run before the one-time test evaluation exists (results/final/test/), so it can't stand in for that run.
+
+Seventh entry, `balanced_rule`: the backend's `balanced` priority (src/coach_api.py) replayed on the same test episodes. Each week it builds the
+Optimization plan and the PPO-with-forecast plan for the current state and takes the Optimization plan unless its projected fill rate is more than
+0.03 below PPO's. It is NOT part of the frozen six-method comparison (that comparison is untouched); it was added afterwards so the app's three
+priorities match the backend's, and its rule and tolerance were fixed beforehand (docs/GROCERY_COACH_INTEGRATION.md).
 """
 from __future__ import annotations
 
@@ -19,14 +24,40 @@ import pandas as pd
 
 from src import comparison as cmp
 from src.env import GroceryEnv
+from src.coach_api import STRATEGIES, CoachAdapter
 from src.evaluate import episode_specs, make_policy
+from src.policies import Policy
 from src.rl_wrapper import OrderUpToWrapper
 
 ROOT = Path(__file__).resolve().parent
 FINAL = ROOT / "results" / "final" / "test"
 OUT = ROOT / "results" / "ui" / "plans.json"
 LABELS = {"fixed": "Fixed list", "average_rule": "Average rule", "forecast_rule": "Forecast rule (Ridge)",
-          "optimization": "Optimization (MILP)", "ppo_forecast": "RL agent (PPO + forecast)", "ppo_no_forecast": "RL agent (PPO, no forecast)"}
+          "optimization": "Optimization (MILP)", "ppo_forecast": "RL agent (PPO + forecast)", "ppo_no_forecast": "RL agent (PPO, no forecast)",
+          "balanced_rule": "Balanced rule (Optimization or RL agent, chosen each week)"}
+METRIC_COLS = ["reward", "cash_spend", "net_cost", "waste_cost", "waste_units", "stockout_units", "stockout_value", "stockout_days",
+               "fill_rate_value", "protein_coverage", "terminal_basis", "terminal_credit", "terminal_charge"]
+
+
+class BalancedRulePolicy(Policy):
+    """The backend's `balanced` priority as a policy: both plans for the current state, chosen by the documented projected-fill-rate rule."""
+    name = "balanced_rule"
+    uses_forecast = True
+
+    def __init__(self, adapter: CoachAdapter, ppo_seed: int):
+        self.adapter, self.ppo_seed, self.env, self.last = adapter, ppo_seed, None, None
+
+    def bind(self, base_env) -> None:
+        self.env = base_env
+
+    def act(self, obs_dict):
+        env, d = self.env, self.env.d
+        p = {"household_id": d.household_id, "region_id": d.region_id, "budget_scenario": "normal", "weeks_remaining": 13 - env.t, "ppo_seed": self.ppo_seed}
+        forecast = np.array([obs_dict["forecast"][pid] for pid in d.product_ids])
+        plans = {s: self.adapter._plan(env, p, s, forecast) for s in STRATEGIES}
+        strategy, why = self.adapter.select("balanced", plans, True)
+        self.last = strategy
+        return plans[strategy]["order"]
 
 
 def r(x, n=3):
@@ -48,7 +79,11 @@ def replay(spec, policy, table):
         env = OrderUpToWrapper(base)
     obs, info = env.reset(options={"start_week": spec.start_week})
     policy.reset()
+    if hasattr(policy, "bind"):
+        policy.bind(base)
     obs_dict, done, weeks = info["obs_dict"], False, {}
+    tot = dict.fromkeys(["reward", "cash_spend", "waste_cost", "waste_units", "stockout_units", "stockout_value", "stockout_days", "demand_value"], 0.0)
+    protein = []
     while not done:
         week = base.week
         lots = [{"p": d.product_ids[l.p], "u": r(l.units), "days": r(base.remaining_days(l), 1), "where": base._location(l)}
@@ -56,6 +91,12 @@ def replay(spec, policy, table):
         fc = obs_dict.get("forecast")
         action = policy.act_vec(obs) if policy.normalized_action else policy.act(obs_dict)
         obs, reward, done, _, info = env.step(action)
+        tot["reward"] += reward
+        tot["cash_spend"] += info["spend"]
+        for k in ("waste_cost", "waste_units", "stockout_units", "stockout_value", "stockout_days"):
+            tot[k] += info[k]
+        tot["demand_value"] += float((d.demand[week] * base.price_at(week)).sum())
+        protein.append(info["protein_target_met"])
         order = {pid: r(u) for pid, u in zip(d.product_ids, np.asarray(info["order"])) if u > 1e-6}
         weeks[str(week)] = {
             "order": order, "notes": list(info.get("notes") or []), "home": lots,
@@ -67,8 +108,14 @@ def replay(spec, policy, table):
             "stockout_units": r(info["stockout_units"]), "stockout_value": r(info["stockout_value"], 2),
             "stockout_days": int(info["stockout_days"]), "protein_target_met": r(info["protein_target_met"]), "reward": r(reward, 4),
         }
+        if getattr(policy, "last", None):
+            weeks[str(week)]["strategy"] = policy.last          # which plan the balanced rule took this week
         obs_dict = info["obs_dict"]
-    return weeks, d
+    summary = {k: tot[k] for k in ("reward", "cash_spend", "waste_cost", "waste_units", "stockout_units", "stockout_value", "stockout_days")}
+    summary.update(net_cost=info["episode_net_cost"], fill_rate_value=1.0 - tot["stockout_value"] / tot["demand_value"],
+                   protein_coverage=float(np.mean(protein)), terminal_basis=info["terminal_inventory_basis"],
+                   terminal_credit=info["terminal_inventory_credit"], terminal_charge=info["terminal_charge"])
+    return weeks, d, summary
 
 
 def main() -> None:
@@ -82,19 +129,30 @@ def main() -> None:
     for agent in cmp.PPO_AGENTS:
         seeds[agent] = best_seed(agent)
         methods[f"ppo_{agent}"] = cmp.load_ppo(agent, seeds[agent])
-    out_methods, d = {}, None
+    methods["balanced_rule"] = BalancedRulePolicy(CoachAdapter(table=table), seeds["forecast"])
+    out_methods, d, summaries = {}, None, {}
     for name, m in methods.items():
-        weeks = {}
+        weeks, eps = {}, []
         for sp in specs:
             pol = make_policy(m, GroceryEnv(sp.household_id, sp.region_id, sp.budget_scenario, sp.storage_scenario, sp.horizon)) \
                 if isinstance(m, str) else m
-            w, d = replay(sp, pol, table if cmp.uses_forecast(pol) else None)
+            w, d, summ = replay(sp, pol, table if cmp.uses_forecast(pol) else None)
             weeks.update(w)
+            eps.append(summ)
+        summaries[name] = {c: float(np.mean([e[c] for e in eps])) for c in METRIC_COLS}
         out_methods[name] = {"label": LABELS[name], "weeks": weeks}
         if name.startswith("ppo_"):
             out_methods[name]["seed"] = seeds[name[4:]]
         print(f"{name:16s} {len(weeks)} weeks, spend ${sum(x['spend'] for x in weeks.values()):.2f}")
     final = pd.read_csv(FINAL / "mean_over_episodes.csv", index_col=0)
+    for name in ("fixed", "average_rule", "forecast_rule", "optimization"):       # the replay must reproduce the frozen results
+        for c in METRIC_COLS:
+            assert abs(summaries[name][c] - final.loc[name, c]) < 1e-6, (name, c)
+    for name in ("ppo_forecast", "ppo_no_forecast"):
+        seed = seeds[name[4:]]
+        for c in METRIC_COLS:
+            assert abs(summaries[name][c] - final.loc[f"{name}_seed{seed}", c]) < 1e-6, (name, c)
+    final.loc["balanced_rule"] = pd.Series(summaries["balanced_rule"])           # supplementary row, not part of the frozen comparison
     payload = {
         "household": specs[0].household_id, "region": specs[0].region_id, "budget_scenario": specs[0].budget_scenario,
         "weekly_budget": r(d.weekly_budget, 2), "protein_target": r(d.protein_target, 1), "products": list(d.product_ids),

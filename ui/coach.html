@@ -840,6 +840,25 @@ function mealOptions(hh,S){
     return {r,ing,rescue,kcal:per("kcal"),protein:per("protein"),cost:per("price"),score};
   }).sort((a,b)=>b.score-a.score);
 }
+/* Meal ingredients and manual additions go on top of the strategy's list. They must obey the same hard limits as the models' own orders:
+   whole packages (rounded up), the weekly budget and storage space. Diet and allergens are already enforced in mealOptions (hh.ok).
+   `want[i]` is the extra quantity asked for; returns {extra, skipped}. A product that does not fit is skipped as a whole (never a partial package).
+   Storage check: purchases are counted in the product's default storage, which is conservative (the models may also freeze part of an order). */
+function fitExtras(prods,cap,pre,price,co,want,budget){
+  const room=cap?{...cap}:null,extra=prods.map(()=>0),skipped=[],at=(i,q)=>{if(room){const s=prods[i].store||"pantry";room[s]-=q*(prods[i].vol||0)}};
+  prods.forEach((p,i)=>(pre.inv[i]||[]).forEach(b=>at(i,b.q)));
+  prods.forEach((p,i)=>at(i,co[i]));
+  let left=budget-co.reduce((a,q,i)=>a+q*price[i],0);
+  prods.forEach((p,i)=>{
+    if(!(want[i]>0.05))return;
+    const step=p.step||1,n=Math.ceil(want[i]/step-1e-9)*step,cost=n*price[i];
+    if(cost>left+1e-9){skipped.push({i,q:n,why:"budget"});return}
+    if(room){const s=p.store||"pantry";if(n*(p.vol||0)>room[s]+1e-9){skipped.push({i,q:n,why:"storage"});return}}
+    extra[i]=n;left-=cost;at(i,n);
+  });
+  return {extra,skipped};
+}
+const skipNote=(prods,s)=>`${prods[s.i].name} for your meals was left off the list: it would not fit the weekly ${s.why==="budget"?"budget":"storage space"}.`;
 function picks(hh,w,opts){const k=pkey(hh,w);if(!ST.picks[k])ST.picks[k]=opts.slice(0,3).map(o=>o.r.id);return ST.picks[k]}
 function planWeek(hh,w){
   if(isOff(hh)&&OFF.methods[PRIO[ST.prio].method]?.weeks?.[w])return planWeekOff(hh,w);
@@ -848,32 +867,37 @@ function planWeek(hh,w){
   const need=P.map(()=>0);chosen.forEach(o=>o.ing.forEach(x=>need[x.i]+=x.q));
   const add=P.map((_,i)=>Math.max(0,need[i]-stockOf(S.pre,i)-S.co[i]));
   const ex=ST.extra?.[pkey(hh,w)]||{};
-  const {fin,adj}=adjustFin(hh,w,S.co.map((q,i)=>q+(add[i]>0.05?add[i]:0)+(ex[PID[i]]||0)));
+  const fx=fitExtras(P,hh.cap,S.pre,P.map(p=>p.price),S.co,S.co.map((q,i)=>(add[i]>0.05?add[i]:0)+(ex[PID[i]]||0)),hh.budget);
+  fx.skipped.forEach(s=>(S.notes||(S.notes=[])).push(skipNote(P,s)));
+  const {fin,adj}=adjustFin(hh,w,S.co.map((q,i)=>q+fx.extra[i]));
   const f=dayF(hh.weekend_boost),exp=o=>{const s=clone(S.pre);return stepWeek(s,o,S.fc,hh,f,ALL)};
   const ef=exp(fin),fixedO=constrain(order("fixed",hh,w,S.pre,M),S.pre,hh,M.avg)[0],efx=exp(fixedO);
   const total=fin.reduce((a,q,i)=>a+q*P[i].price,0),fixedTot=fixedO.reduce((a,q,i)=>a+q*P[i].price,0);
   const prot=P.reduce((a,p,i)=>a+Math.min(stockOf(S.pre,i)+fin[i],Math.max(S.fc[i],need[i]))*p.protein,0);
-  return {S,opts,sel,chosen,raw,need,add,fin,ex,adj,ef,efx,total,fixedTot,pcov:prot/hh.protein_target,price:P.map(p=>p.price),budget:hh.budget,
+  return {S,opts,sel,chosen,raw,need,add:add.map((q,i)=>q>0.05&&fx.extra[i]>0?q:0),fin,ex,adj,ef,efx,total,fixedTot,pcov:prot/hh.protein_target,price:P.map(p=>p.price),budget:hh.budget,
     fcCost:S.fc.reduce((a,q,i)=>a+q*P[i].price,0),rawCost:raw.reduce((a,q,i)=>a+q*P[i].price,0),rawN:raw.filter(q=>q>0.01).length};
 }
 
 /* ===================== Shopping priority → the team's models =====================
-   Each option runs one of the frozen methods from the team's held-out evaluation (results/final/test):
-     Save Money & Reduce Waste → Optimization (MILP): least spend among methods that serve demand, -75% waste
-     Keep My Groceries Stocked → Forecast rule (Ridge): buys up to the full forecast, fewest units run out
-     Balanced                  → RL agent (PPO + Ridge forecast): best fill rate, second-best reward, -27% waste
-   Households outside that evaluation use the in-browser preview, tuned with a matching weight on running out. */
+   This page is a STATIC DEMO. Nothing here calls the Python backend: each option shows a precomputed replay of the team's frozen models on the
+   held-out test weeks (results/ui/plans.json, written by export_ui_plans.py). The mapping is the same as the backend's priorities (src/coach_api.py):
+     Save Money & Reduce Waste → Optimization (MILP)             backend priority "reduce_cost_waste"
+     Balanced                  → Balanced rule                    backend priority "balanced": each week the Optimization plan, unless its
+                                                                   projected fill rate is more than 0.03 below the RL agent's, then the RL agent
+     Keep My Groceries Stocked → RL agent (PPO + Ridge forecast) backend priority "availability"
+   A tested live Python API exists (python -m src.coach_server, docs/GROCERY_COACH_INTEGRATION.md) but is not deployed on Netlify.
+   Households outside the evaluation use the in-browser preview, tuned with a matching weight on running out. */
 const OFF=DATA.official||null;
 const isOff=hh=>!!OFF&&OFF.household===hh.id&&!!OFF.methods;
 const PRIO={
   save:{title:"Save Money & Reduce Waste",short:"Save money",method:"optimization",pen:1.5,
     blurb:"Buys lean: fewer extras, less thrown away. Some items may run out late in the week.",
     icon:'<path d="M12 3v18M16.5 7.5c-.8-1.3-2.3-2-4.3-2-2.6 0-4.2 1.3-4.2 3.2 0 4.6 8.8 2.5 8.8 7 0 2-1.7 3.3-4.5 3.3-2.2 0-3.8-.9-4.6-2.4"/>'},
-  balanced:{title:"Balanced",short:"Balanced",method:"ppo_forecast",pen:3,
-    blurb:"Weighs cost, waste and running out together. Learned by the RL agent.",
+  balanced:{title:"Balanced",short:"Balanced",method:"balanced_rule",pen:3,
+    blurb:"Each week takes the lean Optimization plan, or the RL agent's plan when the lean one would leave noticeably more unmet.",
     icon:'<path d="M12 4v16M5 20h14M5 8l-3 6a3 3 0 0 0 6 0L5 8zm14 0l-3 6a3 3 0 0 0 6 0l-3-6zM5 8h14"/>'},
-  stocked:{title:"Keep My Groceries Stocked",short:"Stay stocked",method:"forecast_rule",pen:6,
-    blurb:"Buys the full forecast so you rarely run out. Costs more and wastes more.",
+  stocked:{title:"Keep My Groceries Stocked",short:"Stay stocked",method:"ppo_forecast",pen:6,
+    blurb:"The RL agent with the Ridge forecast: best fill rate in the test. Spends about as much as the average rule, wastes somewhat less.",
     icon:'<path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/><path d="M3 7l9 4 9-4M12 11v10"/>'},
 };
 const PRIO_ORDER=["save","balanced","stocked"];
@@ -881,7 +905,7 @@ try{const p=localStorage.getItem("grocery-coach-prio");if(PRIO[p])ST.prio=p}catc
 ST.prio=ST.prio||"balanced";
 const savePrio=()=>{try{localStorage.setItem("grocery-coach-prio",ST.prio)}catch(e){}};
 const budgetOf=hh=>isOff(hh)?OFF.weekly_budget:hh.budget;
-const methodLabel=k=>OFF?.methods?.[k]?.label||({optimization:"Optimization (MILP)",ppo_forecast:"RL agent (PPO + forecast)",forecast_rule:"Forecast rule",average_rule:"Average rule",fixed:"Fixed list"}[k]||k);
+const methodLabel=k=>OFF?.methods?.[k]?.label||({optimization:"Optimization (MILP)",ppo_forecast:"RL agent (PPO + forecast)",balanced_rule:"Balanced rule (Optimization or RL agent)",forecast_rule:"Forecast rule",average_rule:"Average rule",fixed:"Fixed list"}[k]||k);
 const offWeeks=(k)=>{const W=OFF.methods[k].weeks;return Object.keys(W).map(Number).sort((a,b)=>a-b).map(w=>({week:w,...W[w]}))};
 const offFinal=k=>{const key=k.startsWith("ppo_")?k+"_mean":k;return OFF.final_test?.[key]||OFF.final_test?.[k]||null};
 const EPW=13; /* weeks per test episode: final_test totals are per episode */
@@ -899,9 +923,11 @@ function planWeekOff(hh,w){
   const need=P.map(()=>0);chosen.forEach(o=>o.ing.forEach(x=>need[x.i]+=x.q));
   const add=P.map((_,i)=>Math.max(0,need[i]-stockOf(pre,i)-co[i]));
   const ex=ST.extra?.[pkey(hh,w)]||{};
-  const {fin,adj}=adjustFin(hh,w,co.map((q,i)=>q+(add[i]>0.05?add[i]:0)+(ex[PID[i]]||0)));
+  const fx=fitExtras(P,hh.cap,pre,price,co,co.map((q,i)=>(add[i]>0.05?add[i]:0)+(ex[PID[i]]||0)),OFF.weekly_budget);
+  fx.skipped.forEach(s=>S.notes.push(skipNote(P,s)));
+  const {fin,adj}=adjustFin(hh,w,co.map((q,i)=>q+fx.extra[i]));
   const total=fin.reduce((a,q,i)=>a+q*price[i],0);
-  return {S,opts,sel,chosen,raw:co,need,add,fin,ex,adj,price,budget:OFF.weekly_budget,off:{W,A,mk},
+  return {S,opts,sel,chosen,raw:co,need,add:add.map((a,i)=>a>0.05&&fx.extra[i]>0?a:0),fin,ex,adj,price,budget:OFF.weekly_budget,off:{W,A,mk},
     ef:{waste_cost:W.waste_cost},efx:{waste_cost:A.waste_cost},total,fixedTot:A.spend,pcov:W.protein_target_met,
     fcCost:fcv.reduce((a,q,i)=>a+q*price[i],0),rawCost:W.spend,rawN:co.filter(q=>q>0.01).length};
 }
@@ -922,7 +948,7 @@ function prioCards(hh){
       <span class="pt"><b>${p.title}</b><span>${p.blurb}</span></span>
       ${s?`<span class="pstats"><span><b class="num">${money(s.spend)}</b>/wk ${sgn(s.dS,s.dS<=0)}</span><span>waste ${sgn(s.dW,s.dW<=0)}</span><span>stocked <b class="num">${pct(Math.max(0,s.fill))}</b></span></span>`:""}
       <span class="pm">${off?esc(methodLabel(p.method)):"In-browser preview"}</span></button>`}).join("")}
-  </div><p class="xs muted" style="margin:8px 0 0">${off?`Changes are compared with the average rule on the held-out test weeks 78–103 (your teammates' final evaluation).`:`Your teammates' models were evaluated on the student household. For this household the options use the in-browser preview.`}</p></section>`;
+  </div><p class="xs muted" style="margin:8px 0 0">${off?`Static demo: precomputed replays of the team's frozen models on the held-out test weeks 78–103, compared with the average rule. Nothing here calls a live model.`:`Your teammates' models were evaluated on the student household. For this household the options use the in-browser preview.`}</p></section>`;
 }
 function prioLine(hh){const s=prioStats(hh,ST.prio),m=isOff(hh)?methodLabel(PRIO[ST.prio].method):"In-browser preview";if(!s)return m;
   const w=Math.round(-s.dW*100);return `${m} · ${Math.round(s.fill*100)}% stocked · ${Math.abs(w)<1?"same waste as":w>0?w+"% less waste than":-w+"% more waste than"} the average rule`}
@@ -931,11 +957,11 @@ function prioSwitch(){return `<div class="seg" role="group" aria-label="Shopping
 /* Results for the evaluated household: the six frozen methods */
 function resultsOff(hh){
   const sel=PRIO[ST.prio].method,f=offFinal(sel),a=offFinal("average_rule");
-  const rows=[["fixed","Fixed list"],["average_rule","Average rule"],["forecast_rule","Forecast rule (Ridge)"],["optimization","Optimization (MILP)"],["ppo_forecast","RL agent (PPO + forecast)"],["ppo_no_forecast","RL agent (PPO, no forecast)"]];
+  const rows=[["fixed","Fixed list"],["average_rule","Average rule"],["forecast_rule","Forecast rule (Ridge)"],["optimization","Optimization (MILP)"],["ppo_forecast","RL agent (PPO + forecast)"],["ppo_no_forecast","RL agent (PPO, no forecast)"],["balanced_rule","Balanced rule (replayed after the test)"]];
   const T=[["Spend / wk",x=>x.cash_spend/EPW,v=>money(v),true],["Wasted / wk",x=>x.waste_cost/EPW,v=>money(v),true],["Ran out (value) / wk",x=>x.stockout_value/EPW,v=>money(v),true],["Stocked (fill rate)",x=>x.fill_rate_value,v=>pct(v),false],["Protein met",x=>x.protein_coverage,v=>pct(v),false],["Reward",x=>x.reward,v=>fx(v,2),false]];
   const best=T.map(([,g,,lo])=>{const v=rows.map(([k])=>offFinal(k)).filter(Boolean).map(g);return lo?Math.min(...v):Math.max(...v)});
   const d=(x,y,lo,isP)=>{const r=isP?x-y:(y?x/y-1:0),good=lo?r<0:r>0,flat=Math.abs(r)<0.01;if(flat)return `<span class="delta flat">same as average rule</span>`;return `<span class="delta ${flat?"flat":good?"good":"bad"}">${isP?(r>=0?"+":"−")+Math.abs(Math.round(r*100))+" pts":(r>=0?"+":"−")+Math.abs(Math.round(r*100))+"%"} vs average rule</span>`};
-  const MC={optimization:"var(--c-dairy)",ppo_forecast:"var(--accent)",forecast_rule:"var(--c-grains)"};
+  const MC={optimization:"var(--c-dairy)",ppo_forecast:"var(--accent)",balanced_rule:"var(--c-protein)",forecast_rule:"var(--c-grains)"};
   const L=PRIO_ORDER.map(k=>[PRIO[k].method,PRIO[k].short+": "+methodLabel(PRIO[k].method),MC[PRIO[k].method],false,PRIO[k].method===sel]).concat([["average_rule","Average rule","var(--l-fixed)",true,false]]);
   const chart=(key,label,fmt)=>{const series=L.map(([k,n,col,dash,focus])=>({name:n,color:col,dash,focus,values:roll(offWeeks(k).map(r=>+r[key]||0),3)}));
     return `<section class="c4 card"><div class="ch"><div><h2>${label}</h2><p>per week, 3-week average</p></div></div>${lineChart(series,{yfmt:fmt,label:label+" per week",W:340,H:200,L:44,Rr:20,T:10,B:26})}</section>`};
@@ -950,7 +976,7 @@ function resultsOff(hh){
    <section class="c12 legend" aria-label="Legend">${L.map(([,n,col,dash])=>`<span style="color:${col}"><i class="sw ${dash?"dash":""}" style="background:${col}"></i><span style="color:var(--ink)">${esc(n)}</span></span>`).join("")}</section>
    ${chart("spend","Spending",v=>"$"+Math.round(v))}${chart("waste_cost","Food waste",v=>"$"+fx(v,v<10?1:0))}${chart("stockout_value","Ran out (value)",v=>"$"+Math.round(v))}
    ${forecastCard(hh)}
-   <section class="c12 card"><div class="ch"><div><h2>All six methods</h2><p>Green is best.</p></div></div>
+   <section class="c12 card"><div class="ch"><div><h2>All methods</h2><p>Green is best. The first six are the team's frozen held-out comparison; the balanced rule was replayed on the same weeks afterwards (its rule was fixed beforehand), so it is not part of that comparison. Precomputed, not a live model call.</p></div></div>
     <div class="scroll"><table class="cmp"><thead><tr><th>Method</th>${T.map(([n])=>`<th>${n}</th>`).join("")}</tr></thead><tbody>
     ${rows.filter(([k])=>offFinal(k)).map(([k,n])=>`<tr class="${k===sel?"me":""}"><td>${esc(n)}${PRIO_ORDER.filter(p=>PRIO[p].method===k).map(p=>` <span class="tag t-meal">${PRIO[p].short}</span>`).join("")}</td>${T.map(([,g,fm],j)=>{const v=g(offFinal(k));return `<td class="${Math.abs(v-best[j])<1e-9?"best":""}">${fm(v)}</td>`}).join("")}</tr>`).join("")}
     </tbody></table></div>
@@ -1393,7 +1419,7 @@ views.plan=()=>{
      <span class="muted">Budget ${money(X.budget,0)}</span><span class="mono ${left<0?"c-bad":"c-good"}">${money(left)} ${left<0?"over":"left"}</span></div>
     <details class="how"><summary>How this list was made</summary><div class="pipe">
     <div class="step"><span class="k">1 · Forecast</span><b>${money(X.fcCost,0)} of food</b><span>${esc(FC_NAME)}</span></div>
-    <div class="step"><span class="k">2 · ${OW?(OW.mk.startsWith("ppo")?"RL agent":OW.mk==="optimization"?"Optimizer":"Forecast rule"):"Purchase plan"}</span><b>${X.rawN} items · ${money(X.rawCost,0)}</b><span>${OW?esc(ML):DATA.plans?.[hh.id]?.[w]?"from the RL agent":"in-browser preview"}</span></div>
+    <div class="step"><span class="k">2 · ${OW?(OW.mk.startsWith("ppo")?"RL agent":OW.mk==="optimization"?"Optimizer":OW.mk==="balanced_rule"?"Balanced rule":"Forecast rule"):"Purchase plan"}</span><b>${X.rawN} items · ${money(X.rawCost,0)}</b><span>${OW?esc(ML):DATA.plans?.[hh.id]?.[w]?"from the RL agent":"in-browser preview"}</span></div>
     <div class="step"><span class="k">3 · Rules</span><b>${S.notes.length?S.notes.length+" change"+(S.notes.length>1?"s":""):"All clear"}</b><span>${OW?"packages, storage, budget, diet":"budget, stock, diet, allergies"}</span></div>
     <div class="step"><span class="k">4 · Meals</span><b>${X.chosen.length} meal${X.chosen.length===1?"":"s"}${adds?` · +${adds}`:""}</b><span>${adds?`item${adds>1?"s":""} added for recipes`:"covered by the plan"}</span></div>
     <div class="step final"><span class="k">Shopping list</span><b>${money(X.total)}</b><span>${lines.length} items</span></div>

@@ -23,6 +23,8 @@ RESULTS = ROOT / "results" / "results.json"
 PLANS = ROOT / "results" / "plans.json"            # optional: the RL agent's order per test week (docs/UI_INTEGRATION.md)
 OFFICIAL = ROOT / "results" / "ui" / "plans.json"  # written by: python export_ui_plans.py (the team's frozen models, week by week)
 FORECAST = DATA / "forecast_weekly.csv"            # written by: python -m src.forecast --export
+STORAGE = ROOT / "data_rl"                         # synthetic storage rules and household capacities (docs/STORAGE_DATA.md)
+LOOSE_STEP_PRODUCTS = {"bananas", "apples", "carrots", "oranges", "onions"}   # sold by weight: bought in 0.5 steps, like src/env.py
 UI = ROOT / "ui" / "coach.html"
 DATA_FILES = ("products.csv", "households.csv", "recipes.csv", "demand_weekly.csv")
 EXTRA_FILES = ("price_weekly_synthetic.csv", "price_history.csv", "products_nutrition_source.csv", "forecast_weekly.csv")
@@ -125,6 +127,12 @@ def load_payload(include_keys: bool = True) -> dict:
         if {"product_id", "grams_per_unit"} <= set(src.columns):
             grams = dict(zip(src["product_id"], src["grams_per_unit"]))
 
+    # package step, packed volume (litres per unit) and default storage per product; household storage capacities (litres).
+    # The interface uses them so meal ingredients added on top of a plan respect whole packages and storage space like the models' own orders.
+    rules, caps = {}, {}
+    if (STORAGE / "storage_rules.csv").exists() and (STORAGE / "household_storage.csv").exists():
+        rules = pd.read_csv(STORAGE / "storage_rules.csv").set_index("product_id").to_dict("index")
+        caps = pd.read_csv(STORAGE / "household_storage.csv").set_index("household_id").to_dict("index")
     product_rows = [
         {
             "id": r.product_id, "name": r.name, "category": r.category, "unit": str(r.unit),
@@ -134,6 +142,8 @@ def load_payload(include_keys: bool = True) -> dict:
             "fat": num(getattr(r, "fat_g_per_unit", 0)), "sugar": num(getattr(r, "sugar_g_per_unit", 0)),
             "sodium": num(getattr(r, "sodium_mg_per_unit", 0)),
             "allergens": split_list(getattr(r, "allergens", "")), "grams": num(grams.get(r.product_id, 0)),
+            "step": 0.5 if r.product_id in LOOSE_STEP_PRODUCTS else 1.0,
+            "vol": num(rules.get(r.product_id, {}).get("volume_l_per_unit")), "store": str(rules.get(r.product_id, {}).get("default_storage", "pantry")),
         }
         for r in products.itertuples(index=False)
     ]
@@ -148,6 +158,7 @@ def load_payload(include_keys: bool = True) -> dict:
             "eats_out": num(h.get("eats_out_share")), "budget": num(h.get("weekly_budget_usd")),
             "protein_target": num(h.get("weekly_protein_target_g")), "weekend_boost": num(h.get("weekend_boost"), 1),
             "allowed": [pid for pid, ok in zip(products["product_id"], allowed) if ok],
+            "cap": ({s: num(caps[h["household_id"]][s + "_l"]) for s in ("pantry", "fridge", "freezer")} if h["household_id"] in caps else None),
         })
 
     recipe_rows = []
