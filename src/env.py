@@ -479,7 +479,8 @@ class GroceryEnv(gym.Env):
 
     # ------------------------------------------------------------------ observation
     def _forecast(self, week: int) -> np.ndarray | None:
-        if self.forecast_fn is None:
+        # No forecast once the episode is over: the terminal observation must not request a week of the next episode or split.
+        if self.forecast_fn is None or self.t >= self.horizon:
             return None
         return np.asarray(self.forecast_fn(week), dtype=float)
 

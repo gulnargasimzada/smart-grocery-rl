@@ -125,10 +125,23 @@ def forecast_status(table: ForecastTable | None, specs: list[EpisodeSpec], varia
         return "no forecast table supplied"
     try:
         for sp in specs:
-            table.require(sp.household_id, range(sp.start_week, min(sp.end_week + 1, SPLITS["test"][1]) + 1), variant)
+            table.require(sp.household_id, sp.weeks, variant)       # only the episode's own weeks are ever requested
     except ForecastUnavailable as e:
         return str(e)
     return None
+
+
+def forecast_notes(table: ForecastTable | None, specs: list[EpisodeSpec], variant: str) -> list[str]:
+    """Which forecast method the episodes rely on (Ridge or the ma4_fallback moving average), for the report."""
+    if table is None or forecast_status(table, specs, variant) is not None:
+        return []
+    notes = []
+    for sp in specs:
+        fb = table.fallback_weeks(sp.household_id, sp.weeks, variant)
+        notes.append(f"forecast weeks {sp.start_week}-{sp.end_week}: " + (
+            f"weeks {fb} use the historical ma4_fallback (4-week moving average), not Ridge; the rest are Ridge" if fb
+            else "all Ridge predictions (walk-forward / trained before the week)"))
+    return notes
 
 
 def run_episode(spec: EpisodeSpec, policy: Policy | str, table: ForecastTable | None = None, variant: str = "no_events") -> dict:
@@ -198,7 +211,8 @@ def md(df: pd.DataFrame) -> str:
     return "\n".join(rows)
 
 
-def write_report(split: str, episodes: pd.DataFrame, summary: pd.DataFrame, unavailable: dict, variant: str) -> str:
+def write_report(split: str, episodes: pd.DataFrame, summary: pd.DataFrame, unavailable: dict, variant: str,
+                 notes: list[str] | None = None) -> str:
     OUT.mkdir(parents=True, exist_ok=True)
     specs = episode_specs(split)
     episodes.to_csv(OUT / f"{split}_episodes.csv", index=False)
@@ -222,6 +236,7 @@ def write_report(split: str, episodes: pd.DataFrame, summary: pd.DataFrame, unav
     ]
     for name, reason in unavailable.items():
         lines.append(f"- `{name}` was NOT run ({variant} forecasts): {reason}")
+    lines += [f"- {n} ({variant})" for n in notes or []]
     text = "\n".join(lines) + "\n"
     (OUT / f"report_{split}.md").write_text(text)
     return text
@@ -230,19 +245,20 @@ def write_report(split: str, episodes: pd.DataFrame, summary: pd.DataFrame, unav
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--split", choices=["train", "validation"], required=True)     # the test split is deliberately not offered
-    ap.add_argument("--forecast-csv", default=None, help="out-of-sample forecast file from the ML side (see docs/RL_EVALUATION.md)")
+    ap.add_argument("--forecast-csv", default=str(ROOT / "data" / "forecast_weekly.csv"),
+                    help="out-of-sample forecast file from the ML side (git-ignored; see docs/RL_EVALUATION.md)")
     ap.add_argument("--forecast-variant", choices=["no_events", "with_events"], default="no_events")
     args = ap.parse_args()
     table = None
-    if args.forecast_csv:
-        products = pd.read_csv(ROOT / "data" / "products.csv")["product_id"].tolist()
-        try:
-            table = ForecastTable.from_csv(args.forecast_csv, products)
-        except (ForecastUnavailable, ValueError) as e:
-            print(f"forecast file rejected: {e}")
+    products = pd.read_csv(ROOT / "data" / "products.csv")["product_id"].tolist()
+    try:
+        table = ForecastTable.from_csv(args.forecast_csv, products)
+    except (ForecastUnavailable, ValueError) as e:
+        print(f"BLOCKER: forecast file unusable, forecast_rule will not run: {e}")
     episodes, summary, unavailable = evaluate_policies(args.split, table=table, variant=args.forecast_variant)
     write_spec_file()
-    print(write_report(args.split, episodes, summary, unavailable, args.forecast_variant))
+    notes = forecast_notes(table, episode_specs(args.split), args.forecast_variant)
+    print(write_report(args.split, episodes, summary, unavailable, args.forecast_variant, notes))
 
 
 if __name__ == "__main__":
