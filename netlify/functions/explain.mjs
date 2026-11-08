@@ -4,10 +4,10 @@
 // The API key stays here on the server (Netlify → Site configuration → Environment variables):
 //   ANTHROPIC_API_KEY  (required)
 //   ANTHROPIC_MODEL    (optional, default claude-haiku-5-5: fast and low-cost for short answers)
-//   ANTHROPIC_VERSION  (optional, default 2026-10-21)
+//   ANTHROPIC_VERSION  (optional, default 2023-06-01, the Messages API version header)
 //   ALLOWED_ORIGINS    (optional, comma-separated, e.g. http://localhost:8501,https://your-site.netlify.app)
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
-const VERSION = process.env.ANTHROPIC_VERSION || "2026-10-21";
+const VERSION = process.env.ANTHROPIC_VERSION || "2023-06-01";
 
 const SYSTEM = `You explain packaged food to everyday shoppers in plain, friendly words.
 Rules:
@@ -105,13 +105,25 @@ const cors = (origin) => {
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), { status, headers: { ...headers, "content-type": "application/json" } });
 
+// Turn an API error into a plain message (and log the details for the Netlify function log).
+async function apiError(r) {
+  let msg = "";
+  try { msg = (await r.json())?.error?.message || ""; } catch {}
+  console.error("Anthropic API error", r.status, msg);
+  if (r.status === 401) return "The AI key isn't valid. Check ANTHROPIC_API_KEY in Netlify.";
+  if (/credit balance/i.test(msg)) return "The AI account is out of credits. Add credits in the Claude Console.";
+  if (/model/i.test(msg)) return `The AI model isn't available (${msg}). Set ANTHROPIC_MODEL in Netlify.`;
+  if (r.status === 429 || r.status === 529) return "The AI is busy right now. Try again in a moment.";
+  return `The AI service returned ${r.status}${msg ? ": " + msg.slice(0, 160) : ""}.`;
+}
+
 async function callClaude(system, content, maxTokens) {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": VERSION, "content-type": "application/json" },
     body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: "user", content }] }),
   });
-  if (!r.ok) throw new Error(`The AI service returned ${r.status}. Try again in a moment.`);
+  if (!r.ok) throw new Error(await apiError(r));
   const data = await r.json();
   const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
   const m = text.match(/\{[\s\S]*\}/);
@@ -167,7 +179,7 @@ export default async (req) => {
         messages: [{ role: "user", content: `Product data:\n${JSON.stringify(product)}` }],
       }),
     });
-    if (!r.ok) return json({ error: `The AI service returned ${r.status}. Try again in a moment.` }, 502, headers);
+    if (!r.ok) return json({ error: await apiError(r) }, 502, headers);
     const data = await r.json();
     const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
     const m = text.match(/\{[\s\S]*\}/);
